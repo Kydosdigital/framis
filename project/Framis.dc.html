@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#FAFBFC;}
+*{box-sizing:border-box;}
+button{cursor:pointer;}
+textarea:focus,input:focus{outline:2px solid #0066CC;outline-offset:1px;}
+@keyframes framisPulse{0%{box-shadow:0 0 0 0 rgba(75,158,143,.45);}100%{box-shadow:0 0 0 14px rgba(75,158,143,0);}}
+@keyframes framisWordIn{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:none;}}
+@keyframes framisTicker{to{transform:translateX(-50%);}}
+@keyframes framisCaret{0%,49%{opacity:1;}50%,100%{opacity:0;}}
+[data-reveal]{transition:opacity .8s ease,transform .8s ease;}
+[data-reveal="off"]{opacity:0;transform:translateY(32px);}
+[data-reveal="off"] [data-stagger]{opacity:0;}
+[data-reveal="on"] [data-stagger]{animation:framisWordIn .65s backwards;}
+</style>
+</helmet>
+
+<div style="font-family:'IBM Plex Sans',sans-serif;color:#1F2937;min-height:100vh;background:#FAFBFC;">
+
+<!-- ============ LANDING ============ -->
+<sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Landing">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 48px;background:#0A1428;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <img src="assets/framis-mark.png" alt="Framis logo" style="height:30px;width:auto;">
+      <span style="font:700 20px Inter,sans-serif;color:#fff;letter-spacing:-0.02em;">Framis</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:28px;">
+      <a href="#curriculum" style="color:#B7C0CE;font:500 14px 'IBM Plex Sans',sans-serif;text-decoration:none;">Curriculum</a>
+      <a href="#how" style="color:#B7C0CE;font:500 14px 'IBM Plex Sans',sans-serif;text-decoration:none;">How it works</a>
+      <button onClick="{{ startOnboarding }}" style="background:#0066CC;color:#fff;border:none;border-radius:8px;padding:10px 20px;font:600 14px Inter,sans-serif;">Start free</button>
+    </div>
+  </div>
+
+  <div style="background:#0A1428;padding:80px 48px 72px;position:relative;overflow:hidden;">
+    <canvas ref="{{ heroCanvas }}" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+    <div style="position:relative;max-width:1040px;margin:0 auto;display:flex;flex-wrap:wrap;gap:52px;align-items:center;">
+      <div style="flex:1 1 460px;min-width:320px;">
+        <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid #24344D;border-radius:999px;padding:6px 14px;margin-bottom:26px;animation:framisWordIn .6s both;background:rgba(10,20,40,.55);">
+          <span style="width:7px;height:7px;border-radius:50%;background:#4B9E8F;display:inline-block;animation:framisPulse 2.4s ease-out infinite;"></span>
+          <span style="color:#8FA0B5;font:500 12.5px 'Fira Code',monospace;letter-spacing:0.04em;">ENGINEERING FORWARD</span>
+        </div>
+        <h1 style="font:800 52px/1.08 Inter,sans-serif;color:#fff;margin:0 0 22px;letter-spacing:-0.03em;text-wrap:balance;"><span style="display:inline-block;animation:framisWordIn .7s .10s both;">Learn</span> <span style="display:inline-block;animation:framisWordIn .7s .16s both;">to</span> <span style="display:inline-block;animation:framisWordIn .7s .22s both;">think</span> <span style="display:inline-block;animation:framisWordIn .7s .28s both;">like</span> <span style="display:inline-block;animation:framisWordIn .7s .34s both;">an</span> <span style="display:inline-block;animation:framisWordIn .7s .40s both;">engineer</span> <span style="display:inline-block;animation:framisWordIn .7s .46s both;">who</span> <span style="display:inline-block;animation:framisWordIn .7s .52s both;">builds</span> <span style="display:inline-block;animation:framisWordIn .7s .58s both;">with</span> <span style="display:inline-block;animation:framisWordIn .7s .64s both;color:#4B9E8F;">AI.</span></h1>
+        <p style="font:400 18px/1.6 'IBM Plex Sans',sans-serif;color:#B7C0CE;margin:0 0 34px;max-width:520px;text-wrap:pretty;animation:framisWordIn .7s .78s both;">AI writes the code. Framis teaches the judgment — verification, systems thinking, and shipping. Zero to full-stack AI engineer in 12 months, 10–15 hours a week.</p>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;animation:framisWordIn .7s .92s both;">
+          <button onClick="{{ startOnboarding }}" style="background:#0066CC;color:#fff;border:none;border-radius:10px;padding:15px 30px;font:600 16px Inter,sans-serif;transition:transform .2s,box-shadow .2s;" style-hover="transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,102,204,.5);">Start free — no card needed</button>
+          <a href="#curriculum" style="color:#4B9E8F;font:600 15px Inter,sans-serif;text-decoration:none;padding:15px 8px;">View the 12-month roadmap →</a>
+        </div>
+        <div style="display:flex;gap:36px;margin-top:44px;flex-wrap:wrap;animation:framisWordIn .7s 1.05s both;">
+          <div><div style="font:700 26px 'Fira Code',monospace;color:#fff;">{{ statProjects }}</div><div style="font:400 13px 'IBM Plex Sans',sans-serif;color:#8FA0B5;">shipped, deployed projects</div></div>
+          <div><div style="font:700 26px 'Fira Code',monospace;color:#fff;">{{ statConcepts }}+</div><div style="font:400 13px 'IBM Plex Sans',sans-serif;color:#8FA0B5;">motion-guided concepts</div></div>
+          <div><div style="font:700 26px 'Fira Code',monospace;color:#fff;">{{ statLessons }}</div><div style="font:400 13px 'IBM Plex Sans',sans-serif;color:#8FA0B5;">lessons over 12 months</div></div>
+        </div>
+      </div>
+      <div style="flex:0 1 430px;min-width:340px;animation:framisWordIn .8s .5s both;">
+        <div style="background:#0D1B30;border:1px solid #24344D;border-radius:14px;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,.45);">
+          <div style="display:flex;align-items:center;gap:7px;padding:12px 16px;border-bottom:1px solid #1A2A44;">
+            <span style="width:10px;height:10px;border-radius:50%;background:#2A3B57;display:inline-block;"></span>
+            <span style="width:10px;height:10px;border-radius:50%;background:#2A3B57;display:inline-block;"></span>
+            <span style="width:10px;height:10px;border-radius:50%;background:#2A3B57;display:inline-block;"></span>
+            <span style="margin-left:10px;font:500 11px 'Fira Code',monospace;color:#5B6B82;letter-spacing:.05em;">LESSON 2.1 · VARIABLES — LIVE</span>
+            <span style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:#4B9E8F;animation:framisPulse 2s ease-out infinite;"></span>
+          </div>
+          <div style="position:relative;height:236px;">
+            <div style="position:absolute;left:18px;top:18px;background:#121F35;border:1px solid #24344D;border-radius:10px;padding:14px 16px;font:500 13.5px/2 'Fira Code',monospace;color:#E8EAF0;min-width:196px;min-height:78px;">
+              <div>{{ demoL1 }}<span style="display:{{ demoCaret1Disp }};width:8px;height:14px;background:#4B9E8F;vertical-align:-2px;animation:framisCaret 1s infinite;"></span></div>
+              <div>{{ demoL2 }}<span style="display:{{ demoCaret2Disp }};width:8px;height:14px;background:#4B9E8F;vertical-align:-2px;animation:framisCaret 1s infinite;"></span></div>
+            </div>
+            <div style="position:absolute;left:{{ demoChipLeft }};top:{{ demoChipTop }};opacity:{{ demoChipOp }};transition:all .9s cubic-bezier(.4,0,.2,1);background:#4B9E8F;color:#fff;border-radius:7px;padding:5px 11px;font:600 12.5px 'Fira Code',monospace;box-shadow:0 6px 18px rgba(75,158,143,.45);">"Alex"</div>
+            <div style="position:absolute;right:18px;top:32px;width:120px;">
+              <div style="border:2px dashed {{ demoBoxBorder }};background:{{ demoBoxBg }};border-radius:11px;height:66px;display:flex;align-items:center;justify-content:center;transition:all .6s;">
+                <span style="font:600 12.5px 'Fira Code',monospace;color:#4B9E8F;opacity:{{ demoBoxValOp }};transition:opacity .5s;">"Alex"</span>
+              </div>
+              <div style="text-align:center;margin-top:8px;font:500 11.5px 'Fira Code',monospace;color:#8FA0B5;">name</div>
+            </div>
+            <div style="position:absolute;left:18px;right:18px;bottom:16px;background:#121F35;border-radius:8px;padding:9px 13px;font:400 12.5px 'Fira Code',monospace;color:#8FA0B5;">
+              <span style="color:#5B6B82;">output › </span><span style="color:#E8EAF0;opacity:{{ demoOutOp }};transition:opacity .5s;">Alex</span>
+            </div>
+          </div>
+          <div style="padding:12px 18px 15px;border-top:1px solid #1A2A44;font:400 12.5px/1.5 'IBM Plex Sans',sans-serif;color:#B7C0CE;min-height:20px;">{{ demoCaption }}</div>
+        </div>
+        <div style="text-align:center;margin-top:12px;font:400 12px 'IBM Plex Sans',sans-serif;color:#5B6B82;">This is how every Framis lesson teaches — motion first.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#0A1428;border-top:1px solid #16233A;padding:15px 0;overflow:hidden;">
+    <div style="display:flex;width:max-content;gap:30px;align-items:center;animation:framisTicker 36s linear infinite;">
+      <sc-for list="{{ tickerItems }}" as="tk" hint-placeholder-count="16">
+        <span style="display:flex;align-items:center;gap:30px;">
+          <span style="font:500 12px 'Fira Code',monospace;color:#8FA0B5;letter-spacing:.08em;white-space:nowrap;">{{ tk }}</span>
+          <span style="color:#4B9E8F;font-size:9px;">▸</span>
+        </span>
+      </sc-for>
+      <sc-for list="{{ tickerItems }}" as="tk2" hint-placeholder-count="16">
+        <span style="display:flex;align-items:center;gap:30px;">
+          <span style="font:500 12px 'Fira Code',monospace;color:#8FA0B5;letter-spacing:.08em;white-space:nowrap;">{{ tk2 }}</span>
+          <span style="color:#4B9E8F;font-size:9px;">▸</span>
+        </span>
+      </sc-for>
+    </div>
+  </div>
+
+  <div id="how" data-reveal="{{ reveal.how }}" data-reveal-key="how" style="padding:80px 48px;display:flex;justify-content:center;">
+    <div style="max-width:960px;width:100%;">
+      <h2 style="font:700 30px Inter,sans-serif;margin:0 0 8px;letter-spacing:-0.02em;">Not another “learn to code” course.</h2>
+      <p style="font:400 16px/1.6 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 36px;max-width:640px;">Bootcamps teach syntax. Framis teaches the thinking that matters when AI writes the code.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">
+        <div data-stagger="1" style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:28px;animation-delay:.08s;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-5px);border-color:#0066CC;box-shadow:0 16px 34px rgba(10,20,40,.10);">
+          <div style="font:500 12px 'Fira Code',monospace;color:#0066CC;margin-bottom:12px;">01 · SEE IT MOVE</div>
+          <div style="font:600 18px Inter,sans-serif;margin-bottom:8px;">Motion-guided lessons</div>
+          <p style="font:400 14.5px/1.6 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0;">Every concept — variables to RAG pipelines — explained with an interactive animation, not a wall of text. Built for kinetic and ADHD learners.</p>
+        </div>
+        <div data-stagger="1" style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:28px;animation-delay:.2s;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-5px);border-color:#4B9E8F;box-shadow:0 16px 34px rgba(10,20,40,.10);">
+          <div style="font:500 12px 'Fira Code',monospace;color:#4B9E8F;margin-bottom:12px;">02 · VERIFY IT</div>
+          <div style="font:600 18px Inter,sans-serif;margin-bottom:8px;">Judgment over prompting</div>
+          <p style="font:400 14.5px/1.6 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0;">Testing, debugging, security, and evals are core curriculum — so you can tell when AI-generated code is wrong before production does.</p>
+        </div>
+        <div data-stagger="1" style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:28px;animation-delay:.32s;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-5px);border-color:#059669;box-shadow:0 16px 34px rgba(10,20,40,.10);">
+          <div style="font:500 12px 'Fira Code',monospace;color:#059669;margin-bottom:12px;">03 · SHIP IT</div>
+          <div style="font:600 18px Inter,sans-serif;margin-bottom:8px;">Portfolio, not certificates</div>
+          <p style="font:400 14.5px/1.6 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0;">Six capstones, all deployed and public on GitHub. You graduate with proof of capability employers can actually inspect.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="curriculum" data-reveal="{{ reveal.curr }}" data-reveal-key="curr" style="padding:24px 48px 80px;display:flex;justify-content:center;">
+    <div style="max-width:960px;width:100%;">
+      <h2 style="font:700 30px Inter,sans-serif;margin:0 0 36px;letter-spacing:-0.02em;">The 12-month roadmap</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+        <sc-for list="{{ phases }}" as="ph" hint-placeholder-count="6">
+          <div data-stagger="1" style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 24px;display:flex;flex-direction:column;gap:8px;animation-delay:{{ ph.delay }};transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-4px);border-color:#0066CC;box-shadow:0 14px 30px rgba(10,20,40,.10);">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+              <span style="font:500 11.5px 'Fira Code',monospace;color:#6B7280;">{{ ph.weeks }}</span>
+              <span style="font:600 11px Inter,sans-serif;color:#0066CC;background:#EAF2FB;border-radius:999px;padding:3px 10px;">PHASE {{ ph.num }}</span>
+            </div>
+            <div style="font:600 16.5px Inter,sans-serif;">{{ ph.title }}</div>
+            <p style="font:400 13.5px/1.55 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0;">{{ ph.desc }}</p>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+              <span style="width:8px;height:8px;background:#4B9E8F;border-radius:2px;display:inline-block;flex:none;"></span>
+              <span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#4B9E8F;">{{ ph.capstone }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div data-reveal="{{ reveal.cta }}" data-reveal-key="cta" style="background:#0A1428;padding:64px 48px;display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center;">
+    <h2 style="font:700 30px Inter,sans-serif;color:#fff;margin:0;letter-spacing:-0.02em;">The bottleneck isn’t typing code. It’s knowing what to build.</h2>
+    <button onClick="{{ startOnboarding }}" style="background:#0066CC;color:#fff;border:none;border-radius:10px;padding:15px 32px;font:600 16px Inter,sans-serif;transition:transform .2s,box-shadow .2s;" style-hover="transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,102,204,.5);">Start free</button>
+    <span style="font:400 13px 'Fira Code',monospace;color:#6B7280;">framis.dev</span>
+  </div>
+
+</div>
+</sc-if>
+
+<!-- ============ ONBOARDING ============ -->
+<sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Onboarding" style="min-height:100vh;background:#0A1428;display:flex;align-items:center;justify-content:center;padding:40px 20px;">
+  <div style="background:#fff;border-radius:16px;padding:44px 44px 40px;max-width:520px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.35);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="assets/framis-mark.png" alt="" style="height:24px;width:auto;">
+        <span style="font:700 17px Inter,sans-serif;letter-spacing:-0.02em;">Framis</span>
+      </div>
+      <span style="font:500 12px 'Fira Code',monospace;color:#6B7280;">STEP {{ obStepLabel }} / 3</span>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:32px;">
+      <div style="height:4px;flex:1;border-radius:2px;background:{{ obBar1 }};"></div>
+      <div style="height:4px;flex:1;border-radius:2px;background:{{ obBar2 }};"></div>
+      <div style="height:4px;flex:1;border-radius:2px;background:{{ obBar3 }};"></div>
+    </div>
+
+    <sc-if value="{{ obIs1 }}" hint-placeholder-val="{{ false }}">
+      <h2 style="font:700 24px Inter,sans-serif;margin:0 0 6px;letter-spacing:-0.02em;">Create your account</h2>
+      <p style="font:400 14.5px/1.55 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 26px;">Free forever for lessons, sandboxes, and peer review.</p>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <input value="{{ obName }}" onChange="{{ setObName }}" placeholder="First name" style="border:1px solid #D6DBE3;border-radius:8px;padding:13px 14px;font:400 15px 'IBM Plex Sans',sans-serif;">
+        <input value="{{ obEmail }}" onChange="{{ setObEmail }}" placeholder="Email" type="email" style="border:1px solid #D6DBE3;border-radius:8px;padding:13px 14px;font:400 15px 'IBM Plex Sans',sans-serif;">
+        <input value="{{ obPw }}" onChange="{{ setObPw }}" placeholder="Password" type="password" style="border:1px solid #D6DBE3;border-radius:8px;padding:13px 14px;font:400 15px 'IBM Plex Sans',sans-serif;">
+        <button onClick="{{ obNext }}" style="background:#0066CC;color:#fff;border:none;border-radius:8px;padding:14px;font:600 15px Inter,sans-serif;margin-top:6px;">Continue</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ obIs2 }}" hint-placeholder-val="{{ false }}">
+      <h2 style="font:700 24px Inter,sans-serif;margin:0 0 6px;letter-spacing:-0.02em;">Where are you starting from?</h2>
+      <p style="font:400 14.5px/1.55 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 26px;">Three quick questions so we start you in the right place. No wrong answers.</p>
+      <div style="display:flex;flex-direction:column;gap:22px;">
+        <sc-for list="{{ obQuestions }}" as="q" hint-placeholder-count="3">
+          <div>
+            <div style="font:600 14.5px Inter,sans-serif;margin-bottom:10px;">{{ q.label }}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <sc-for list="{{ q.opts }}" as="o" hint-placeholder-count="3">
+                <button onClick="{{ o.pick }}" style="border:1.5px solid {{ o.border }};background:{{ o.bg }};color:{{ o.color }};border-radius:999px;padding:8px 16px;font:500 13.5px 'IBM Plex Sans',sans-serif;">{{ o.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        <button onClick="{{ obNext }}" style="background:{{ obQuizBtnBg }};color:#fff;border:none;border-radius:8px;padding:14px;font:600 15px Inter,sans-serif;">See my starting point</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ obIs3 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:56px;height:56px;border-radius:50%;background:#E7F5F1;display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5 5L20 6.5" stroke="#059669" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <h2 style="font:700 24px Inter,sans-serif;margin:0 0 6px;letter-spacing:-0.02em;">{{ obGreeting }}</h2>
+      <p style="font:400 14.5px/1.6 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 24px;">{{ obPlacement }}</p>
+      <div style="background:#F4F6F9;border-radius:10px;padding:18px 20px;margin-bottom:26px;">
+        <div style="font:600 13px Inter,sans-serif;color:#6B7280;margin-bottom:12px;">BEFORE YOUR FIRST LESSON, INSTALL:</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ setupItems }}" as="s" hint-placeholder-count="3">
+            <button onClick="{{ s.toggle }}" style="display:flex;align-items:center;gap:12px;background:none;border:none;padding:0;text-align:left;">
+              <span style="width:20px;height:20px;border-radius:6px;border:1.5px solid {{ s.boxBorder }};background:{{ s.boxBg }};display:flex;align-items:center;justify-content:center;flex:none;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="opacity:{{ s.checkOpacity }};"><path d="M4 12.5l5 5L20 6.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round"></path></svg>
+              </span>
+              <span style="font:500 14px 'IBM Plex Sans',sans-serif;color:#1F2937;">{{ s.label }}</span>
+              <span style="font:400 12.5px 'Fira Code',monospace;color:#0066CC;margin-left:auto;">guide →</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+      <button onClick="{{ finishOnboarding }}" style="background:#0066CC;color:#fff;border:none;border-radius:8px;padding:14px;font:600 15px Inter,sans-serif;width:100%;">Go to my dashboard</button>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ APP SHELL ============ -->
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;min-height:100vh;align-items:stretch;">
+
+  <!-- sidebar -->
+  <div style="width:232px;flex:none;background:#0A1428;display:flex;flex-direction:column;padding:22px 14px;gap:4px;">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 10px 22px;">
+      <img src="assets/framis-mark.png" alt="Framis" style="height:24px;width:auto;">
+      <span style="font:700 17px Inter,sans-serif;color:#fff;letter-spacing:-0.02em;">Framis</span>
+    </div>
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+      <button onClick="{{ n.go }}" style="display:flex;align-items:center;gap:11px;background:{{ n.bg }};border:none;border-radius:8px;padding:11px 12px;text-align:left;width:100%;">
+        <span style="width:8px;height:8px;border-radius:2px;background:{{ n.dot }};display:inline-block;flex:none;"></span>
+        <span style="font:600 13.5px Inter,sans-serif;color:{{ n.color }};">{{ n.label }}</span>
+        <span style="margin-left:auto;font:500 11px 'Fira Code',monospace;color:#5B6B82;">{{ n.badge }}</span>
+      </button>
+    </sc-for>
+    <div style="margin-top:auto;">
+      <sc-if value="{{ showStreaks }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#121F35;border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <span style="font:700 22px Inter,sans-serif;color:#4B9E8F;">12</span>
+            <span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#8FA0B5;">day streak</span>
+          </div>
+          <div style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#5B6B82;margin-top:4px;">Longest: 28 days</div>
+        </div>
+      </sc-if>
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;">
+        <span style="width:30px;height:30px;border-radius:50%;background:#4B9E8F;color:#fff;display:flex;align-items:center;justify-content:center;font:600 13px Inter,sans-serif;flex:none;">{{ initial }}</span>
+        <div>
+          <div style="font:600 13px Inter,sans-serif;color:#fff;">{{ displayName }}</div>
+          <div style="font:400 11px 'IBM Plex Sans',sans-serif;color:#5B6B82;">Week 18 of 48</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- main -->
+  <div style="flex:1;min-width:0;padding:36px 44px 64px;max-width:1100px;">
+
+  <!-- ===== DASHBOARD ===== -->
+  <sc-if value="{{ tabDash }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Dashboard">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:26px;">
+      <div>
+        <h1 style="font:700 27px Inter,sans-serif;margin:0 0 6px;letter-spacing:-0.02em;">Welcome back, {{ displayName }}.</h1>
+        <p style="font:400 14.5px 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0;">Phase 3 · Software Engineering Discipline · estimated completion Nov 2026</p>
+      </div>
+      <button onClick="{{ goLesson }}" style="background:#0066CC;color:#fff;border:none;border-radius:8px;padding:12px 22px;font:600 14px Inter,sans-serif;">Resume: Testing Basics →</button>
+    </div>
+
+    <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 26px;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+        <span style="font:600 14px Inter,sans-serif;">Overall progress</span>
+        <span style="font:500 12.5px 'Fira Code',monospace;color:#6B7280;">Week 18 / 48 · 38%</span>
+      </div>
+      <div style="height:10px;background:#EDF0F4;border-radius:5px;overflow:hidden;">
+        <div style="height:100%;width:38%;background:linear-gradient(90deg,#0066CC,#4B9E8F);border-radius:5px;"></div>
+      </div>
+      <div style="display:flex;gap:26px;margin-top:16px;flex-wrap:wrap;">
+        <div><span style="font:700 18px Inter,sans-serif;">8</span> <span style="font:400 13px 'IBM Plex Sans',sans-serif;color:#6B7280;">modules complete</span></div>
+        <div><span style="font:700 18px Inter,sans-serif;">2/6</span> <span style="font:400 13px 'IBM Plex Sans',sans-serif;color:#6B7280;">capstones shipped</span></div>
+        <div><span style="font:700 18px Inter,sans-serif;">94%</span> <span style="font:400 13px 'IBM Plex Sans',sans-serif;color:#6B7280;">lesson completion</span></div>
+        <div><span style="font:700 18px Inter,sans-serif;">4.2/5</span> <span style="font:400 13px 'IBM Plex Sans',sans-serif;color:#6B7280;">review quality</span></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
+      <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 24px;">
+        <div style="font:600 14px Inter,sans-serif;margin-bottom:16px;">This week <span style="font:400 12.5px 'IBM Plex Sans',sans-serif;color:#6B7280;">· 6.5 of 10–15 hrs</span></div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <sc-for list="{{ weekTasks }}" as="t" hint-placeholder-count="4">
+            <button onClick="{{ t.go }}" style="display:flex;align-items:center;gap:12px;background:{{ t.bg }};border:1px solid {{ t.border }};border-radius:9px;padding:12px 14px;text-align:left;width:100%;">
+              <span style="width:19px;height:19px;border-radius:6px;border:1.5px solid {{ t.boxBorder }};background:{{ t.boxBg }};display:flex;align-items:center;justify-content:center;flex:none;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style="opacity:{{ t.checkOpacity }};"><path d="M4 12.5l5 5L20 6.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round"></path></svg>
+              </span>
+              <span style="flex:1;">
+                <span style="display:block;font:500 13.5px 'IBM Plex Sans',sans-serif;color:#1F2937;text-decoration:{{ t.deco }};">{{ t.label }}</span>
+                <span style="display:block;font:400 11.5px 'IBM Plex Sans',sans-serif;color:#6B7280;">{{ t.meta }}</span>
+              </span>
+              <span style="font:500 11.5px 'Fira Code',monospace;color:#0066CC;">{{ t.cta }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 24px;">
+          <div style="font:600 14px Inter,sans-serif;margin-bottom:14px;">Capstone in progress</div>
+          <div style="font:600 16px Inter,sans-serif;margin-bottom:4px;">Project 3 — App with tests, auth &amp; CI</div>
+          <p style="font:400 13.5px/1.55 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 14px;">Due in 2 weeks. Two peers are assigned to review your Notes App this Friday.</p>
+          <button onClick="{{ goCapstone }}" style="background:#F0F6FC;color:#0066CC;border:1px solid #C9DEF2;border-radius:8px;padding:10px 18px;font:600 13px Inter,sans-serif;">Open project brief</button>
+        </div>
+        <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 24px;">
+          <div style="font:600 14px Inter,sans-serif;margin-bottom:14px;">Peer review queue <span style="font:600 11px Inter,sans-serif;color:#fff;background:#DC2626;border-radius:999px;padding:2px 8px;margin-left:6px;">1 due</span></div>
+          <p style="font:400 13.5px/1.55 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 14px;">Jordan submitted their Notes App. Your review is due in 2 days — reviewing others is how you learn to read code.</p>
+          <button onClick="{{ goReview }}" style="background:#F0F6FC;color:#0066CC;border:1px solid #C9DEF2;border-radius:8px;padding:10px 18px;font:600 13px Inter,sans-serif;">Start review</button>
+        </div>
+        <sc-if value="{{ showStreaks }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 24px;">
+            <div style="font:600 14px Inter,sans-serif;margin-bottom:12px;">Badges</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#0066CC;background:#EAF2FB;border-radius:999px;padding:6px 13px;">Git Master</span>
+              <span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#059669;background:#E7F5F1;border-radius:999px;padding:6px 13px;">Debugger</span>
+              <span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#B45309;background:#FDF3E1;border-radius:999px;padding:6px 13px;">Peer Reviewer Star</span>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== LESSON ===== -->
+  <sc-if value="{{ tabLesson }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Lesson" style="max-width:780px;">
+    <div style="font:500 12.5px 'Fira Code',monospace;color:#6B7280;margin-bottom:10px;">MODULE 2 · PYTHON BASICS · LESSON 1 OF 4</div>
+    <h1 style="font:700 30px Inter,sans-serif;margin:0 0 10px;letter-spacing:-0.02em;">Variables — storing information</h1>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:30px;">
+      <span style="font:400 13px 'IBM Plex Sans',sans-serif;color:#6B7280;">~25 min hands-on</span>
+      <span style="color:#D6DBE3;">·</span>
+      <span style="font:400 13px 'IBM Plex Sans',sans-serif;color:#6B7280;">One concept. That’s the whole lesson.</span>
+      <button onClick="{{ toggleSimpler }}" style="margin-left:auto;background:#fff;border:1px solid #D6DBE3;border-radius:999px;padding:7px 16px;font:600 12.5px Inter,sans-serif;color:#0066CC;">{{ simplerLabel }}</button>
+    </div>
+
+    <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:26px 28px;margin-bottom:18px;">
+      <p style="font:400 16px/1.7 'IBM Plex Sans',sans-serif;margin:0;text-wrap:pretty;">{{ conceptCopy }}</p>
+    </div>
+
+    <!-- motion visualisation -->
+    <div style="background:#0A1428;border-radius:12px;padding:26px 28px 22px;margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;">
+        <span style="font:500 12px 'Fira Code',monospace;color:#4B9E8F;letter-spacing:0.06em;">WATCH IT MOVE</span>
+        <button onClick="{{ playViz }}" style="background:#0066CC;color:#fff;border:none;border-radius:999px;padding:9px 20px;font:600 13px Inter,sans-serif;">{{ vizBtnLabel }}</button>
+      </div>
+      <div style="position:relative;height:190px;">
+        <div style="position:absolute;left:0;top:28px;background:#121F35;border:1px solid {{ vizCodeBorder }};border-radius:10px;padding:16px 18px;font:500 15px 'Fira Code',monospace;color:#E8EAF0;transition:border-color .5s;">
+          <div>name = <span style="color:#4B9E8F;">"Alex"</span></div>
+          <div style="margin-top:8px;color:{{ vizPrintColor }};transition:color .5s;">print(name)</div>
+        </div>
+        <div style="position:absolute;left:{{ chipLeft }};top:{{ chipTop }};opacity:{{ chipOpacity }};transition:all .9s cubic-bezier(.4,0,.2,1);background:#4B9E8F;color:#fff;border-radius:8px;padding:7px 15px;font:600 14px 'Fira Code',monospace;box-shadow:0 6px 18px rgba(75,158,143,.4);">"Alex"</div>
+        <div style="position:absolute;right:0;top:16px;width:170px;">
+          <div style="border:2px dashed {{ boxBorder }};background:{{ boxBg }};border-radius:12px;height:96px;display:flex;align-items:center;justify-content:center;transition:all .6s;">
+            <span style="font:600 15px 'Fira Code',monospace;color:#4B9E8F;opacity:{{ boxValueOpacity }};transition:opacity .5s;">"Alex"</span>
+          </div>
+          <div style="text-align:center;margin-top:10px;font:500 13px 'Fira Code',monospace;color:#8FA0B5;">name</div>
+        </div>
+        <div style="position:absolute;left:0;bottom:0;right:0;background:#121F35;border-radius:8px;padding:10px 14px;font:400 13px 'Fira Code',monospace;color:#8FA0B5;">
+          <span style="color:#5B6B82;">output › </span><span style="color:#E8EAF0;opacity:{{ vizOutputOpacity }};transition:opacity .5s;">Alex</span>
+        </div>
+      </div>
+      <div style="margin-top:16px;font:400 14px/1.5 'IBM Plex Sans',sans-serif;color:#B7C0CE;min-height:22px;">{{ vizCaption }}</div>
+    </div>
+
+    <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 28px;margin-bottom:18px;">
+      <div style="font:600 13px Inter,sans-serif;color:#6B7280;margin-bottom:10px;">IN THE REAL WORLD</div>
+      <p style="font:400 15px/1.65 'IBM Plex Sans',sans-serif;margin:0 0 12px;">In a restaurant app, you might store:</p>
+      <div style="background:#F4F6F9;border-radius:8px;padding:14px 18px;font:400 14px/1.7 'Fira Code',monospace;color:#1F2937;">user_name = <span style="color:#4B9E8F;">"Sarah"</span><br>order_total = <span style="color:#0066CC;">42.50</span></div>
+    </div>
+
+    <!-- sandbox -->
+    <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;overflow:hidden;margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #E4E7EE;">
+        <span style="font:600 14px Inter,sans-serif;">Try it yourself</span>
+        <div style="display:flex;gap:8px;">
+          <button onClick="{{ resetCode }}" style="background:#fff;border:1px solid #D6DBE3;border-radius:7px;padding:8px 15px;font:600 12.5px Inter,sans-serif;color:#6B7280;">Reset</button>
+          <button onClick="{{ runCode }}" style="background:#059669;color:#fff;border:none;border-radius:7px;padding:8px 18px;font:600 12.5px Inter,sans-serif;">▸ Run</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;">
+        <textarea value="{{ code }}" onChange="{{ setCode }}" spellcheck="false" style="flex:1 1 320px;min-height:170px;border:none;resize:vertical;background:#0A1428;color:#E8EAF0;padding:18px 20px;font:400 14px/1.7 'Fira Code',monospace;"></textarea>
+        <div style="flex:1 1 240px;min-height:170px;background:#F4F6F9;padding:18px 20px;border-left:1px solid #E4E7EE;">
+          <div style="font:500 11px 'Fira Code',monospace;color:#6B7280;margin-bottom:10px;">OUTPUT</div>
+          <sc-for list="{{ outputLines }}" as="line" hint-placeholder-count="1">
+            <div style="font:400 13.5px/1.7 'Fira Code',monospace;color:{{ line.color }};white-space:pre-wrap;">{{ line.text }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="padding:12px 20px;background:#FDF9F0;border-top:1px solid #F1E5C9;font:400 13px 'IBM Plex Sans',sans-serif;color:#8A6D1F;">Challenge: store your own name and age in variables, then print “Hi [name], you are [age]!”</div>
+    </div>
+
+    <!-- quiz -->
+    <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:24px 28px;margin-bottom:18px;">
+      <div style="font:600 13px Inter,sans-serif;color:#6B7280;margin-bottom:12px;">CHECK YOUR UNDERSTANDING</div>
+      <div style="font:400 15px/1.6 'IBM Plex Sans',sans-serif;margin-bottom:6px;">What does this do?</div>
+      <div style="background:#F4F6F9;border-radius:8px;padding:12px 18px;font:400 14px/1.7 'Fira Code',monospace;margin-bottom:16px;">x = 5<br>y = x + 3</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <sc-for list="{{ quizOptions }}" as="qo" hint-placeholder-count="3">
+          <button onClick="{{ qo.pick }}" style="display:flex;align-items:center;gap:12px;border:1.5px solid {{ qo.border }};background:{{ qo.bg }};border-radius:9px;padding:13px 16px;text-align:left;font:500 14px 'IBM Plex Sans',sans-serif;color:#1F2937;">
+            <span style="font:600 12.5px 'Fira Code',monospace;color:{{ qo.keyColor }};">{{ qo.key }}</span>
+            <span>{{ qo.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="margin-top:14px;font:500 14px/1.55 'IBM Plex Sans',sans-serif;color:{{ quizFeedbackColor }};min-height:20px;">{{ quizFeedback }}</div>
+    </div>
+
+    <div style="background:#E7F5F1;border-radius:12px;padding:22px 28px;margin-bottom:26px;">
+      <div style="font:600 13px Inter,sans-serif;color:#059669;margin-bottom:8px;">KEY TAKEAWAY</div>
+      <p style="font:500 15.5px/1.6 'IBM Plex Sans',sans-serif;color:#1F2937;margin:0;">Variables store values you’ll use later. Give them clear names so future-you remembers what they hold.</p>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div style="font:400 12.5px 'IBM Plex Sans',sans-serif;color:#6B7280;">Next up</div>
+        <div style="font:600 15px Inter,sans-serif;">Functions — reusable recipes</div>
+      </div>
+      <button onClick="{{ completeLesson }}" style="background:{{ lessonBtnBg }};color:#fff;border:none;border-radius:9px;padding:14px 26px;font:600 15px Inter,sans-serif;animation:{{ lessonBtnAnim }};">{{ lessonBtnLabel }}</button>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== CAPSTONE ===== -->
+  <sc-if value="{{ tabCapstone }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Capstone" style="max-width:780px;">
+    <div style="font:500 12.5px 'Fira Code',monospace;color:#6B7280;margin-bottom:10px;">CAPSTONE 2 · PHASE 2 · INTERMEDIATE · 2–3 WEEKS · SOLO</div>
+    <h1 style="font:700 30px Inter,sans-serif;margin:0 0 14px;letter-spacing:-0.02em;">Full-stack notes app with login</h1>
+    <p style="font:400 15.5px/1.65 'IBM Plex Sans',sans-serif;color:#4B5563;margin:0 0 26px;max-width:640px;">You’re building an MVP where users sign up, log in, and manage private notes. React frontend, FastAPI + SQLite backend, deployed on Vercel + Railway, 70%+ test coverage.</p>
+
+    <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 26px;margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;">
+          <span style="font:600 14px Inter,sans-serif;">Acceptance criteria</span>
+          <span style="font:500 12.5px 'Fira Code',monospace;color:{{ critCountColor }};">{{ critCount }} / 7</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ criteriaItems }}" as="c" hint-placeholder-count="7">
+            <button onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:12px;background:none;border:none;padding:2px 0;text-align:left;">
+              <span style="width:19px;height:19px;border-radius:6px;border:1.5px solid {{ c.boxBorder }};background:{{ c.boxBg }};display:flex;align-items:center;justify-content:center;flex:none;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style="opacity:{{ c.checkOpacity }};"><path d="M4 12.5l5 5L20 6.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round"></path></svg>
+              </span>
+              <span style="font:400 14px 'IBM Plex Sans',sans-serif;color:#1F2937;text-decoration:{{ c.deco }};">{{ c.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 26px;margin-bottom:18px;">
+        <div style="font:600 14px Inter,sans-serif;margin-bottom:6px;">Stuck? Reveal hints one at a time</div>
+        <p style="font:400 12.5px 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 14px;">Struggling first is how it sticks. Hints don’t affect your score.</p>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <sc-for list="{{ hintItems }}" as="h" hint-placeholder-count="3">
+            <sc-if value="{{ h.open }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#F4F6F9;border-radius:8px;padding:12px 16px;font:400 13.5px/1.55 'IBM Plex Sans',sans-serif;color:#1F2937;"><span style="font:600 12px 'Fira Code',monospace;color:#0066CC;">HINT {{ h.num }} · </span>{{ h.text }}</div>
+            </sc-if>
+            <sc-if value="{{ h.closed }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ h.reveal }}" style="background:#fff;border:1px dashed #C4CBD6;border-radius:8px;padding:12px 16px;text-align:left;font:600 13px Inter,sans-serif;color:#6B7280;">Reveal hint {{ h.num }}</button>
+            </sc-if>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 26px;">
+        <div style="font:600 14px Inter,sans-serif;margin-bottom:16px;">Submit your project</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <input value="{{ ghUrl }}" onChange="{{ setGhUrl }}" placeholder="GitHub repo URL (must be public)" style="border:1px solid #D6DBE3;border-radius:8px;padding:12px 14px;font:400 14px 'Fira Code',monospace;">
+          <input value="{{ depUrl }}" onChange="{{ setDepUrl }}" placeholder="Deployed URL" style="border:1px solid #D6DBE3;border-radius:8px;padding:12px 14px;font:400 14px 'Fira Code',monospace;">
+          <div style="font:400 12.5px 'IBM Plex Sans',sans-serif;color:#6B7280;">On submit we auto-check: repo is public · README exists · no hardcoded secrets · tests pass. Then two peers review within 3 days.</div>
+          <button onClick="{{ submitCapstone }}" style="background:{{ capBtnBg }};color:#fff;border:none;border-radius:9px;padding:14px;font:600 15px Inter,sans-serif;">Submit for peer review</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSubmitted }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border:1px solid #B7E3D4;border-radius:12px;padding:34px 32px;text-align:center;">
+        <div style="width:62px;height:62px;border-radius:50%;background:#E7F5F1;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;animation:framisPulse 1.4s ease-out 2;">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5 5L20 6.5" stroke="#059669" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <h2 style="font:700 22px Inter,sans-serif;margin:0 0 8px;">Shipped. That’s project 3 of 6.</h2>
+        <p style="font:400 14.5px/1.6 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 6px;">Auto-checks passed: repo public · README found · no secrets detected · 12/12 tests green.</p>
+        <p style="font:400 14.5px/1.6 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 22px;">Two peers have been assigned. Reviews land within 3 days, then it goes on your portfolio.</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button onClick="{{ goDashboard }}" style="background:#0066CC;color:#fff;border:none;border-radius:8px;padding:12px 22px;font:600 14px Inter,sans-serif;">Back to dashboard</button>
+          <button onClick="{{ goReview }}" style="background:#fff;color:#0066CC;border:1px solid #C9DEF2;border-radius:8px;padding:12px 22px;font:600 14px Inter,sans-serif;">Review Jordan’s project now</button>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- ===== PEER REVIEW ===== -->
+  <sc-if value="{{ tabReview }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Peer review" style="max-width:780px;">
+    <div style="font:500 12.5px 'Fira Code',monospace;color:#6B7280;margin-bottom:10px;">PEER REVIEW · ANONYMISED · DUE IN 2 DAYS</div>
+    <h1 style="font:700 30px Inter,sans-serif;margin:0 0 14px;letter-spacing:-0.02em;">Review: Notes App <span style="font:500 16px 'Fira Code',monospace;color:#6B7280;">by learner #4127</span></h1>
+
+    <sc-if value="{{ notReviewed }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+        <span style="font:500 12.5px 'Fira Code',monospace;color:#0066CC;background:#EAF2FB;border-radius:999px;padding:7px 15px;">github.com/•••/notes-app</span>
+        <span style="font:500 12.5px 'Fira Code',monospace;color:#059669;background:#E7F5F1;border-radius:999px;padding:7px 15px;">notes-app.vercel.app ✓ live</span>
+        <span style="font:500 12.5px 'Fira Code',monospace;color:#6B7280;background:#F4F6F9;border-radius:999px;padding:7px 15px;">coverage 74%</span>
+      </div>
+
+      <div style="background:#0A1428;border-radius:12px;padding:20px 24px;margin-bottom:20px;">
+        <div style="font:500 11.5px 'Fira Code',monospace;color:#8FA0B5;margin-bottom:12px;">auth.py · does anything look off?</div>
+        <pre style="margin:0;font:400 13.5px/1.75 'Fira Code',monospace;color:#E8EAF0;white-space:pre-wrap;">def login(email, password):
+    user = db.get_user(email)
+    <span style="background:rgba(220,38,38,.22);border-radius:4px;padding:1px 4px;">if user.password == password:</span>  <span style="color:#5B6B82;"># ← plain-text compare?</span>
+        return make_token(user)
+    return None</pre>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 26px;margin-bottom:18px;">
+        <div style="font:600 14px Inter,sans-serif;margin-bottom:16px;">Scorecard</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <sc-for list="{{ reviewRows }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+              <span style="flex:1;min-width:220px;font:400 14px 'IBM Plex Sans',sans-serif;">{{ r.label }} <span style="color:#9AA3AF;font-size:12px;">({{ r.weight }})</span></span>
+              <span style="display:flex;gap:6px;">
+                <sc-for list="{{ r.stars }}" as="st" hint-placeholder-count="5">
+                  <button onClick="{{ st.pick }}" style="width:26px;height:26px;border-radius:50%;border:1.5px solid {{ st.border }};background:{{ st.bg }};font:600 11.5px Inter,sans-serif;color:{{ st.color }};padding:0;">{{ st.n }}</button>
+                </sc-for>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E7EE;border-radius:12px;padding:22px 26px;margin-bottom:20px;">
+        <div style="font:600 14px Inter,sans-serif;margin-bottom:4px;">Feedback</div>
+        <p style="font:400 12.5px 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 16px;">Guided template — vague feedback helps no one.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <sc-for list="{{ feedbackFields }}" as="f" hint-placeholder-count="4">
+            <div>
+              <div style="font:600 12.5px Inter,sans-serif;color:#4B5563;margin-bottom:6px;">{{ f.label }}</div>
+              <textarea value="{{ f.value }}" onChange="{{ f.set }}" placeholder="{{ f.ph }}" style="width:100%;min-height:54px;border:1px solid #D6DBE3;border-radius:8px;padding:10px 12px;font:400 13.5px/1.5 'IBM Plex Sans',sans-serif;resize:vertical;"></textarea>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ submitReview }}" style="background:{{ reviewBtnBg }};color:#fff;border:none;border-radius:9px;padding:14px 26px;font:600 15px Inter,sans-serif;margin-top:16px;">Submit review</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isReviewed }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff;border:1px solid #B7E3D4;border-radius:12px;padding:34px 32px;text-align:center;">
+        <h2 style="font:700 22px Inter,sans-serif;margin:0 0 8px;">Review sent — nicely spotted.</h2>
+        <p style="font:400 14.5px/1.6 'IBM Plex Sans',sans-serif;color:#6B7280;margin:0 0 8px;">You flagged the plain-text password compare. That’s exactly the judgment Framis is built to train.</p>
+        <p style="font:500 13px 'IBM Plex Sans',sans-serif;color:#B45309;margin:0 0 22px;">+1 toward your Peer Reviewer Star badge · 1 of 2 reviews done this week</p>
+        <button onClick="{{ goDashboard }}" style="background:#0066CC;color:#fff;border:none;border-radius:8px;padding:12px 22px;font:600 14px Inter,sans-serif;">Back to dashboard</button>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  </div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;startScreen&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;landing&quot;, &quot;dashboard&quot;, &quot;lesson&quot;], &quot;default&quot;: &quot;landing&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Prototype&quot;},
+  &quot;learnerName&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Alex&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Prototype&quot;},
+  &quot;showStreaks&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Prototype&quot;}
+}">
+const STARTER_CODE = 'name = "Alex"\nage = 24\nprint("Hi " + name + ", you are " + age + "!")';
+
+class Component extends DCLogic {
+  state = {
+    screen: 'landing',
+    appTab: 'dashboard',
+    demoT: 0,
+    reveal: { how: 'off', curr: 'off', cta: 'off' },
+    obStep: 1, obName: '', obEmail: '', obPw: '',
+    obAnswers: { q1: null, q2: null, q3: null },
+    setup: { py: false, vsc: false, git: false },
+    simpler: false,
+    vizStage: 0, vizPlaying: false,
+    code: STARTER_CODE, output: [],
+    quizPick: null,
+    lessonDone: false,
+    criteria: [false, false, false, false, false, false, false],
+    hintsOpen: [false, false, false],
+    ghUrl: '', depUrl: '', capstoneSubmitted: false,
+    scores: { crit: 0, read: 0, tests: 0, deploy: 0, readme: 0 },
+    feedback: { well: '', improve: '', question: '', learned: '' },
+    reviewSent: false,
+    weekDone: [true, false, false, false],
+  };
+
+  componentDidMount() {
+    const s = this.props.startScreen;
+    if (s === 'dashboard') this.setState({ screen: 'app', appTab: 'dashboard' });
+    if (s === 'lesson') this.setState({ screen: 'app', appTab: 'lesson' });
+    this._timers = [];
+    this._demoInt = setInterval(() => {
+      if (this.state.screen !== 'landing') return;
+      this.setState((st) => ({ demoT: st.demoT + 1 }));
+    }, 100);
+    this._obs = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) {
+          const k = en.target.getAttribute('data-reveal-key');
+          this.setState((st) => ({ reveal: { ...st.reveal, [k]: 'on' } }));
+          this._obs.unobserve(en.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    setTimeout(() => {
+      document.querySelectorAll('[data-reveal-key]').forEach((el) => this._obs.observe(el));
+    }, 350);
+  }
+  componentWillUnmount() {
+    (this._timers || []).forEach(clearTimeout);
+    clearInterval(this._demoInt);
+    if (this._obs) this._obs.disconnect();
+    cancelAnimationFrame(this._raf);
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+  }
+
+  heroCanvasRef = (el) => {
+    if (!el) { cancelAnimationFrame(this._raf); this._canvasEl = null; return; }
+    if (this._canvasEl === el) return;
+    this._canvasEl = el;
+    const parent = el.parentElement;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const size = () => {
+      el._w = parent.offsetWidth; el._h = parent.offsetHeight;
+      el.width = el._w * dpr; el.height = el._h * dpr;
+    };
+    size();
+    this._onResize = size;
+    window.addEventListener('resize', size);
+    const nodes = [];
+    for (let i = 0; i < 44; i++) nodes.push({
+      x: Math.random() * el._w, y: Math.random() * el._h,
+      vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35,
+      r: 1.2 + Math.random() * 1.8,
+      c: Math.random() > 0.5 ? '0,102,204' : '75,158,143',
+    });
+    this._mouse = { x: -999, y: -999 };
+    parent.addEventListener('mousemove', (e) => {
+      const b = el.getBoundingClientRect();
+      this._mouse = { x: e.clientX - b.left, y: e.clientY - b.top };
+    });
+    parent.addEventListener('mouseleave', () => { this._mouse = { x: -999, y: -999 }; });
+    const ctx = el.getContext('2d');
+    const draw = () => {
+      if (!el.isConnected) return;
+      if (el._w !== parent.offsetWidth || el._h !== parent.offsetHeight) {
+        size();
+        if (el._w > 0) for (const n of nodes) { if (n.x > el._w || n.x < 0) n.x = Math.random() * el._w; if (n.y > el._h || n.y < 0) n.y = Math.random() * el._h; }
+      }
+      if (el._w === 0) { this._raf = requestAnimationFrame(draw); return; }
+      const w = el._w, h = el._h;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      for (const n of nodes) {
+        const dx = this._mouse.x - n.x, dy = this._mouse.y - n.y;
+        if (dx * dx + dy * dy < 24000) { n.vx += dx * 0.00005; n.vy += dy * 0.00005; }
+        n.vx *= 0.996; n.vy *= 0.996;
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < -20) n.x = w + 20; if (n.x > w + 20) n.x = -20;
+        if (n.y < -20) n.y = h + 20; if (n.y > h + 20) n.y = -20;
+      }
+      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        const ddx = a.x - b.x, ddy = a.y - b.y;
+        const d = Math.sqrt(ddx * ddx + ddy * ddy);
+        if (d < 120) {
+          ctx.strokeStyle = 'rgba(75,158,143,' + (0.22 * (1 - d / 120)).toFixed(3) + ')';
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+      for (const n of nodes) {
+        ctx.fillStyle = 'rgba(' + n.c + ',0.75)';
+        ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 6.284); ctx.fill();
+      }
+      this._raf = requestAnimationFrame(draw);
+    };
+    draw();
+  };
+
+  // ---- mini python-ish interpreter ----
+  runPython(src) {
+    const vars = {}; const out = [];
+    const splitTop = (s, sep) => {
+      const parts = []; let cur = '', q = null;
+      for (const ch of s) {
+        if (q) { cur += ch; if (ch === q) q = null; continue; }
+        if (ch === '"' || ch === "'") { q = ch; cur += ch; continue; }
+        if (ch === sep) { parts.push(cur); cur = ''; continue; }
+        cur += ch;
+      }
+      parts.push(cur); return parts;
+    };
+    const evalExpr = (e) => {
+      e = e.trim(); let m;
+      const plus = splitTop(e, '+');
+      if (plus.length > 1) {
+        let acc = evalExpr(plus[0]);
+        for (let i = 1; i < plus.length; i++) {
+          const v = evalExpr(plus[i]);
+          acc = (typeof acc === 'string' || typeof v === 'string') ? String(acc) + String(v) : acc + v;
+        }
+        return acc;
+      }
+      const mul = splitTop(e, '*');
+      if (mul.length > 1) return mul.map(evalExpr).reduce((a, b) => a * b);
+      const min = splitTop(e, '-');
+      if (min.length > 1 && min[0].trim() !== '') return min.map(evalExpr).reduce((a, b) => a - b);
+      if ((m = e.match(/^f(["'])([\s\S]*)\1$/))) return m[2].replace(/\{([^}]+)\}/g, (_, v) => String(evalExpr(v)));
+      if ((m = e.match(/^(["'])([\s\S]*)\1$/))) return m[2];
+      if (/^-?\d+(\.\d+)?$/.test(e)) return Number(e);
+      if ((m = e.match(/^str\((.+)\)$/))) return String(evalExpr(m[1]));
+      if ((m = e.match(/^int\((.+)\)$/))) return parseInt(evalExpr(m[1]), 10);
+      if (/^[A-Za-z_]\w*$/.test(e)) {
+        if (e in vars) return vars[e];
+        throw new Error("NameError: name '" + e + "' is not defined");
+      }
+      throw new Error("SyntaxError: couldn't understand: " + e);
+    };
+    try {
+      for (const raw of src.split('\n')) {
+        const line = raw.trim();
+        if (!line || line.startsWith('#')) continue;
+        let m;
+        if ((m = line.match(/^print\((.*)\)\s*$/))) {
+          const args = m[1].trim() === '' ? [] : splitTop(m[1], ',').map(evalExpr);
+          out.push({ text: args.join(' '), color: '#1F2937' });
+        } else if ((m = line.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/))) {
+          vars[m[1]] = evalExpr(m[2]);
+        } else {
+          throw new Error("SyntaxError: couldn't understand: " + line);
+        }
+      }
+      if (!out.length) out.push({ text: '(no output — did you call print()?)', color: '#6B7280' });
+    } catch (err) {
+      out.push({ text: err.message, color: '#DC2626' });
+    }
+    return out;
+  }
+
+  playViz = () => {
+    (this._timers || []).forEach(clearTimeout);
+    this._timers = [];
+    this.setState({ vizStage: 0, vizPlaying: true });
+    const stages = [[300, 1], [1400, 2], [2600, 3], [3800, 4]];
+    stages.forEach(([t, st]) => this._timers.push(setTimeout(() => {
+      this.setState({ vizStage: st, vizPlaying: st !== 4 });
+    }, t)));
+  };
+
+  renderVals() {
+    const S = this.state;
+    const set = (patch) => this.setState(patch);
+    const NAVY = '#0A1428', BLUE = '#0066CC', TEAL = '#4B9E8F', GREY = '#6B7280', GREEN = '#059669';
+    const displayName = (S.obName.trim() || (this.props.learnerName ?? 'Alex')).split(' ')[0];
+
+    // onboarding
+    const obBar = (n) => S.obStep >= n ? BLUE : '#E4E7EE';
+    const q = (key, opts) => ({
+      label: { q1: 'How comfortable are you in a terminal?', q2: 'Have you built and shared a project?', q3: 'Do you use AI coding tools (Claude, Copilot)?' }[key],
+      opts: opts.map((label) => {
+        const active = S.obAnswers[key] === label;
+        return {
+          label,
+          border: active ? BLUE : '#D6DBE3',
+          bg: active ? '#EAF2FB' : '#fff',
+          color: active ? BLUE : '#4B5563',
+          pick: () => set({ obAnswers: { ...S.obAnswers, [key]: label } }),
+        };
+      }),
+    });
+    const allAnswered = S.obAnswers.q1 && S.obAnswers.q2 && S.obAnswers.q3;
+    const beginner = S.obAnswers.q1 === 'Never used it';
+    const setupItems = ['py', 'vsc', 'git'].map((k, i) => ({
+      label: ['Python 3.12', 'VS Code', 'Git + GitHub account'][i],
+      boxBorder: S.setup[k] ? GREEN : '#C4CBD6',
+      boxBg: S.setup[k] ? GREEN : '#fff',
+      checkOpacity: S.setup[k] ? 1 : 0,
+      toggle: () => set({ setup: { ...S.setup, [k]: !S.setup[k] } }),
+    }));
+
+    // nav
+    const tabs = [
+      ['dashboard', 'Dashboard', ''],
+      ['lesson', 'Lesson', 'wk 18'],
+      ['capstone', 'Capstone', S.capstoneSubmitted ? 'sent' : 'due 2w'],
+      ['review', 'Peer review', S.reviewSent ? 'done' : '1 due'],
+    ];
+    const navItems = tabs.map(([id, label, badge]) => ({
+      label, badge,
+      bg: S.appTab === id ? '#1A2A44' : 'transparent',
+      dot: S.appTab === id ? TEAL : '#33455F',
+      color: S.appTab === id ? '#fff' : '#8FA0B5',
+      go: () => set({ appTab: id }),
+    }));
+
+    // dashboard week tasks
+    const taskDefs = [
+      ['Lesson: Variables — storing information', '25 min · Module 2', 'open', 'lesson'],
+      ['Lesson: Mocking & fixtures', '30 min · due tomorrow', 'open', 'lesson'],
+      ['Sandbox: unit tests for expense tracker', '1 hr', 'open', 'lesson'],
+      ['Capstone: submit Notes App', '2–3 wks', 'open', 'capstone'],
+    ];
+    const weekTasks = taskDefs.map(([label, meta, cta, tab], i) => {
+      const done = S.weekDone[i];
+      return {
+        label, meta, cta: done ? 'done' : cta + ' →',
+        bg: done ? '#F7FAF9' : '#fff',
+        border: done ? '#DBEAE4' : '#E4E7EE',
+        boxBorder: done ? GREEN : '#C4CBD6',
+        boxBg: done ? GREEN : '#fff',
+        checkOpacity: done ? 1 : 0,
+        deco: done ? 'line-through' : 'none',
+        go: () => set({ appTab: tab }),
+      };
+    });
+
+    // lesson viz
+    const vz = S.vizStage;
+    const captions = [
+      'Press play to see what really happens when you create a variable.',
+      'Python reads the right side first: the value "Alex".',
+      'The value moves into a labelled box in memory. The label is “name”.',
+      'Stored. From now on, “name” points at that box.',
+      'print(name) opens the box, takes the value out, and shows it.',
+    ];
+    const outputLines = S.output.length ? S.output : [{ text: '— run your code to see output here', color: '#9AA3AF' }];
+
+    // quiz
+    const quizAnswers = [
+      ['a', 'x changes to 8', false],
+      ['b', 'y becomes 8', true],
+      ['c', 'both stay the same', false],
+    ];
+    const quizOptions = quizAnswers.map(([key, label, correct]) => {
+      const picked = S.quizPick === key;
+      let border = '#D6DBE3', bg = '#fff', keyColor = GREY;
+      if (picked && correct) { border = GREEN; bg = '#E7F5F1'; keyColor = GREEN; }
+      if (picked && !correct) { border = '#DC2626'; bg = '#FDF0F0'; keyColor = '#DC2626'; }
+      return { key: key + ')', label, border, bg, keyColor, pick: () => set({ quizPick: key }) };
+    });
+    const quizCorrect = S.quizPick === 'b';
+    const quizFeedback = S.quizPick == null ? '' : quizCorrect
+      ? 'Right. x stays 5 — Python copies its value into the maths, then stores 8 in a new box called y.'
+      : 'Not quite — look at which side of the = the maths happens on, then try again.';
+
+    // capstone
+    const critLabels = [
+      'User can create an account with email + password',
+      'User can log in and see only their own notes',
+      'User can create, edit and delete notes',
+      'Logging out clears the auth token',
+      'Backend tests cover the main flows (70%+)',
+      'No hardcoded secrets anywhere in the repo',
+      'Deployed and working at a public URL',
+    ];
+    const criteriaItems = critLabels.map((label, i) => ({
+      label,
+      boxBorder: S.criteria[i] ? GREEN : '#C4CBD6',
+      boxBg: S.criteria[i] ? GREEN : '#fff',
+      checkOpacity: S.criteria[i] ? 1 : 0,
+      deco: 'none',
+      toggle: () => { const c = [...S.criteria]; c[i] = !c[i]; set({ criteria: c }); },
+    }));
+    const critCount = S.criteria.filter(Boolean).length;
+    const hintTexts = [
+      'Start with the database schema: a users table and a notes table with a user_id foreign key.',
+      'Never store raw passwords — hash them with bcrypt before they touch the database.',
+      'Attach a JWT to each request; the backend checks it before returning any notes.',
+    ];
+    const hintItems = hintTexts.map((text, i) => ({
+      num: i + 1, text,
+      open: S.hintsOpen[i], closed: !S.hintsOpen[i],
+      reveal: () => { const h = [...S.hintsOpen]; h[i] = true; set({ hintsOpen: h }); },
+    }));
+    const capReady = critCount === 7 && S.ghUrl.trim() && S.depUrl.trim();
+
+    // review
+    const rowDefs = [
+      ['crit', 'Meets all acceptance criteria', '40%'],
+      ['read', 'Code is readable and well-structured', '20%'],
+      ['tests', 'Has 70%+ test coverage', '20%'],
+      ['deploy', 'Deployment works without errors', '10%'],
+      ['readme', 'README is clear for someone new', '10%'],
+    ];
+    const reviewRows = rowDefs.map(([key, label, weight]) => ({
+      label, weight,
+      stars: [1, 2, 3, 4, 5].map((n) => {
+        const on = S.scores[key] >= n;
+        return {
+          n,
+          border: on ? BLUE : '#D6DBE3',
+          bg: on ? BLUE : '#fff',
+          color: on ? '#fff' : GREY,
+          pick: () => set({ scores: { ...S.scores, [key]: n } }),
+        };
+      }),
+    }));
+    const fbDefs = [
+      ['well', 'What worked well (1–2 things)', 'e.g. Clean separation between routes and db logic…'],
+      ['improve', 'One thing that could improve', 'e.g. Passwords are compared in plain text — try bcrypt…'],
+      ['question', 'One question I had', 'e.g. Why SQLite over Postgres here?'],
+      ['learned', 'One thing I learned from this code', 'e.g. Neat use of FastAPI dependencies for auth.'],
+    ];
+    const feedbackFields = fbDefs.map(([key, label, ph]) => ({
+      label, ph,
+      value: S.feedback[key],
+      set: (e) => set({ feedback: { ...S.feedback, [key]: e.target.value } }),
+    }));
+    const scoresDone = Object.values(S.scores).every((v) => v > 0);
+    const reviewReady = scoresDone && S.feedback.well.trim() && S.feedback.improve.trim();
+
+    // landing motion (frame-driven, 100ms ticks)
+    const t = S.demoT;
+    const f = t % 60;
+    const L1 = 'name = "Alex"', L2 = 'print(name)';
+    const typed1 = Math.max(0, Math.min(L1.length, f - 2));
+    const typed2 = Math.max(0, Math.min(L2.length, f - 30));
+    const chipShown = f >= 16 && f < 28;
+    const chipFly = f >= 20;
+    const boxFilled = f >= 28;
+    const demoCaption = f < 16 ? 'Python reads the right side first: the value "Alex".'
+      : f < 28 ? 'The value flies into a labelled box in memory.'
+      : f < 44 ? 'Stored — “name” now points at that box.'
+      : 'print(name) opens the box and shows what’s inside.';
+    const cnt = (target) => String(Math.min(target, Math.max(0, Math.round((t - 8) * target / 14))));
+
+    return {
+      // landing motion
+      heroCanvas: this.heroCanvasRef,
+      demoL1: L1.slice(0, typed1),
+      demoL2: L2.slice(0, typed2),
+      demoCaret1Disp: f >= 2 && f < 18 ? 'inline-block' : 'none',
+      demoCaret2Disp: f >= 30 && f < 43 ? 'inline-block' : 'none',
+      demoChipLeft: chipFly ? 'calc(100% - 138px)' : '106px',
+      demoChipTop: chipFly ? '48px' : '28px',
+      demoChipOp: chipShown ? 1 : 0,
+      demoBoxBorder: boxFilled ? '#4B9E8F' : '#33455F',
+      demoBoxBg: boxFilled ? 'rgba(75,158,143,0.12)' : 'transparent',
+      demoBoxValOp: boxFilled ? 1 : 0,
+      demoOutOp: f >= 44 ? 1 : 0.08,
+      demoCaption,
+      statProjects: cnt(6), statConcepts: cnt(40), statLessons: cnt(48),
+      reveal: S.reveal,
+      tickerItems: ['VARIABLES', 'FUNCTIONS', 'LOOPS', 'APIS', 'DATABASES', 'AUTH', 'REACT', 'TESTING', 'CI/CD', 'EMBEDDINGS', 'RAG', 'TOKENS', 'TOOL CALLING', 'EVALS', 'AGENTS', 'FINE-TUNING'],
+
+      // routing
+      isLanding: S.screen === 'landing',
+      isOnboarding: S.screen === 'onboarding',
+      isApp: S.screen === 'app',
+      tabDash: S.appTab === 'dashboard',
+      tabLesson: S.appTab === 'lesson',
+      tabCapstone: S.appTab === 'capstone',
+      tabReview: S.appTab === 'review',
+      startOnboarding: () => set({ screen: 'onboarding', obStep: 1 }),
+      finishOnboarding: () => set({ screen: 'app', appTab: 'dashboard' }),
+      goDashboard: () => set({ appTab: 'dashboard' }),
+      goLesson: () => set({ appTab: 'lesson' }),
+      goCapstone: () => set({ appTab: 'capstone' }),
+      goReview: () => set({ appTab: 'review' }),
+      navItems, displayName,
+      initial: displayName.charAt(0).toUpperCase(),
+      showStreaks: this.props.showStreaks ?? true,
+
+      // landing
+      phases: [
+        { num: '1', delay: '0s', weeks: 'WEEKS 1–8', title: 'Programming foundations', desc: 'Terminal, Git, Python, data structures, debugging.', capstone: 'Capstone: CLI expense tracker' },
+        { num: '2', delay: '.07s', weeks: 'WEEKS 9–16', title: 'Web + full-stack basics', desc: 'HTML/CSS/JS, React, APIs, Python backend + Postgres.', capstone: 'Capstone: Notes app with login' },
+        { num: '3', delay: '.14s', weeks: 'WEEKS 17–24', title: 'Engineering discipline', desc: 'Testing, logging, security, CI/CD, Docker.', capstone: 'Capstone: Tested app with CI pipeline' },
+        { num: '4', delay: '.21s', weeks: 'WEEKS 25–32', title: 'AI application engineering', desc: 'LLM APIs, RAG, tool calling, evals and guardrails.', capstone: 'Capstone: AI Q&A system with citations' },
+        { num: '5', delay: '.28s', weeks: 'WEEKS 33–40', title: 'ML fundamentals', desc: 'Stats intuition, linear algebra, transformers, fine-tuning.', capstone: 'Capstone: Train + deploy a classifier' },
+        { num: '6', delay: '.35s', weeks: 'WEEKS 41–48', title: 'Production AI systems', desc: 'Agents, human-in-the-loop, observability, cost control.', capstone: 'Capstone: Production AI system' },
+      ],
+
+      // onboarding
+      obStepLabel: String(S.obStep),
+      obBar1: obBar(1), obBar2: obBar(2), obBar3: obBar(3),
+      obIs1: S.obStep === 1, obIs2: S.obStep === 2, obIs3: S.obStep === 3,
+      obName: S.obName, obEmail: S.obEmail, obPw: S.obPw,
+      setObName: (e) => set({ obName: e.target.value }),
+      setObEmail: (e) => set({ obEmail: e.target.value }),
+      setObPw: (e) => set({ obPw: e.target.value }),
+      obNext: () => {
+        if (S.obStep === 2 && !allAnswered) return;
+        set({ obStep: Math.min(3, S.obStep + 1) });
+      },
+      obQuestions: [
+        q('q1', ['Never used it', 'I can cd around', 'I live in it']),
+        q('q2', ['Not yet', 'Tutorials only', 'Yes, something real']),
+        q('q3', ['No', 'Sometimes', 'Daily']),
+      ],
+      obQuizBtnBg: allAnswered ? BLUE : '#B9C2CE',
+      obGreeting: 'Nice to meet you' + (S.obName.trim() ? ', ' + displayName : '') + '.',
+      obPlacement: beginner
+        ? 'We’ll start you at Module 1 — setting up like an engineer. You’ll run your first program today.'
+        : 'You’re comfortable with the basics, so we’ll start you at Module 2: Python — and your first lesson is Variables.',
+      setupItems,
+
+      weekTasks,
+
+      // lesson
+      simplerLabel: S.simpler ? 'Original explanation' : 'Explain it simpler',
+      toggleSimpler: () => set({ simpler: !S.simpler }),
+      conceptCopy: S.simpler
+        ? 'A variable is a labelled box. Put a value in. Use the label to get it back later. That’s it — everything else in this lesson is just practising that one move.'
+        : 'A variable is like a labelled box. When you write name = "Alex", you’re writing “Alex” on a sticky note and putting it into a box labelled “name”. Later, any time your code says name, Python walks over to that box and takes the value out.',
+      playViz: this.playViz,
+      vizBtnLabel: S.vizPlaying ? 'Playing…' : (vz === 4 ? '↻ Replay' : '▶ Play'),
+      vizCaption: captions[vz],
+      vizCodeBorder: vz === 1 ? TEAL : '#24344D',
+      vizPrintColor: vz === 4 ? '#E8EAF0' : '#5B6B82',
+      chipLeft: vz < 2 ? '52px' : 'calc(100% - 145px)',
+      chipTop: vz < 2 ? '38px' : '52px',
+      chipOpacity: vz === 1 || vz === 2 ? 1 : 0,
+      boxBorder: vz >= 3 ? TEAL : '#33455F',
+      boxBg: vz >= 3 ? 'rgba(75,158,143,0.12)' : 'transparent',
+      boxValueOpacity: vz >= 3 ? 1 : 0,
+      vizOutputOpacity: vz === 4 ? 1 : 0.08,
+      code: S.code,
+      setCode: (e) => set({ code: e.target.value }),
+      resetCode: () => set({ code: STARTER_CODE, output: [] }),
+      runCode: () => set({ output: this.runPython(S.code) }),
+      outputLines,
+      quizOptions,
+      quizFeedback,
+      quizFeedbackColor: quizCorrect ? GREEN : '#DC2626',
+      lessonBtnLabel: S.lessonDone ? '✓ Lesson complete' : 'Mark lesson complete',
+      lessonBtnBg: S.lessonDone ? GREEN : BLUE,
+      lessonBtnAnim: S.lessonDone ? 'framisPulse 1.2s ease-out 2' : 'none',
+      completeLesson: () => {
+        const w = [...S.weekDone]; w[0] = true;
+        set({ lessonDone: true, weekDone: w });
+      },
+
+      // capstone
+      notSubmitted: !S.capstoneSubmitted,
+      isSubmitted: S.capstoneSubmitted,
+      criteriaItems, critCount: String(critCount),
+      critCountColor: critCount === 7 ? GREEN : GREY,
+      hintItems,
+      ghUrl: S.ghUrl, depUrl: S.depUrl,
+      setGhUrl: (e) => set({ ghUrl: e.target.value }),
+      setDepUrl: (e) => set({ depUrl: e.target.value }),
+      capBtnBg: capReady ? GREEN : '#B9C2CE',
+      submitCapstone: () => { if (capReady) set({ capstoneSubmitted: true }); },
+
+      // review
+      notReviewed: !S.reviewSent,
+      isReviewed: S.reviewSent,
+      reviewRows, feedbackFields,
+      reviewBtnBg: reviewReady ? BLUE : '#B9C2CE',
+      submitReview: () => { if (reviewReady) set({ reviewSent: true }); },
+    };
+  }
+}
+</script>
+</body>
+</html>
