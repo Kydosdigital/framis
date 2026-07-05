@@ -2,13 +2,8 @@
 
 import { useEffect } from "react";
 import { useFramis, useDisplayName, CONFIG } from "@/lib/store";
-import { PHASES } from "@/lib/data";
+import { PHASES, LESSON_CONTENT } from "@/lib/data";
 import { Check } from "../ui";
-
-const LESSON_META: Record<number, { title: string; key: "variables" | "rag"; minutes: number }> = {
-  2: { title: "Variables — storing information", key: "variables", minutes: 25 },
-  14: { title: "RAG — teaching an LLM to cite its sources", key: "rag", minutes: 25 },
-};
 
 const CAPSTONE_COPY: Record<string, string> = {
   not_started: "You haven't started this yet — open the brief when you're ready.",
@@ -34,7 +29,7 @@ export default function Dashboard() {
     return <div className="text-[14px] text-ink-500">Loading your progress…</div>;
   }
 
-  const nextLesson = stats.nextLessonModuleNumber != null ? LESSON_META[stats.nextLessonModuleNumber] : null;
+  const nextLesson = stats.nextLessonModuleNumber != null ? LESSON_CONTENT[stats.nextLessonModuleNumber] : null;
   const phaseNum = Math.min(6, Math.max(1, Math.ceil((stats.nextLessonModuleNumber ?? 24) / 4)));
   const phase = PHASES[phaseNum - 1];
   const justStarting = stats.completedLessons === 0 && stats.shippedCapstones === 0;

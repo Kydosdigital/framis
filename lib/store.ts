@@ -20,6 +20,9 @@ export type Screen = "landing" | "onboarding" | "app";
 export type AppTab = "dashboard" | "lesson" | "capstone" | "review" | "portfolio" | "roadmap";
 export type QuizKey = "a" | "b" | "c";
 export type Theme = "light" | "dark";
+// null = browsing the full lesson list; "variables"/"rag" = a built lesson;
+// a number = a module picked from the browser that has no lesson content yet
+export type LessonSelection = "variables" | "rag" | number | null;
 
 type ObAnswers = { q1: string | null; q2: string | null; q3: string | null };
 type Setup = { py: boolean; vsc: boolean; git: boolean };
@@ -53,8 +56,8 @@ type State = {
   // mobile sidebar drawer
   sidebarOpen: boolean;
 
-  // which lesson is showing on the Lesson tab
-  activeLessonKey: "variables" | "rag";
+  // which lesson is showing on the Lesson tab — null means "browse all lessons"
+  activeLessonKey: LessonSelection;
 
   // onboarding
   obStep: number;
@@ -102,8 +105,8 @@ type Actions = {
   loadStats: () => Promise<void>;
   toggleSidebar: () => void;
   closeSidebar: () => void;
-  setActiveLessonKey: (key: "variables" | "rag") => void;
-  goToLesson: (key: "variables" | "rag") => void;
+  setActiveLessonKey: (key: LessonSelection) => void;
+  goToLesson: (key: "variables" | "rag" | number) => void;
 
   setOb: (patch: Partial<Pick<State, "obName" | "obEmail" | "obPw">>) => void;
   answer: (key: keyof ObAnswers, value: string) => void;
@@ -145,7 +148,7 @@ export const useFramis = create<State & Actions>((set, get) => ({
   statsLoading: false,
 
   sidebarOpen: false,
-  activeLessonKey: "variables",
+  activeLessonKey: null,
 
   obStep: 1,
   obMode: "signup",

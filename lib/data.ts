@@ -40,6 +40,13 @@ export const ROADMAP_MODULES: { phase: number; num: number; title: string }[] = 
   { phase: 6, num: 24, title: "AI Product Design + Edge Cases" },
 ];
 
+// Modules with a real, built lesson. Everything else in ROADMAP_MODULES is
+// browsable but shows an honest "not published yet" state when opened.
+export const LESSON_CONTENT: Record<number, { key: "variables" | "rag"; title: string; minutes: number }> = {
+  2: { key: "variables", title: "Variables — storing information", minutes: 25 },
+  14: { key: "rag", title: "RAG — teaching an LLM to cite its sources", minutes: 25 },
+};
+
 export const OB_QUESTIONS: {
   key: "q1" | "q2" | "q3";
   label: string;

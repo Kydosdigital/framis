@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useFramis } from "@/lib/store";
-import { ROADMAP_MODULES, PHASES } from "@/lib/data";
+import { ROADMAP_MODULES, PHASES, LESSON_CONTENT } from "@/lib/data";
 
 const COLS = [90, 290, 490, 690];
 const ROW_HEIGHT = 220;
@@ -83,10 +83,7 @@ export default function Roadmap() {
           : status === "current"
             ? "This is where you are right now."
             : "Ahead on your route — not unlocked yet.",
-      action:
-        m.num === 2 || m.num === 14
-          ? { label: "Go to lesson →", go: () => goToLesson(m.num === 2 ? "variables" : "rag") }
-          : undefined,
+      action: { label: "Go to lesson →", go: () => goToLesson(LESSON_CONTENT[m.num] ? LESSON_CONTENT[m.num].key : m.num) },
     };
   } else if (selected?.kind === "capstone") {
     const ph = PHASES[selected.phaseIndex];
