@@ -96,6 +96,48 @@ const content: LessonData = {
     "Not quite — git commit only saves what's been staged with git add. Since app.js was never staged, its changes remain modified-but-uncommitted, untouched by this commit.",
   takeaway:
     "git init starts the history, git add chooses what goes into the next snapshot, and git commit locks it in — with git status and git log as your constant reality-check on what's saved and what isn't.",
+  explainers: [
+    {
+      id: "what-is-repository",
+      term: "What's a Repository (\"repo\")?",
+      emoji: "🗂️",
+      shortDef: "A repository is a project folder that Git is keeping a full history of, save by save.",
+      longDef:
+        "A repository — usually shortened to \"repo\" — is just a normal folder on your computer, plus a hidden .git folder inside it that Git uses to store every snapshot you've ever taken. Running git init is the one-time step that adds that hidden folder and turns an ordinary folder into a repo. Nothing about your actual files changes — you're just adding a history-tracking system alongside them.",
+      whyMatters:
+        "Once a folder is a repo, every meaningful change you make can become a permanent, recoverable checkpoint. Without it, deleting or breaking a file is often gone for good.",
+      realWorldExample:
+        "Think of it like turning on \"track changes\" in a Google Doc, except it also remembers every version forever, not just the last few edits.",
+      relatedTerms: ["what-is-staging-area", "what-is-commit"],
+      expandedByDefault: true,
+    },
+    {
+      id: "what-is-staging-area",
+      term: "What's the Staging Area?",
+      emoji: "🗃️",
+      shortDef: "The staging area is a holding zone for changes you're about to save — nothing lands there automatically.",
+      longDef:
+        "Editing a file doesn't save anything in Git — it just shows up as \"changed\" when you run git status. Running git add moves a specific change into the staging area, which is Git's way of saying \"yes, include this in the next save.\" You can edit ten files but only stage three of them, and only those three will end up in your next commit.",
+      whyMatters:
+        "This extra step means you get to choose exactly what goes into each save point, instead of accidentally bundling unrelated changes together.",
+      realWorldExample:
+        "It's like packing a bag before a trip: editing files is tossing clothes on the bed, and git add is actually putting specific items into the suitcase. Only what's in the suitcase travels with you.",
+      relatedTerms: ["what-is-commit"],
+    },
+    {
+      id: "what-is-commit",
+      term: "What's a Commit?",
+      emoji: "💾",
+      shortDef: "A commit is a permanent snapshot of everything currently staged, saved with a short message describing it.",
+      longDef:
+        "Running git commit -m \"message\" takes whatever is sitting in the staging area and locks it in forever as a numbered, timestamped snapshot. Unlike a normal file save, a commit never gets overwritten — the version before it is still there, and you can always come back to it later with git log or older Git commands you'll learn soon.",
+      whyMatters:
+        "Commits are the \"undo history\" for your whole project, not just your last keystroke. A messy commit habit (or none at all) is one of the most common reasons beginners lose work they thought was safe.",
+      realWorldExample:
+        "It's exactly like a save point in a video game. You can keep playing after you save, and if things go badly later, you can always load back to that exact checkpoint.",
+      relatedTerms: ["what-is-staging-area", "what-is-repository"],
+    },
+  ],
 };
 
 export default content;

@@ -93,6 +93,61 @@ const content: LessonData = {
     "Not quite — --soft undoes the commit but leaves changes staged (not unstaged), while --hard undoes the commit and deletes the changes entirely. Plain git reset (the default \"mixed\" mode) is the middle ground: unstaged, but still in your files.",
   takeaway:
     "git diff lets you preview before you commit, git checkout throws away uncommitted mistakes, and git reset rewinds committed ones — with --soft, --mixed, and --hard trading off how much of your work survives the rewind.",
+  explainers: [
+    {
+      id: "what-is-uncommitted-changes",
+      term: "What Are \"Uncommitted Changes\"?",
+      emoji: "✏️",
+      shortDef: "Uncommitted changes are edits Git has noticed but hasn't saved as a permanent snapshot yet.",
+      longDef:
+        "The moment you edit a tracked file, Git notices — git status will call it \"modified.\" But nothing is actually saved until you stage it and commit it. Until then, it's just sitting there as an uncommitted change: easy to review, easy to throw away, and not yet part of your project's permanent history.",
+      whyMatters:
+        "Knowing whether a change is committed or not tells you how safe it is. Uncommitted work can be undone with a single command and no trace left behind — committed work takes a deliberate rewind instead.",
+      realWorldExample:
+        "It's like a sentence you just typed in a document but haven't saved yet — still easy to delete completely, versus a paragraph you already saved and would now have to deliberately go back and remove.",
+      relatedTerms: ["what-is-git-diff", "what-is-checkout"],
+      expandedByDefault: true,
+    },
+    {
+      id: "what-is-git-diff",
+      term: "What Does git diff Show You?",
+      emoji: "🔍",
+      shortDef: "git diff shows the exact lines you've changed but haven't committed yet — additions and deletions, side by side.",
+      longDef:
+        "Run git diff and Git prints every uncommitted change line by line: lines you removed marked with a minus sign, lines you added marked with a plus sign. Nothing is modified by running it — it's purely a preview, so you can catch a typo or an accidental edit before it becomes a permanent part of your history.",
+      whyMatters:
+        "Committing a mistake is far more annoying to undo than catching it before you commit. A quick git diff habit before every commit catches most of those mistakes for free.",
+      realWorldExample:
+        "It's proofreading a text message before you hit send — a quick look at exactly what changed, while you can still easily fix it.",
+      relatedTerms: ["what-is-uncommitted-changes"],
+    },
+    {
+      id: "what-is-checkout",
+      term: "checkout vs. reset — What's the Difference?",
+      emoji: "↩️",
+      shortDef: "git checkout -- file throws away uncommitted edits to one file. git reset rewinds your branch past commits you've already made.",
+      longDef:
+        "These two solve different problems. git checkout -- filename only works on uncommitted changes — it restores one file to how it looked at your last commit, discarding whatever you'd typed since. git reset works on commits themselves — it moves your branch backward in history, undoing one or more commits you already made. If your mistake hasn't been committed yet, reach for checkout. If it already got committed, you need reset.",
+      whyMatters:
+        "Reaching for the wrong one wastes time — checkout won't touch a commit that already happened, and reset is overkill (and riskier) for a change you haven't even saved yet.",
+      realWorldExample:
+        "checkout is crumpling up a draft page you haven't handed in. reset is going back through pages you've already turned in and pulling some of them back out.",
+      relatedTerms: ["what-is-uncommitted-changes", "what-is-hard-reset"],
+    },
+    {
+      id: "what-is-hard-reset",
+      term: "Why Is --hard the Scary One?",
+      emoji: "⚠️",
+      shortDef: "--soft and plain reset keep your changes around after rewinding; --hard deletes them completely, with no undo.",
+      longDef:
+        "All three reset modes move your branch back to an earlier commit — they differ only in what happens to the work in between. --soft keeps it staged, ready to re-commit. Plain reset (the default, \"mixed\") unstages it but leaves it sitting in your files, editable. --hard throws it away entirely, as if it never happened, and there's no simple command to bring it back.",
+      whyMatters:
+        "Of the three, --hard is the one genuinely destructive command in this lesson. It's worth a two-second pause before running it — everything else here is easy to recover from if you get it wrong.",
+      realWorldExample:
+        "--soft and mixed reset are like tearing pages out of a notebook but keeping them in a pile on your desk. --hard is shredding them on the spot.",
+      relatedTerms: ["what-is-checkout"],
+    },
+  ],
 };
 
 export default content;

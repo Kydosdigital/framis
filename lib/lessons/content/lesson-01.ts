@@ -91,6 +91,63 @@ const content: LessonData = {
   takeaway:
     "pwd, ls, and cd are the three moves you'll use constantly: pwd tells you where you are, ls shows you what's there, and cd takes you somewhere else. Master this loop and you'll never feel lost in a terminal again.",
   nextUpLabel: "Python Syntax, Variables, Functions",
+  explainers: [
+    {
+      id: "what-is-terminal",
+      term: "What is a Terminal?",
+      emoji: "⌨️",
+      shortDef:
+        "A terminal is a text-based way to talk to your computer. Instead of clicking folders with your mouse, you type commands.",
+      longDef:
+        "A terminal (also called \"command line\" or \"shell\") is a program that lets you control your computer by typing text commands instead of clicking buttons. Every modern computer — Mac, Windows, Linux — has one built in. It's faster and more powerful than using a mouse for a lot of tasks, which is why developers live in it all day.",
+      whyMatters:
+        "Almost all real coding work happens in the terminal — running your code, installing tools, using Git. Learning it is like learning to drive: it feels awkward for the first week, then it opens up everything else.",
+      realWorldExample:
+        "Imagine your computer's files are a building. Clicking through Finder or File Explorer is like walking the halls looking in every room. The terminal is like having a walkie-talkie — you can ask for something to happen instantly without walking there yourself.",
+      relatedTerms: ["what-is-folder", "what-is-command"],
+      expandedByDefault: true,
+    },
+    {
+      id: "what-is-folder",
+      term: "What's a Folder (Directory)?",
+      emoji: "📁",
+      shortDef: "A folder is a container for files and other folders — the exact same thing you see in Finder or File Explorer.",
+      longDef:
+        "In the terminal, folders are usually called \"directories\" — that's just the old, more technical name for the same idea. A directory can hold files, and it can hold other directories inside it, nested as deep as you like. Nothing about the underlying files changes when you switch from clicking through Finder to typing in a terminal — it's the same folders, just a different way of looking at them.",
+      whyMatters:
+        "Every command you run happens \"inside\" whatever folder you're currently in. If you don't know which folder that is, a command can affect files you didn't mean to touch.",
+      realWorldExample:
+        "If you're standing in your Downloads folder and you say \"move that file,\" you mean a file in Downloads — not one sitting on your Desktop. Same instruction, different folder, different result.",
+      relatedTerms: ["what-is-working-directory"],
+    },
+    {
+      id: "what-is-command",
+      term: "What's a Command?",
+      emoji: "🎯",
+      shortDef: "A command is an instruction you type to make your computer do something specific.",
+      longDef:
+        "When you type pwd or ls in the terminal, you're typing a command. Each command is a small, focused program that does one job. pwd literally stands for \"print working directory\" — it means \"show me which folder I'm in right now.\" ls stands for \"list\" — it shows you what's inside that folder.",
+      whyMatters:
+        "Commands are how you control a computer without a mouse. Learning a small set of them (pwd, ls, cd to start) lets you navigate and inspect anything on your machine.",
+      realWorldExample:
+        "A command is like one line of a recipe. pwd is like asking \"what room am I standing in?\" ls is like asking \"what's in this room?\" cd is like walking through a specific door into another room.",
+      relatedTerms: ["what-is-terminal"],
+    },
+    {
+      id: "what-is-working-directory",
+      term: "What's a Working Directory?",
+      emoji: "📍",
+      shortDef:
+        "The working directory is the one folder your terminal is currently \"standing in\" — like your current location.",
+      longDef:
+        "At any given moment, your terminal is focused on exactly one folder, and that's your working directory. Every command you run happens relative to that folder. If you list files, you're listing files in this folder. If you move something, you're moving it from this folder. Change your working directory (with cd) and every one of those commands now acts somewhere else, even though you typed the exact same thing.",
+      whyMatters:
+        "This is the single biggest source of beginner confusion. If a command doesn't work the way you expected, the very first thing to check is: am I even in the folder I think I'm in? Get in the habit of running pwd whenever you're unsure.",
+      realWorldExample:
+        "It's like your current location inside a building. If you're standing in the lobby and someone says \"check the door on the left,\" they mean the lobby's left door. Stand in Room 5 instead, and \"the door on the left\" means something completely different — same instruction, different current location.",
+      relatedTerms: ["what-is-folder"],
+    },
+  ],
 };
 
 export default content;
