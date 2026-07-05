@@ -2,11 +2,12 @@ export type OutputLine = { text: string; color: string };
 
 /**
  * A small Python-ish interpreter with just enough control flow for the
- * broader lesson set: if/elif/else, for-in over range()/lists, functions,
- * lists, dicts, try/except. Deliberately not a real Python implementation —
- * no classes, imports, while-loops, or string methods beyond str()/int()/
- * float()/len(). Kept separate from lib/python.ts (the original Variables-
- * lesson interpreter) so extending it can't regress that lesson.
+ * broader lesson set: if/elif/else, for-in over range()/lists, while,
+ * break/continue, functions, lists, dicts, try/except. Deliberately not a
+ * real Python implementation — no classes, imports, or string methods
+ * beyond str()/int()/float()/len(). Kept separate from lib/python.ts (the
+ * original Variables-lesson interpreter) so extending it can't regress
+ * that lesson.
  */
 
 type Value = string | number | boolean | null | Value[] | { [k: string]: Value } | PyFunction;
@@ -25,6 +26,9 @@ class PyError extends Error {
 class ReturnSignal {
   constructor(public value: Value) {}
 }
+
+class BreakSignal {}
+class ContinueSignal {}
 
 function tokenizeLines(src: string): Line[] {
   const lines: Line[] = [];
@@ -52,6 +56,39 @@ function buildBlocks(lines: Line[], startIndent: number, pos: { i: number }): Bl
     blocks.push({ line, children });
   }
   return blocks;
+}
+
+/** Splits a run of concatenated bracket groups like `["a"]["b"][0]` into
+ *  their inner expressions (`'"a"'`, `'"b"'`, `'0'`), respecting nested
+ *  brackets and quoted strings so chained subscripts (dict-of-dicts,
+ *  list-of-lists) parse correctly instead of one greedy match. */
+function splitBracketChain(s: string): string[] {
+  const groups: string[] = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] !== "[") throw new PyError("SyntaxError", `expected '[' in subscript chain: ${s}`);
+    i++;
+    const start = i;
+    let depth = 1;
+    let q: string | null = null;
+    while (i < s.length && depth > 0) {
+      const ch = s[i];
+      if (q) {
+        if (ch === q && s[i - 1] !== "\\") q = null;
+      } else if (ch === '"' || ch === "'") {
+        q = ch;
+      } else if (ch === "[") {
+        depth++;
+      } else if (ch === "]") {
+        depth--;
+        if (depth === 0) break;
+      }
+      i++;
+    }
+    groups.push(s.slice(start, i));
+    i++; // skip the closing ']'
+  }
+  return groups;
 }
 
 function splitTopLevel(s: string, seps: string[]): string[] {
@@ -177,7 +214,31 @@ class Interpreter {
       const items: Value[] = Array.isArray(iterable) ? iterable : [];
       for (const item of items) {
         scope[varName] = item;
-        this.execBlocks(b.children, scope);
+        try {
+          this.execBlocks(b.children, scope);
+        } catch (err) {
+          if (err instanceof BreakSignal) break;
+          if (err instanceof ContinueSignal) continue;
+          throw err;
+        }
+      }
+      return 0;
+    }
+
+    if (text.startsWith("while ") && text.endsWith(":")) {
+      const cond = text.slice(6, -1);
+      let iterations = 0;
+      while (truthy(this.evalExpr(cond, scope, lineNo))) {
+        if (++iterations > 100000) {
+          throw new PyError("RuntimeError", "loop ran for too long — check for an infinite loop (line " + lineNo + ")");
+        }
+        try {
+          this.execBlocks(b.children, scope);
+        } catch (err) {
+          if (err instanceof BreakSignal) break;
+          if (err instanceof ContinueSignal) continue;
+          throw err;
+        }
       }
       return 0;
     }
@@ -208,7 +269,7 @@ class Interpreter {
       try {
         this.execBlocks(b.children, scope);
       } catch (err) {
-        if (err instanceof ReturnSignal) throw err;
+        if (err instanceof ReturnSignal || err instanceof BreakSignal || err instanceof ContinueSignal) throw err;
         const pe = err instanceof PyError ? err : new PyError("Exception", (err as Error).message);
         const handler = exceptBlocks.find((eb) => !eb.errType || eb.errType === pe.pyType) ?? exceptBlocks[0];
         if (!handler) throw pe;
@@ -243,6 +304,8 @@ class Interpreter {
     let m: RegExpMatchArray | null;
 
     if (text === "pass") return;
+    if (text === "break") throw new BreakSignal();
+    if (text === "continue") throw new ContinueSignal();
 
     if ((m = text.match(/^return(\s+(.+))?$/))) {
       throw new ReturnSignal(m[2] ? this.evalExpr(m[2], scope, lineNo) : null);
@@ -390,21 +453,24 @@ class Interpreter {
       return obj;
     }
 
-    if ((m = e.match(/^([A-Za-z_]\w*)\[(.+)\]$/))) {
-      const container = this.evalExpr(m[1], scope, lineNo);
-      const key = this.evalExpr(m[2], scope, lineNo);
-      if (Array.isArray(container)) {
-        const i = key as number;
-        const v = container[i < 0 ? container.length + i : i];
-        if (v === undefined) throw new PyError("IndexError", "list index out of range");
-        return v;
+    if ((m = e.match(/^([A-Za-z_]\w*)((?:\[[\s\S]+\])+)$/))) {
+      let container = this.evalExpr(m[1], scope, lineNo);
+      for (const keyExpr of splitBracketChain(m[2])) {
+        const key = this.evalExpr(keyExpr, scope, lineNo);
+        if (Array.isArray(container)) {
+          const i = key as number;
+          const v = container[i < 0 ? container.length + i : i];
+          if (v === undefined) throw new PyError("IndexError", "list index out of range");
+          container = v;
+        } else if (container && typeof container === "object") {
+          const v = (container as Record<string, Value>)[String(key)];
+          if (v === undefined) throw new PyError("KeyError", String(key));
+          container = v;
+        } else {
+          throw new PyError("TypeError", "not subscriptable");
+        }
       }
-      if (container && typeof container === "object") {
-        const v = (container as Record<string, Value>)[String(key)];
-        if (v === undefined) throw new PyError("KeyError", String(key));
-        return v;
-      }
-      throw new PyError("TypeError", "not subscriptable");
+      return container;
     }
 
     if ((m = e.match(/^str\((.+)\)$/))) return fmt(this.evalExpr(m[1], scope, lineNo));
@@ -509,6 +575,8 @@ export function runPythonExt(src: string): OutputLine[] {
   } catch (err) {
     if (err instanceof ReturnSignal) {
       // top-level return, ignore
+    } else if (err instanceof BreakSignal || err instanceof ContinueSignal) {
+      interp.out.push({ text: "SyntaxError: 'break'/'continue' outside loop", color: "#DC2626" });
     } else {
       const msg = err instanceof PyError ? `${err.pyType}: ${err.message}` : (err as Error).message;
       interp.out.push({ text: msg, color: "#DC2626" });

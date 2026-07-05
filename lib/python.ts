@@ -94,4 +94,4 @@ export function runPython(src: string): OutputLine[] {
 }
 
 export const STARTER_CODE =
-  'name = "Alex"\nage = 24\nprint("Hi " + name + ", you are " + age + "!")';
+  'name = "Alex"\nage = 24\nprint(f"Hi {name}, you are {age} years old!")';

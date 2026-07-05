@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 import { runPythonExt, type OutputLine } from "@/lib/pythonExt";
+import { runJsExt } from "@/lib/jsExt";
+import { runSqlExt } from "@/lib/sqlExt";
 import type { LessonData, QuizOption } from "@/lib/lessons/types";
 import StageViz from "./StageViz";
+import ExplainerSidebar from "./ExplainerSidebar";
 
 export default function GenericLesson({
   data,
@@ -67,13 +70,23 @@ export default function GenericLesson({
     }
   };
 
+  const runCode = (src: string) => {
+    const language = data.sandbox.kind === "code" ? data.sandbox.language ?? "python" : "python";
+    if (language === "javascript") return runJsExt(src);
+    if (language === "sql") return runSqlExt(src);
+    return runPythonExt(src);
+  };
+
   const quizCorrect = data.quizOptions.find((o) => o.key === quizPick)?.correct ?? false;
   const quizFeedback = quizPick == null ? "" : quizCorrect ? data.quizFeedbackCorrect : data.quizFeedbackIncorrect;
 
   const outputLines = output.length ? output : [{ text: "— run your code to see output here", color: "#9AA3AF" }];
 
+  const hasExplainers = Boolean(data.explainers && data.explainers.length > 0);
+
   return (
-    <div>
+    <div className={hasExplainers ? "md:flex md:items-start md:gap-6" : ""}>
+      <div className={hasExplainers ? "md:w-[65%] md:min-w-0" : ""}>
       <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
         MODULE {data.num} · {data.phaseLabel} · LESSON {data.orderIndex} OF {totalLessons}
       </div>
@@ -123,7 +136,7 @@ export default function GenericLesson({
                 Reset
               </button>
               <button
-                onClick={() => setOutput(runPythonExt(code))}
+                onClick={() => setOutput(runCode(code))}
                 className="rounded-[7px] bg-success px-[18px] py-2 font-inter text-[12.5px] font-semibold text-white"
               >
                 ▸ Run
@@ -226,6 +239,8 @@ export default function GenericLesson({
           {done ? "✓ Lesson complete" : "Mark lesson complete"}
         </button>
       </div>
+      </div>
+      {hasExplainers && <ExplainerSidebar explainers={data.explainers as NonNullable<LessonData["explainers"]>} />}
     </div>
   );
 }
