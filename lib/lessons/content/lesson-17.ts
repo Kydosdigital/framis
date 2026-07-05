@@ -3,82 +3,79 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 17,
   orderIndex: 1,
-  phaseLabel: "PROBABILITY + STATISTICS",
-  title: "One roll lies, ten thousand rolls tell the truth",
+  phaseLabel: "LLM APIS + TOKENS + COST",
+  title: "The Meter That's Always Running: Tokens and Cost",
   minutes: 20,
   concept:
-    "A fair six-sided die has an equal 1-in-6 chance of landing on each face, but that doesn't mean six rolls will give you exactly one of each — small samples are noisy and can look wildly uneven. The way you actually see the true 1-in-6 pattern emerge is to roll the die many times and tally each outcome into a dictionary that maps a face value to how often it came up. Early on, with only a handful of rolls, one face might show up three times as often as another purely by chance. But as the roll count grows into the hundreds and thousands, each face's share of the total creeps closer and closer to about 16.7% — this steady convergence toward the true probability as sample size grows is called the law of large numbers. A for-loop and a dict are the whole mechanism: loop over every recorded roll, and for each one, read that face's counter out of the dict, add one, and write it back in.",
+    "Large language models don't read your prompt as words — they break it into small chunks called tokens, and every token you send or receive costs money. You don't need a real tokenizer to get the idea across: a common rule of thumb is that one token is roughly four characters of English text, so you can estimate tokens with a tiny function like len(text) // 4. Once you know roughly how many tokens a request uses, cost is just multiplication — take the token count, divide by 1000, and multiply by whatever price the provider charges per 1000 tokens. Providers almost always price input tokens (what you send) and output tokens (what the model generates) separately, with output usually costing several times more, so a full estimate adds both pieces together. Modeling this as plain functions — text in, tokens out; tokens in, cents out — makes it obvious why a longer prompt or a longer answer directly increases the bill.",
   conceptSimpler:
-    "It's like judging whether a coin is fair — flip it twice and you might get two heads and think it's rigged, but flip it two thousand times and the near-even split reveals the truth.",
+    "Tokens are like the minutes on a phone plan: the call itself doesn't cost anything until you multiply the number of minutes by the price per minute, and every extra minute — or token — adds straight to the bill.",
   vizStages: [
     {
-      label: "1. Six rolls, one lucky streak",
+      label: "1. Characters become tokens",
       body:
-        "You roll a die six times and log each result. Just by chance, face 4 shows up three times while 1 and 5 don't show up at all — nothing is wrong with the die, six rolls is simply too small a sample to reveal the true odds.",
-      code:
-        'rolls = [4, 2, 4, 6, 4, 3]\ncounts = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0}\nfor r in rolls:\n    counts[r] = counts[r] + 1\nprint(counts)\n\n# {\'1\': 0, \'2\': 1, \'3\': 1, \'4\': 3, \'5\': 0, \'6\': 1}',
+        "We can't run a real tokenizer here, but the classic estimate — about 4 characters per token — is close enough to reason about cost. A single function turns any string into an estimated token count.",
+      code: "def estimate_tokens(text):\n    return len(text) // 4",
     },
     {
-      label: "2. The dict is doing the counting",
+      label: "2. Tokens have a price tag",
       body:
-        "Each pass through the loop reads the current tally for that face out of the dict, adds one, and writes it back in — the same read-increment-write pattern you'd use to count anything: votes, page views, word frequencies.",
-      code: 'counts["4"] = counts["4"] + 1\n# read 2, add 1, store 3 back under key "4"',
+        "Providers charge per 1000 tokens, not per token, so the cost function divides by 1000 before multiplying by the price. Using integer division and prices in cents keeps every result a whole, exact number.",
+      code: "def cost_in_cents(tokens, price_per_1000):\n    return tokens * price_per_1000 // 1000",
     },
     {
-      label: "3. A hundred rolls",
+      label: "3. Run a real prompt through it",
       body:
-        "Extend the same loop to a hundred recorded rolls instead of six, and the gaps shrink dramatically — every face lands somewhere around 15 to 18 times instead of some faces at zero and others tripled.",
+        "A prompt is just a string. Feed it to estimate_tokens and you get a number you can immediately reason about before ever calling a real API.",
       code:
-        "# 100 rolls tallied by the same loop\n# {'1': 15, '2': 18, '3': 16, '4': 17, '5': 16, '6': 18}",
+        "prompt = \"Summarize this support ticket in two sentences.\"\ntokens = estimate_tokens(prompt)\nprint(tokens)",
     },
     {
-      label: "4. Ten thousand rolls: the law of large numbers",
+      label: "4. Same tokens, different price",
       body:
-        "Push the roll count into the thousands and each face's share locks in tight around 16.7%. Individual rolls stay completely random, but the average behavior of a huge pile of them becomes almost perfectly predictable — that's the law of large numbers.",
-      code:
-        "# 10,000 rolls tallied by the same loop\n# {'1': 1668, '2': 1655, '3': 1682, '4': 1671, '5': 1649, '6': 1675}\n# each face lands between 16.4% and 16.8% - right around the true 1/6",
+        "The token count doesn't change based on which model you call — only the price per 1000 tokens does. That's why picking a cheaper model can cut your bill without changing the prompt at all.",
+      code: "cheap = cost_in_cents(tokens, 2)\npremium = cost_in_cents(tokens, 30)\nprint(cheap, premium)",
     },
   ],
   realWorldIntro:
-    "This is exactly why ML teams never trust a single eval run or one user's reaction to a new feature: one sample is as noisy as one die roll, so they average scores across thousands of test cases or thousands of users before believing a model or feature actually performs better.",
+    "Every real LLM API — OpenAI, Anthropic, and others — bills using exactly this input-tokens-times-price-plus-output-tokens-times-price formula, and output tokens are almost always priced several times higher than input tokens because generating text costs more than reading it.",
   realWorldCode:
-    'scores = [0.81, 0.77, 0.85, 0.79, 0.83, 0.80]\ntotal = 0\nfor s in scores:\n    total = total + s\naverage = total / len(scores)\nprint(f"average eval score across {len(scores)} runs: {average}")',
+    "def total_cost_cents(input_tokens, output_tokens, input_price, output_price):\n    input_cost = input_tokens * input_price // 1000\n    output_cost = output_tokens * output_price // 1000\n    return input_cost + output_cost",
   sandbox: {
     kind: "code",
     challenge:
-      "This frequency counter crashes partway through the loop — fix the counts dictionary so every face from 1 to 6 is initialized to 0 before the loop runs, then rerun it to see all six tallies print cleanly.",
+      "Estimate input and output tokens for a prompt/reply pair, then print the total cost in cents under both a budget model price and a premium model price.",
     starterCode:
-      'rolls = [3, 1, 4, 6, 2, 5, 3, 3, 6, 1, 2, 4, 5, 6, 3, 2, 1, 4, 6, 3]\n\ncounts = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}\n\nfor r in rolls:\n    counts[r] = counts[r] + 1\n\ntotal = len(rolls)\n\nfor face in range(1, 7):\n    key = str(face)\n    count = counts[key]\n    pct = count * 100 / total\n    print(f"Face {face}: {count} rolls ({pct}%)")',
+      "def estimate_tokens(text):\n    return len(text) // 4\n\ndef cost_in_cents(tokens, price_per_1000):\n    return tokens * price_per_1000 // 1000\n\nprompt = \"Write a short product description for a wireless keyboard with a long battery life.\"\nreply = \"The wireless keyboard delivers a full year of battery life, reliable Bluetooth pairing, and a compact design that fits any desk.\"\n\ninput_tokens = estimate_tokens(prompt)\noutput_tokens = estimate_tokens(reply)\ntotal_tokens = input_tokens + output_tokens\n\nprint(\"input tokens:\", input_tokens)\nprint(\"output tokens:\", output_tokens)\n\nbudget_price = 2\npremium_price = 30\n\nbudget_cost = cost_in_cents(total_tokens, budget_price)\npremium_cost = cost_in_cents(total_tokens, premium_price)\n\nprint(\"budget model cost (cents):\", budget_cost)\nprint(\"premium model cost (cents):\", premium_cost)\n\nif premium_cost > budget_cost * 5:\n    print(\"premium model costs more than 5x the budget model here\")\nelse:\n    print(\"premium model is not that much pricier here\")",
   },
   quizQuestion:
-    "You roll a die 6 times and one face comes up 4 times. After rolling it 6,000 times, that same face's share settles right around 16.7%. What does this demonstrate?",
+    "cost_in_cents(999, 5) returns 4, not 4.995. Why?",
   quizCode:
-    "small = {\"4\": 4, \"1\": 1, \"2\": 1}\n# from 6 rolls\n\nlarge = {\"4\": 1013, \"1\": 987, \"2\": 998}\n# from 6,000 rolls",
+    "def cost_in_cents(tokens, price_per_1000):\n    return tokens * price_per_1000 // 1000\n\nresult = cost_in_cents(999, 5)\nprint(result)",
   quizOptions: [
     {
       key: "a",
-      label:
-        "The law of large numbers: small samples are noisy, but as the number of trials grows, the observed frequencies converge toward the true underlying probability",
+      label: "Because // is floor division, so it drops the fractional part of the result",
       correct: true,
     },
     {
       key: "b",
-      label: "The die must have been slightly broken for the first six rolls and only started working correctly afterward",
+      label: "Because 999 tokens automatically rounds up to 1000 before the math runs",
       correct: false,
     },
     {
       key: "c",
-      label: "Dictionaries automatically become more accurate the more times you read a value out of them",
+      label: "Because price_per_1000 must always be a whole number of cents",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — six rolls is a tiny, noisy sample where one face can easily land four times by chance, but six thousand rolls average that randomness out, pulling each face's share close to its true 1-in-6 probability.",
+    "Right — // is floor division, so 999 * 5 = 4995, and 4995 // 1000 floors to 4, throwing away the .995 remainder instead of rounding it.",
   quizFeedbackIncorrect:
-    "Not quite — nothing changed about the die itself; a sample of six rolls is simply too small to reflect the true 1-in-6 odds, while thousands of rolls average that noise away until the real probability shows through.",
+    "Not quite — nothing rounds the token count itself; 999 * 5 = 4995, and // floors that to 4, discarding the .995 fraction rather than rounding it or requiring whole-cent prices.",
   takeaway:
-    "A for-loop and a dict turn raw rolls into a frequency count, and the law of large numbers says the more rolls you tally, the closer those counts settle toward the true underlying probability — small samples are noisy, big ones are not.",
-  nextUpLabel: "Linear Algebra Basics",
+    "Token counting and cost are just arithmetic: estimate tokens from character count, then multiply by a price-per-1000 rate for both input and output — do that, and you can predict an API bill before you ever make the call.",
+  nextUpLabel: "Embeddings + RAG + Vector Search",
 };
 
 export default content;

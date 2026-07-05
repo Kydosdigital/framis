@@ -3,82 +3,82 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 9,
   orderIndex: 2,
-  phaseLabel: "TESTING (UNIT/INTEGRATION/E2E)",
-  title: "Isolated on Purpose: What Makes a Test a Unit Test",
-  minutes: 18,
+  phaseLabel: "PANDAS + DATA WRANGLING",
+  title: "Cleaning messy data: handling missing values",
+  minutes: 22,
   concept:
-    "A unit test checks exactly one function, by itself, with inputs you choose and pass in directly — no database, no logged-in user, no other function running alongside it. That word \"unit\" is the whole idea: you're testing a single unit of the program in isolation, the same way an electrician checks one outlet without powering the whole house. The benefit shows up the moment a test fails — if calculate_shipping_cost(5, True) is the only thing running and its assert fails, the bug has to be inside calculate_shipping_cost, full stop. Nothing else was involved, so there's nowhere else to look. Contrast that with clicking through an entire checkout flow and noticing the final receipt looks wrong — the bug could be in shipping, tax, inventory, or the receipt printer itself, and you'd have to hunt through all of it. Unit tests trade that broad uncertainty for a narrow, fast, precise answer about one function at a time.",
+    "Once you've looked at a real dataset, you'll find gaps: a field that should hold a number or a string instead holds nothing. We model that gap as Python's None, the same way pandas models it as NaN. A missing value isn't just an annoyance — it actively breaks arithmetic, since you can't add None to a running total or compare it the way you compare a real number. So before you can compute anything across a column, you have to decide what to do about its gaps, and there are two standard strategies. The first is to drop any row that's missing the field you care about — simple and safe, but it throws away every other field on that row too, and if enough rows have gaps you can lose a lot of data. The second is to fill the gap with a stand-in value — often a fixed default like 0, or a computed one like the column's mean — which keeps every row, but quietly injects a made-up number into your data, which changes any aggregate you compute afterward. Neither strategy is \"correct\" in general; which one is right depends on the dataset and the question you're asking, but you always have to pick one on purpose. Real pandas gives you both as one-liners: df.dropna() removes any row with a gap, and df.fillna(value) fills every gap with a value (df.fillna(df.mean()) fills with the column's average). Underneath both, the mechanism is the same loop you're about to write yourself.",
   conceptSimpler:
-    "A unit test is like turning one gear by hand to see if it's cracked, instead of running the whole engine and guessing which gear made the noise.",
+    "A missing value is a blank cell — you can either throw away the whole row that has a blank in it, or pencil something in to fill the blank — but either way, someone has to decide which move to make, and that decision changes your numbers.",
   vizStages: [
     {
-      label: "1. The function under test",
+      label: "1. Spotting one missing value",
       body:
-        "calculate_shipping_cost decides what a package costs to ship: members always ship free, and non-members pay a standard rate — or more, if the package is heavy.",
+        "A missing value shows up as None sitting where a real value should be. Checking for it is a plain equality check.",
       code:
-        "def calculate_shipping_cost(weight, is_member):\n    if is_member:\n        return 0\n    if weight > 20:\n        return 25\n    return 10",
+        'row = {"name": "Ben", "age": None}\nif row["age"] == None:\n    print("age is missing on this row")\nelse:\n    print(f"age is {row[\'age\']}")',
     },
     {
-      label: "2. Called directly, with nothing else running",
+      label: "2. Counting how many rows are affected",
       body:
-        "A unit test calls calculate_shipping_cost by itself, with plain numbers you made up — no shopping cart, no real user account, no database. That's what \"isolation\" means: the only thing under test is this one function.",
+        "Before choosing a strategy, find out how bad the problem is — loop over every row and count how many are missing the field you care about.",
       code:
-        "result = calculate_shipping_cost(5, True)\nassert result == 0, \"members should ship free\"\nprint(\"member, light package:\", result)",
+        'rows = []\nrows.append({"name": "Ava", "age": 29})\nrows.append({"name": "Ben", "age": None})\nrows.append({"name": "Cy", "age": 41})\nrows.append({"name": "Dee", "age": None})\n\nmissing_count = 0\nfor row in rows:\n    if row["age"] == None:\n        missing_count = missing_count + 1\nprint(f"missing age values: {missing_count} of {len(rows)} rows")',
     },
     {
-      label: "3. One assert per behavior",
+      label: "3. Strategy one: drop the incomplete rows",
       body:
-        "Because the function is isolated, you can hit each of its branches on purpose, one input at a time, without worrying about anything else in the app getting in the way.",
+        "Build a new list that only keeps rows where the field isn't missing. This is exactly what df.dropna(subset=[\"age\"]) does in real pandas — same idea, one line instead of a loop.",
       code:
-        "assert calculate_shipping_cost(5, True) == 0, \"members ship free\"\nassert calculate_shipping_cost(25, False) == 25, \"non-members pay extra for heavy packages\"\nassert calculate_shipping_cost(5, False) == 10, \"non-members pay the standard rate otherwise\"",
+        'def drop_missing(rows, column):\n    clean = []\n    for row in rows:\n        if row[column] != None:\n            clean.append(row)\n    return clean\n\nrows = []\nrows.append({"name": "Ava", "age": 29})\nrows.append({"name": "Ben", "age": None})\nrows.append({"name": "Cy", "age": 41})\n\ndropped = drop_missing(rows, "age")\nprint(f"kept {len(dropped)} of {len(rows)} rows")',
     },
     {
-      label: "4. Isolation tells you exactly what broke",
+      label: "4. Strategy two: fill the gap instead",
       body:
-        "If this test fails, the bug is guaranteed to live inside calculate_shipping_cost — not the database, not the email system, not any other function, because none of those things were even running. That precision is the entire point of testing in isolation.",
+        "Instead of throwing rows away, replace each missing value with a stand-in — a fixed default, or a computed value like the column's mean. Notice the row count doesn't change, but the aggregate you compute afterward will, depending on what you filled in with.",
       code:
-        "# AssertionError: members ship free\n# (nothing else in the app was even running when this failed)",
+        'def mean_of(rows, column):\n    total = 0\n    count = 0\n    for row in rows:\n        if row[column] != None:\n            total = total + row[column]\n            count = count + 1\n    return total / count\n\ndef fill_missing(rows, column, fill_value):\n    filled = []\n    for row in rows:\n        value = row[column]\n        if value == None:\n            value = fill_value\n        filled.append({"name": row["name"], column: value})\n    return filled\n\nrows = []\nrows.append({"name": "Ava", "age": 29})\nrows.append({"name": "Ben", "age": None})\n\nfilled = fill_missing(rows, "age", 0)\nprint(filled)',
     },
   ],
   realWorldIntro:
-    "In a real CI pipeline, unit tests run first and finish in milliseconds because they never touch a database or network — a suite of thousands of them can pass before a slower integration or end-to-end suite even starts.",
+    "Real pandas makes both strategies one-liners: df.dropna(subset=[\"age\"]) drops any row missing an age, df.fillna({\"age\": 0}) fills every gap with a fixed default, and df.fillna({\"age\": df[\"age\"].mean()}) fills with the column's own average instead. Which one you reach for matters — filling every gap with 0 will drag a numeric average down hard, while filling with the mean at least keeps the average unchanged, which is why \"fill with the mean\" is the far more common default in practice.",
   realWorldCode:
-    "# tests/test_shipping.py\ndef test_member_free_shipping():\n    assert calculate_shipping_cost(5, True) == 0\n\ndef test_heavy_package_surcharge():\n    assert calculate_shipping_cost(25, False) == 25\n\n# $ pytest tests/test_shipping.py -v\n# 2 passed in 0.01s",
+    '# real pandas — same two strategies as one-liners:\n# clean = df.dropna(subset=["age"])\n# filled_default = df.fillna({"age": 0})\n# filled_mean = df.fillna({"age": df["age"].mean()})',
   sandbox: {
     kind: "code",
     challenge:
-      "Fix calculate_shipping_cost so members always ship free, even on heavy packages — right now the weight check runs first and overrides membership.",
+      "Using the 5 rows below (2 have a missing age), implement drop_missing and fill_missing, then compare all three: the average age after dropping, the average age after filling gaps with 0, and the average age after filling gaps with the column's own mean. Notice which of these actually changes the average.",
     starterCode:
-      'def calculate_shipping_cost(weight, is_member):\n    if weight > 20:\n        return 25\n    if is_member:\n        return 0\n    return 10\n\ntest1 = calculate_shipping_cost(5, True)\nassert test1 == 0, "members should ship free regardless of package weight"\n\ntest2 = calculate_shipping_cost(25, True)\nassert test2 == 0, "members should ship free even on heavy packages"\n\ntest3 = calculate_shipping_cost(25, False)\nassert test3 == 25, "non-members pay extra for heavy packages"\n\nprint("All unit tests passed:", test1, test2, test3)',
+      'def mean_of(rows, column):\n    total = 0\n    count = 0\n    for row in rows:\n        if row[column] != None:\n            total = total + row[column]\n            count = count + 1\n    return total / count\n\ndef drop_missing(rows, column):\n    clean = []\n    for row in rows:\n        if row[column] != None:\n            clean.append(row)\n    return clean\n\ndef fill_missing(rows, column, fill_value):\n    filled = []\n    for row in rows:\n        value = row[column]\n        if value == None:\n            value = fill_value\n        filled.append({"name": row["name"], column: value})\n    return filled\n\nrows = []\nrows.append({"name": "Ava", "age": 29})\nrows.append({"name": "Ben", "age": None})\nrows.append({"name": "Cy", "age": 41})\nrows.append({"name": "Dee", "age": None})\nrows.append({"name": "Eli", "age": 35})\n\ndropped = drop_missing(rows, "age")\nprint(f"drop: kept {len(dropped)} of {len(rows)} rows")\nprint(f"drop: average age = {mean_of(dropped, \'age\')}")\n\nfilled_zero = fill_missing(rows, "age", 0)\nprint(f"fill-with-0: kept {len(filled_zero)} of {len(rows)} rows")\nprint(f"fill-with-0: average age = {mean_of(filled_zero, \'age\')}")\n\nfill_value = mean_of(rows, "age")\nfilled_mean = fill_missing(rows, "age", fill_value)\nprint(f"fill-with-mean: average age = {mean_of(filled_mean, \'age\')}")',
   },
   quizQuestion:
-    "A teammate suggests testing calculate_shipping_cost by placing a real order through the entire checkout flow — cart, payment, inventory, email confirmation — and reading the shipping line off the final receipt. Why is calling calculate_shipping_cost(5, True) directly, by itself, a better unit test?",
+    "In the code above, dropping the 2 missing rows gives an average age of 35, but filling those same 2 gaps with 0 gives an average age of 21. Why do the two strategies disagree so much?",
+  quizCode:
+    'def mean_of(rows, column):\n    total = 0\n    count = 0\n    for row in rows:\n        if row[column] != None:\n            total = total + row[column]\n            count = count + 1\n    return total / count\n\ndef drop_missing(rows, column):\n    clean = []\n    for row in rows:\n        if row[column] != None:\n            clean.append(row)\n    return clean\n\ndef fill_missing(rows, column, fill_value):\n    filled = []\n    for row in rows:\n        value = row[column]\n        if value == None:\n            value = fill_value\n        filled.append({"name": row["name"], column: value})\n    return filled\n\nrows = []\nrows.append({"name": "Ava", "age": 29})\nrows.append({"name": "Ben", "age": None})\nrows.append({"name": "Cy", "age": 41})\nrows.append({"name": "Dee", "age": None})\nrows.append({"name": "Eli", "age": 35})\n\ndropped = drop_missing(rows, "age")\nprint(f"drop: average age = {mean_of(dropped, \'age\')}")\n\nfilled_zero = fill_missing(rows, "age", 0)\nprint(f"fill-with-0: average age = {mean_of(filled_zero, \'age\')}")',
   quizOptions: [
     {
       key: "a",
       label:
-        "It isolates the one function you actually care about, so if the assert fails you know the bug is in calculate_shipping_cost, not somewhere else in the checkout flow",
+        "Filling with 0 keeps all 5 rows but adds two artificial zeros into the sum, dragging the average down; dropping just averages the 3 real values",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "It's better because unit tests are always faster to write than any other kind of test, no matter what they're checking",
+      label: "The dropped version is wrong because it changes the row count, so its average can't be trusted",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "It's better because a function can never be tested by calling it through another function, only by calling it directly by name",
+      label: "There's a bug — both strategies should always produce the exact same average no matter what",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — calling the function directly with chosen inputs isolates it from the rest of the app, so a failing assert can only mean one thing: calculate_shipping_cost itself is broken.",
+    "Right — dropping removes Ben and Dee entirely, so the average is just over Ava, Cy, and Eli's real ages (29+41+35)/3 = 35. Filling with 0 keeps all 5 rows but treats Ben and Dee as if they were age 0, so the sum includes two fake zeros: (29+0+41+0+35)/5 = 21. Neither number is \"wrong\" exactly, but 0 was a bad choice of fill value here — it invented data that pulls the average sharply toward zero.",
   quizFeedbackIncorrect:
-    "Not quite — the real advantage is isolation: calling the function directly means a failure points at exactly one place, instead of leaving you to search the entire checkout flow for the cause.",
+    "Not quite — nothing here is a bug, and the two strategies are supposed to disagree since they make different choices. Dropping removes Ben and Dee, averaging only the 3 rows with real ages. Filling with 0 keeps all 5 rows but treats the 2 missing ages as literally 0, which drags the average down hard — that's exactly why filling with a fixed default like 0 needs to be a deliberate, considered choice, not a reflex.",
   takeaway:
-    "A unit test isolates one function and calls it directly with inputs you control, so a failure points at exactly one place. That precision is what makes unit tests the fastest way to find out which piece of a program actually broke.",
+    "A missing value (None here, NaN in real pandas) breaks arithmetic until you deal with it. Dropping rows with gaps keeps your numbers honest but shrinks your dataset; filling gaps keeps every row but injects a value you chose — and a badly chosen fill value like 0 can distort an aggregate far more than simply dropping the row would have.",
 };
 
 export default content;

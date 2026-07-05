@@ -3,83 +3,77 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 23,
   orderIndex: 1,
-  phaseLabel: "OBSERVABILITY + COST CONTROLS",
-  title: "The Two-Line Function Standing Between You and a Surprise Bill",
-  minutes: 20,
+  phaseLabel: "TRANSFORMERS + ATTENTION",
+  title: "Order isn't free: telling the model what came first",
+  minutes: 18,
   concept:
-    "Every request your AI feature makes to a model API can be logged as one dict: something like {\"latency_ms\": 340, \"cost\": 0.004}, capturing how long the call took and what it cost. On its own, one log entry tells you almost nothing — a single slow request could just be a fluke. What matters is aggregating the whole list: loop over every request, add up the cost field into a running total, add up the latency field into a running total, and divide that latency total by the number of requests to get an average. Those two numbers — total cost and average latency — are the two questions every AI product eventually has to answer: \"are we burning too much money\" and \"are users waiting too long.\" They're deliberately kept separate rather than combined into one score, because they move independently — a prompt change can slow every response down without touching cost, and a traffic spike can multiply your bill without any single request getting slower.",
+    "Over the next several lessons you'll learn how a transformer uses attention to let every word absorb information from every other word in a sentence. That mechanism has a blind spot worth fixing before we go any further: attention scores measure how relevant two tokens are to each other, not which one came first, so if a model only saw a pile of tokens with no notion of sequence, \"the dog bit the man\" and \"the man bit the dog\" would be built from exactly the same ingredients — same words, same set, same inputs to every score. Since those two sentences describe opposite events, a transformer needs a way to inject \"where in the sentence am I\" into every token before attention (or anything else) gets to run. Positional encoding is that fix: a pattern of numbers generated purely from a token's index in the sequence — position 1 gets one pattern, position 2 a different one, position 3 different again — added directly onto that token's own vector. Real transformers generate this pattern from sine and cosine waves at different frequencies (which gives useful mathematical properties for very long sequences), but the mechanism to internalize is simpler than the formula: whatever the exact pattern is, it gets added to the word's vector before anything else happens, so every later computation — including attention — automatically has access to both \"what is this token\" and \"where does it sit,\" with no special-cased logic for order bolted on afterward.",
   conceptSimpler:
-    "It's like a taxi dispatcher who logs every trip's fare and duration, then at the end of the day adds up total fuel spend separately from average trip time — one number tells you if you're profitable, the other tells you if riders are having a bad experience, and neither one substitutes for the other.",
+    "It's like handing out numbered tickets to people in a line — without the tickets everyone looks like an interchangeable crowd, but with a ticket stapled to each person, you can finally tell who was first, second, and third.",
   vizStages: [
     {
-      label: "1. Each request is one log entry",
+      label: "1. A preview problem: relevance without order",
       body:
-        "A production AI feature logs one dict per model call. Nothing here is aggregated yet — it's just the raw material.",
-      code:
-        "requests = [\n  {\"latency_ms\": 120, \"cost\": 0.002},\n  {\"latency_ms\": 340, \"cost\": 0.004},\n  {\"latency_ms\": 610, \"cost\": 0.006}\n]",
+        "Attention, which you're about to learn starting in the next lesson, scores how relevant two tokens are to each other — left to itself, it has no way to know which token came first. Feed it the same set of words in any order and it would score them identically.",
+      code: "words: {dog, bit, man}  -- attention alone treats this as an unordered set",
     },
     {
-      label: "2. Loop and accumulate",
+      label: "2. But word order changes meaning completely",
       body:
-        "A for loop walks the list once, adding each request's cost into total_cost and each request's latency into total_latency as it goes.",
-      code:
-        "total_cost = 0\ntotal_latency = 0\ncount = 0\nfor req in requests:\n    total_cost = total_cost + req[\"cost\"]\n    total_latency = total_latency + req[\"latency_ms\"]\n    count = count + 1",
+        "\"The dog bit the man\" and \"the man bit the dog\" use identical words but describe opposite events. A model that ignored order would treat these as the same sentence.",
+      code: "\"The dog bit the man.\"   != meaning   \"The man bit the dog.\"",
     },
     {
-      label: "3. Divide once, at the end",
+      label: "3. A position signal gets added to each token",
       body:
-        "Total cost is already the number you want — money spent is money spent, so it's never divided. Latency is different: total_latency only becomes meaningful once you divide by count, turning \"sum of every wait time\" into \"typical wait time.\"",
+        "Before attention (or anything else) runs, each token's vector gets a positional encoding added to it — a pattern of numbers generated from its index in the sequence. Position 1's pattern differs from position 2's, which differs from position 3's.",
       code:
-        "avg_latency = total_latency / count\nprint(\"total cost:\", total_cost)\nprint(\"avg latency ms:\", avg_latency)",
+        "token(\"dog\", position 2) = word_vector(\"dog\") + position_vector(2)\ntoken(\"dog\", position 5) = word_vector(\"dog\") + position_vector(5)  -- different!",
     },
     {
-      label: "4. The two numbers tell different stories",
+      label: "4. Now the same word carries different information by position",
       body:
-        "Total cost flat but avg latency climbing means the model (or a slow downstream call) got slower without costing more — a UX problem. Avg latency flat but total cost climbing means traffic (or per-call cost) went up without anyone waiting longer — a budget problem. Tracking only one hides the other.",
-      code:
-        "day1: total_cost=4.10  avg_latency=280ms\nday2: total_cost=4.05  avg_latency=790ms   <- latency regression, cost looks fine",
+        "\"Dog\" at position 2 (the subject, before \"bit\") and \"dog\" at position 5 (the object, after \"bit\") now arrive as distinguishable vectors, so whatever runs next — attention included — can tell the sentences apart.",
+      code: "\"The dog bit the man\":   dog@2, bit@3, man@5\n\"The man bit the dog\":   man@2, bit@3, dog@5",
     },
   ],
   realWorldIntro:
-    "This is exactly what the top tiles of an LLM observability dashboard (Datadog, Grafana, LangSmith, or a homegrown one) are computing every few minutes behind the scenes — pulling the latest window of request logs and running the same sum-and-divide over them to render \"avg latency: 340ms\" and \"spend today: $12.40\" as two separate numbers, not one blended score.",
-  realWorldCode:
-    "def analyze_requests(requests):\n    total_cost = 0\n    total_latency = 0\n    count = 0\n    for req in requests:\n        total_cost = total_cost + req[\"cost\"]\n        total_latency = total_latency + req[\"latency_ms\"]\n        count = count + 1\n    avg_latency = total_latency / count\n    return [total_cost, avg_latency]",
+    "This is exactly why models can tell \"turn left then right\" apart from \"turn right then left,\" and why longer context windows require extending or redesigning positional encoding schemes. It's also why this step has to happen first in this course: attention just consumes whatever vector arrives at its input, position baked in or not — it has no way to fix a missing position signal after the fact.",
   sandbox: {
     kind: "code",
     challenge:
-      "Run analyze_requests over the sample logs, then read off which alert fires and notice that the other metric stays healthy at the same time.",
+      "Write add_vectors(vec_a, vec_b) and a position_pattern(position) function, then show that the exact same word produces a different vector depending on where it sits in the sentence.",
     starterCode:
-      "def analyze_requests(requests):\n    total_cost = 0\n    total_latency = 0\n    count = 0\n    for req in requests:\n        total_cost = total_cost + req[\"cost\"]\n        total_latency = total_latency + req[\"latency_ms\"]\n        count = count + 1\n    avg_latency = total_latency / count\n    return [total_cost, avg_latency]\n\nrequests = [{\"latency_ms\": 120, \"cost\": 0.002}, {\"latency_ms\": 340, \"cost\": 0.004}, {\"latency_ms\": 95, \"cost\": 0.0015}, {\"latency_ms\": 610, \"cost\": 0.006}, {\"latency_ms\": 900, \"cost\": 0.006}]\n\nstats = analyze_requests(requests)\ntotal_cost = stats[0]\navg_latency = stats[1]\n\nprint(\"total cost:\", total_cost)\nprint(\"avg latency ms:\", avg_latency)\n\nif avg_latency > 300:\n    print(\"ALERT: average latency is above 300ms\")\nelse:\n    print(\"latency looks healthy\")\n\nif total_cost > 0.05:\n    print(\"ALERT: total cost is above budget\")\nelse:\n    print(\"cost looks healthy\")",
+      "def add_vectors(vec_a, vec_b):\n    result = []\n    for i in range(len(vec_a)):\n        result.append(vec_a[i] + vec_b[i])\n    return result\n\n# a simplified stand-in for the sine/cosine pattern real transformers use --\n# the real formula needs trig functions our sandbox doesn't have, but this\n# captures the same idea: a pattern that's different at every position.\ndef position_pattern(position):\n    return [position, position * 2, position * 3, position * 4]\n\nword_dog = [3, 5, 0, 0]\n\ntoken_dog_at_2 = add_vectors(word_dog, position_pattern(2))\ntoken_dog_at_5 = add_vectors(word_dog, position_pattern(5))\n\nprint(f\"'dog' alone:         {word_dog}\")\nprint(f\"'dog' at position 2: {token_dog_at_2}\")\nprint(f\"'dog' at position 5: {token_dog_at_5}\")\n\nif token_dog_at_2 == token_dog_at_5:\n    print(\"same vector regardless of position -- order would be invisible\")\nelse:\n    print(\"different vectors -- position is now baked into the representation\")",
   },
   quizQuestion:
-    "A dashboard only tracks total_cost per day, and it's been flat and unremarkable for a week. Based on the function below, what could still be quietly going wrong that this single metric would never catch?",
+    "word_cat = [4, 1, 0, 0] and position_pattern(3) returns [3, 6, 9, 12]. What does add_vectors(word_cat, position_pattern(3)) produce, and why does that matter?",
   quizCode:
-    "def analyze_requests(requests):\n    total_cost = 0\n    for req in requests:\n        total_cost = total_cost + req[\"cost\"]\n    return total_cost\n\nrequests = [{\"latency_ms\": 120, \"cost\": 0.01}, {\"latency_ms\": 890, \"cost\": 0.01}, {\"latency_ms\": 910, \"cost\": 0.01}]\nprint(\"total cost:\", analyze_requests(requests))",
+    "word_cat = [4, 1, 0, 0]\npos_3 = position_pattern(3)\ntoken_cat_at_3 = add_vectors(word_cat, pos_3)\nprint(pos_3)\nprint(token_cat_at_3)",
   quizOptions: [
     {
       key: "a",
       label:
-        "Requests could be getting much slower (rising latency) while cost per request stays exactly the same, and nothing here would show it",
+        "[7, 7, 9, 12] — each entry of the position pattern gets added to the matching entry of the word vector, so \"cat\" at position 3 is a distinguishable vector from \"cat\" anywhere else",
       correct: true,
     },
     {
       key: "b",
-      label: "Nothing — if total cost is flat and normal, every other aspect of the requests must also be fine",
+      label: "[12, 6, 0, 0] — the position pattern replaces the word vector's entries instead of adding to them",
       correct: false,
     },
     {
       key: "c",
-      label: "Total cost would automatically rise on its own if latency rose, so tracking cost alone always catches both problems",
+      label: "[4, 1, 0, 0] — position information doesn't actually change the vector, it's tracked separately",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — cost and latency are computed from completely separate fields and move independently, so a function that only sums cost (like this one) can look perfectly calm while avg latency quietly triples in the background.",
+    "Right — 4+3, 1+6, 0+9, 0+12 gives [7, 7, 9, 12]. The position pattern is added entry-by-entry directly into the word's own vector, so the vector itself now carries positional information, not a separate side channel.",
   quizFeedbackIncorrect:
-    "Not quite — cost and latency don't move together automatically; they're separate fields summed separately, which is exactly why a slow-but-not-more-expensive regression can hide behind a flat cost number.",
+    "Not quite — positional encoding adds to the word vector rather than replacing or ignoring it: 4+3, 1+6, 0+9, 0+12 gives [7, 7, 9, 12], a vector that's now different from \"cat\" at any other position.",
   takeaway:
-    "Sum cost, sum-then-divide latency, and keep the two numbers separate — total cost tells you if you're overspending, average latency tells you if users are waiting too long, and a system that only watches one of them will miss regressions in the other.",
-  nextUpLabel: "AI Product Design + Edge Cases",
+    "Positional encoding stamps each token with where it sits in the sequence before any other computation happens, which is exactly what the attention mechanism in the next lesson needs already baked in if it's going to have any hope of respecting word order.",
 };
 
 export default content;

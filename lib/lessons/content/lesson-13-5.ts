@@ -1,7 +1,7 @@
 import type { LessonData } from "../types";
 
 const content: LessonData = {
-  num: 9,
+  num: 13,
   orderIndex: 5,
   phaseLabel: "TESTING (UNIT/INTEGRATION/E2E)",
   title: "The Last Mile: Test Coverage and Real End-to-End Tests",

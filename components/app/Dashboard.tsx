@@ -32,7 +32,7 @@ export default function Dashboard() {
   }
 
   const nextLesson = stats.nextLessonModuleNumber != null ? lessonMeta(stats.nextLessonModuleNumber) : null;
-  const phaseNum = Math.min(6, Math.max(1, Math.ceil((stats.nextLessonModuleNumber ?? 24) / 4)));
+  const phaseNum = Math.min(7, Math.max(1, Math.ceil((stats.nextLessonModuleNumber ?? 28) / 4)));
   const phase = PHASES[phaseNum - 1];
   const justStarting = stats.completedLessons === 0 && stats.shippedCapstones === 0;
   const lessonPct = stats.totalLessons ? Math.round((stats.completedLessons / stats.totalLessons) * 100) : 0;
@@ -84,7 +84,7 @@ export default function Dashboard() {
           <p className="text-[14.5px] text-ink-500">
             {justStarting
               ? `Week 1 · Phase ${phaseNum} · ${phase.title} · let's get started`
-              : `Week ${stats.weekNumber} of 48 · Phase ${phaseNum} · ${phase.title}`}
+              : `Week ${stats.weekNumber} of 64 · Phase ${phaseNum} · ${phase.title}`}
           </p>
         </div>
         {nextLesson && (

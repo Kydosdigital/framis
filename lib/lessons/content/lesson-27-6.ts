@@ -1,7 +1,7 @@
 import type { LessonData } from "../types";
 
 const content: LessonData = {
-  num: 23,
+  num: 27,
   orderIndex: 6,
   phaseLabel: "OBSERVABILITY + COST CONTROLS",
   title: "One Meter, Every User: Tracking Cost Per Person",

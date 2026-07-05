@@ -3,82 +3,81 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 22,
   orderIndex: 2,
-  phaseLabel: "HUMAN-IN-THE-LOOP + GUARDRAILS",
-  title: "Trust the Number, Not the Vibe: Routing on Confidence",
-  minutes: 20,
+  phaseLabel: "LINEAR ALGEBRA BASICS",
+  title: "Vector magnitude: how \"long\" is a vector",
+  minutes: 15,
   concept:
-    "A model can attach a confidence score to almost any decision it makes — how sure it is a support ticket matches a known issue, how sure an extracted invoice total is correct, how sure a moderation call is right. The simplest guardrail turns that single number into a routing decision using two thresholds instead of one: a high bar above which the model is right often enough that acting alone is safe, and a low floor below which the model essentially has no useful signal at all. Confidence sitting between those two lines is the 'ask a human' zone — not so low the model is guessing, but not so high you'd bet money on it unsupervised. Two things make this harder than it sounds: a model's stated confidence is not automatically a calibrated probability — a model can say '95% confident' and still be wrong far more than 5% of the time if nobody has ever checked that number against real outcomes. And the floor is not just a weaker version of escalation — below it, the signal is so unreliable that dressing up a low-confidence guess as an 'AI recommendation' for a human to review can do more harm than good, so the safer move is to block the action outright and treat it as a raw exception instead.",
+    "Every vector has a magnitude — a single number for how long it is, ignoring direction entirely. Picture a vector as an arrow drawn from the origin: its magnitude is just the straight-line distance from the tip of that arrow back to (0, 0), the same distance you'd get from the Pythagorean theorem. You compute it by squaring every entry, adding those squares together, and then taking the square root of that sum — squaring first because it turns negative entries positive (a vector pointing \"backwards\" is still just as long), and the sum-of-squares step is exactly the same loop you'd use to take a vector's dot product with itself. The square root is the part that turns \"sum of squares\" into an actual length, undoing the squaring so the units make sense again. Magnitude matters because it measures intensity or scale — a longer embedding vector isn't necessarily \"more similar\" to anything, it might just represent a longer document or a more emphatic signal, which is exactly the wrinkle the next lesson deals with.",
   conceptSimpler:
-    "It's like a weather forecast: above 90% chance of rain you just grab an umbrella without asking anyone, below 10% you basically ignore the forecast because it's noise, and anywhere in between you check a second source before deciding.",
+    "It's the same math as figuring out how far a hiker ended up from camp after walking 3 miles east and 4 miles north — you don't add 3 and 4, you square them, add the squares, and find the straight-line distance, which turns out to be a clean 5 miles.",
   vizStages: [
     {
-      label: "1. Every decision comes with a confidence number",
+      label: "1. A vector as a straight-line distance",
       body:
-        "Before routing anything, the model attaches a single number between 0 and 1 to its own output — how sure it is about the call it just made.",
-      code: "request = {\"id\": \"req-101\", \"confidence\": 0.96}",
+        "The vector [3, 4] can be drawn as an arrow: 3 units right, 4 units up. Its magnitude is the length of the straight line from the origin to that point — not 3 + 4 = 7, but the diagonal distance, which the Pythagorean theorem says is the square root of 3² + 4².",
+      code: "vec = [3, 4]\n# straight-line distance from (0,0) to (3,4)\n# = square root of (3*3 + 4*4)",
     },
     {
-      label: "2. Two thresholds carve out three lanes",
+      label: "2. Square every entry, then add",
       body:
-        "A high bar marks 'confident enough to act alone,' and a low floor marks 'too uncertain to trust at all.' Everything between those two lines becomes the human-review zone.",
-      code: "high = 0.9\nfloor = 0.35",
-    },
-    {
-      label: "3. The routing function, in full",
-      body:
-        "The three lanes fall out of a single if/elif/else: at or above the high bar, auto-approve; at or above the floor but below the bar, escalate; below the floor, block outright.",
+        "The first half of the job is a for-loop nearly identical to the dot product's: square each entry and accumulate a running total. This sum-of-squares is the number that lives \"under\" the square root.",
       code:
-        "def route_by_confidence(confidence):\n    if confidence >= high:\n        return \"auto_approve\"\n    elif confidence >= floor:\n        return \"escalate_to_human\"\n    else:\n        return \"block_and_flag\"",
+        "def sum_of_squares(vec):\n    total = 0\n    for i in range(len(vec)):\n        total = total + vec[i] * vec[i]\n    return total\n\nprint(sum_of_squares([3, 4]))  # 9 + 16 = 25",
     },
     {
-      label: "4. Running it against real requests",
+      label: "3. The square root undoes the squaring",
       body:
-        "A 0.96 sails through automatically. A 0.71 and a 0.5 both land in the human queue, even though one is much closer to the auto-approve bar than the other. A 0.2 gets blocked, not escalated — the model has nothing worth showing a reviewer.",
+        "Magnitude is technically the square root of that sum — but our mini-language has no sqrt(). When the numbers are chosen so the sum of squares is a perfect square, we can find that root by brute force: just test small whole numbers until one, squared, matches.",
       code:
-        "0.96 -> auto_approve\n0.71 -> escalate_to_human\n0.50 -> escalate_to_human\n0.20 -> block_and_flag",
+        "def magnitude(vec):\n    target = sum_of_squares(vec)\n    for guess in range(0, target + 1):\n        if guess * guess == target:\n            return guess\n    return -1\n\nprint(magnitude([3, 4]))  # 25 -> guess 5, since 5*5 == 25",
+    },
+    {
+      label: "4. Scaling a vector scales its magnitude",
+      body:
+        "[6, 8] is just [3, 4] with every entry doubled. Its sum of squares is 36 + 64 = 100, and the whole number whose square is 100 is 10 — exactly double the original magnitude of 5. Stretching a vector's entries stretches its length by the same factor.",
+      code:
+        "print(magnitude([3, 4]))  # 5\nprint(magnitude([6, 8]))  # 10 -- same direction, double the length",
     },
   ],
   realWorldIntro:
-    "Invoice-processing tools like the ones behind Bill.com and Ramp attach a confidence score to every field an extraction model reads off a scanned document, and the same three-lane pattern shows up again: high-confidence fields post straight to the ledger, mid-confidence fields go to a human reviewer's queue, and low-confidence fields get rejected back for a rescan instead of asking a person to rubber-stamp a guess.",
+    "In embedding search, magnitude quietly represents \"how much\" — a long, keyword-stuffed document or a very confident signal often produces a vector with a bigger magnitude, even if it isn't actually the best match in meaning. Knowing how to measure magnitude is the missing piece needed to stop a dot product from being fooled by size alone, which the next lesson tackles head-on with cosine similarity.",
   realWorldCode:
-    "def route_invoice_field(field_name, confidence):\n    if confidence >= 0.92:\n        return \"post_to_ledger\"\n    elif confidence >= 0.4:\n        return \"send_to_reviewer\"\n    else:\n        return \"reject_rescan\"",
+    "doc_vec = embed(long_document)   # naturally larger magnitude, just from length\nquery_vec = embed(short_query)   # smaller magnitude\n# comparing raw dot products would unfairly favor doc_vec for its size, not its relevance",
   sandbox: {
     kind: "code",
     challenge:
-      "Write a function that routes a request to auto-approve, escalate-to-human, or block-and-flag based on how its confidence score compares to a high threshold and a low floor, then run it over a batch of requests and tally the outcomes.",
+      "Write sum_of_squares(vec) and magnitude(vec) (using the brute-force guess loop), then print the magnitude of [3, 4] and [6, 8].",
     starterCode:
-      "def route_by_confidence(confidence):\n    assert confidence >= 0 and confidence <= 1, \"confidence must be between 0 and 1\"\n    high = 0.9\n    floor = 0.35\n    if confidence >= high:\n        return \"auto_approve\"\n    elif confidence >= floor:\n        return \"escalate_to_human\"\n    else:\n        return \"block_and_flag\"\n\nrequests = [{\"id\": \"req-101\", \"confidence\": 0.96}, {\"id\": \"req-102\", \"confidence\": 0.71}, {\"id\": \"req-103\", \"confidence\": 0.5}, {\"id\": \"req-104\", \"confidence\": 0.2}]\n\napproved = 0\nescalated = 0\nblocked = 0\n\nfor req in requests:\n    action = route_by_confidence(req[\"confidence\"])\n    print(f\"{req['id']}: confidence {req['confidence']} -> {action}\")\n    if action == \"auto_approve\":\n        approved = approved + 1\n    elif action == \"escalate_to_human\":\n        escalated = escalated + 1\n    else:\n        blocked = blocked + 1\n\nprint(f\"auto-approved: {approved}, escalated: {escalated}, blocked: {blocked}\")",
+      "def sum_of_squares(vec):\n    total = 0\n    for i in range(len(vec)):\n        total = total + vec[i] * vec[i]\n    return total\n\ndef magnitude(vec):\n    target = sum_of_squares(vec)\n    for guess in range(0, target + 1):\n        if guess * guess == target:\n            return guess\n    return -1\n\na = [3, 4]\nb = [6, 8]\n\nprint(f\"sum of squares of {a}: {sum_of_squares(a)}\")\nprint(f\"magnitude of {a}: {magnitude(a)}\")\nprint(f\"sum of squares of {b}: {sum_of_squares(b)}\")\nprint(f\"magnitude of {b}: {magnitude(b)}\")",
   },
   quizQuestion:
-    "A fraud model reports 92% confidence that a transaction is legitimate — above the auto-approve threshold — and auto-approves it. The transaction turns out to be fraudulent. What does this actually suggest about confidence thresholds?",
+    "vec_y is exactly vec_x with every entry multiplied by 3. If magnitude(vec_x) is 5, what should magnitude(vec_y) be?",
   quizCode:
-    "def route_by_confidence(confidence):\n    if confidence >= 0.9:\n        return \"auto_approve\"\n    elif confidence >= 0.35:\n        return \"escalate_to_human\"\n    else:\n        return \"block_and_flag\"\n\naction = route_by_confidence(0.92)\nprint(action)",
+    "vec_x = [3, 4]\nvec_y = [9, 12]\nprint(sum_of_squares(vec_x))\nprint(sum_of_squares(vec_y))",
   quizOptions: [
     {
       key: "a",
       label:
-        "A confidence score is only useful once it's calibrated against real outcomes — a 90% threshold is meaningless if the model's '90% confident' calls aren't actually right about 90% of the time, so teams need to audit calibration, not just trust the raw number",
+        "15 — multiplying every entry by 3 multiplies each squared term by 9, so the sum of squares grows by 9, and the square root undoes that back down to a factor of 3",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "This proves confidence thresholds don't work at all, so every transaction should be escalated to a human regardless of confidence",
+      label: "5 — magnitude doesn't change just because the entries got bigger",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "The fix is simply to raise the auto-approve threshold from 0.9 to something higher, which would have caught this case",
+      label: "45 — since the entries were scaled by 3, the magnitude should scale by 3 squared (9) as well",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — one wrong call at 92% doesn't disprove thresholds, but it's a signal to check calibration: if 92%-confidence predictions are wrong noticeably more than 8% of the time across many cases, the number itself is untrustworthy and no threshold built on top of it will behave the way it looks like it should.",
+    "Right — scaling a vector's entries by k multiplies its sum of squares by k² (225 = 9 × 25), and the square root exactly cancels that squaring, so the magnitude itself only scales by k (5 × 3 = 15).",
   quizFeedbackIncorrect:
-    "Not quite — the problem isn't that thresholds are useless or that the bar was in the wrong place; it's that the confidence number itself might not be calibrated. A threshold is only as good as the probability estimate feeding it, so the real fix is checking whether '92% confident' predictions are actually right 92% of the time.",
+    "Not quite — magnitude is directly tied to the size of the entries (bigger entries mean a longer vector), but it doesn't grow by the same k² factor the sum of squares does; the square root brings that squared growth back down to a plain factor of k.",
   takeaway:
-    "A confidence score only earns trust once it's been checked against real outcomes. Thresholds carve that score into auto-approve, escalate, and block lanes — but the floor isn't a weaker form of escalation, it's the point where there's no signal left worth acting on at all.",
+    "Magnitude is \"square, sum, then undo the squaring\" — it tells you how long a vector is, completely separate from which direction it points, and that distinction is exactly what the next lesson needs.",
 };
 
 export default content;

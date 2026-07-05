@@ -3,102 +3,105 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 24,
   orderIndex: 2,
-  phaseLabel: "AI PRODUCT DESIGN + EDGE CASES",
-  title: "Show your work: why citations beat confidence",
+  phaseLabel: "FINE-TUNING + DATASET QUALITY",
+  title: "Don't fine-tune a problem a better prompt can fix in an afternoon",
   minutes: 18,
   concept:
-    "A model sounds exactly as confident when it's right as when it's fabricating something from thin air — fluent, assured, grammatically perfect either way — which means a user has no built-in way to tell a correct answer from a plausible-sounding wrong one just by how it reads. The fix isn't making the model sound less confident; it's redesigning the output so the user (or a reviewer) can check the claim themselves, cheaply, without having to take the model's word for it. That means attaching real citations — a link to the actual passage the answer is based on, not just a source name in parentheses — so a claim can be verified in one click instead of a separate search. It also means letting the interface reflect uncertainty honestly: an answer built on one thin, outdated source should look and read differently from one backed by several current, corroborating ones, instead of both getting the same flat, confident tone. Products that skip this treat \"the model said so\" as sufficient evidence on its own, and that assumption is exactly what breaks trust the first time it turns out to be wrong.",
+    "Fine-tuning changes the model's weights, which means it can fix problems no prompt ever could — it's the only lever for teaching a genuinely new output format the model resists, a domain-specific style it can't be talked into, or a task where you need lower latency by baking instructions into the weights instead of sending them every request. But fine-tuning costs real time and money: you need a curated dataset, a training run, an eval pass, and a redeploy every time the task definition changes even slightly. Most of what feels like \"the model isn't doing what I want\" is actually a prompt problem — vague instructions, missing examples, no clear output schema — and those are fixed in minutes by rewriting the prompt, not weeks by retraining. The rule of thumb: reach for better prompting, few-shot examples, and retrieval first, and only fine-tune once you've proven the model can already do the task when given a great prompt, but does it inconsistently or too slowly to use at scale. Fine-tuning on a badly-defined task doesn't clarify the task — it just bakes the confusion in more permanently.",
   conceptSimpler:
-    "It's the difference between a student who just says \"the answer is 42\" and one who shows the worksheet — one asks you to trust them, the other lets you check the work yourself.",
+    "It's the difference between giving someone clearer instructions versus sending them back to school — school works for a real skill gap, but most performance problems are just unclear instructions, and no amount of schooling fixes those faster than just being clearer.",
   vizStages: [
     {
-      label: "1. Confidence isn't accuracy",
+      label: "1. The cheap fix first",
       body:
-        "A correct answer and a hallucinated one can be worded identically — same tone, same fluency, same lack of hedging. Nothing about how the sentence sounds tells you which one it is.",
-      code: 'assistant: "Your plan includes 3 free reschedules per year."   // true\nassistant: "Your plan includes unlimited free reschedules."     // fabricated\n// both delivered in exactly the same confident voice',
+        "A support-ticket classifier keeps mislabeling billing tickets as bugs. Before touching training data, the team rewrites the prompt to include the exact category definitions and three labeled examples.",
+      code: "prompt = \"Classify as billing, bug, or question.\\n\" +\n  \"billing = anything about charges, refunds, or payment methods.\\n\" +\n  \"Example: 'charged twice' -> billing\\n\" +\n  \"Example: 'app crashes on open' -> bug\"",
     },
     {
-      label: "2. Answer-only vs. sourced answer",
+      label: "2. When the cheap fix is enough",
       body:
-        "A naive product prints the model's sentence and stops there. A designed product attaches the actual passage the claim came from, with a link straight to it, so the user isn't just being told — they're being shown.",
-      code: '// naive\n{ text: "You get 3 free reschedules per year." }\n\n// designed\n{\n  text: "You get 3 free reschedules per year.",\n  source: { doc: "Membership Terms §4.2", url: "/terms#4.2", quote: "Members may reschedule up to three (3) times annually at no charge." }\n}',
+        "Accuracy jumps from 71% to 95% just from clearer instructions and examples. There's no fine-tuning problem here — there was a prompt-clarity problem, and it's solved.",
+      code: "// before: accuracy 71%\n// after adding definitions + examples: accuracy 95%\n// no training run needed",
     },
     {
-      label: "3. Let the interface reflect uncertainty",
+      label: "3. When prompting hits a real wall",
       body:
-        "One old support ticket and three current policy documents shouldn't produce the same confident sentence. A designed product varies the phrasing and visual weight based on how strong the underlying evidence actually is.",
-      code: 'strong: "According to the current Membership Terms (3 sources agree): ..."\nweak:   "Based on a single older support note, this might be: ... (unconfirmed — worth double-checking)"',
+        "A different team needs the model to output a rigid internal JSON schema with 40 fields, every time, with zero drift, at high volume and low latency. Even a great prompt gets the format right 90% of the time and occasionally adds a stray field or explanatory sentence.",
+      code: "// best prompt achievable: 90% schema-valid, and slower\n// per-request cost of re-sending 40-field instructions every call: high",
     },
     {
-      label: "4. A citation must itself be checkable",
+      label: "4. That's the fine-tuning case",
       body:
-        "A citation only builds trust if it resolves to something real. A link that 404s, or a case name and quote that don't exist, is worse than no citation at all — it looks verified while being completely unverifiable.",
-      code: '// looks trustworthy, is not:\nsource: { doc: "Support Policy v4", url: "/policies/v4" }  // page was deleted 8 months ago, link 404s',
+        "This is a good fine-tuning candidate: the task is precisely defined, the failure is consistency and cost rather than confusion, and a curated set of correct examples can teach the exact format so it doesn't need to be re-explained every request.",
+      code: "// fine-tuned on 300 correctly-formatted examples:\n// schema-valid: 99.6%, no instructions needed in the prompt at all",
     },
   ],
   realWorldIntro:
-    "In the 2023 case Mata v. Avianca, a lawyer used ChatGPT to help draft a federal court filing, and the model invented six court cases — complete with plausible case names, docket numbers, and quoted excerpts — none of which existed; nothing in that workflow made the citations checkable before they went in front of a judge, and the attorney was sanctioned.",
+    "Teams that skip straight to fine-tuning often discover, after a training run, that the same gain was available from adding two few-shot examples to the prompt — which is why most fine-tuning guides insist on a documented prompt-engineering attempt first.",
   realWorldCode:
-    '// what the model produced (fabricated, but formatted exactly like a real citation):\n"Varghese v. China Southern Airlines Co., Ltd., 925 F.3d 1339 (11th Cir. 2019)"\n// correct format, plausible court, plausible year — and it does not exist\n\n// what a designed product would have added before this reached a filing:\n// a verification step that checks the citation against an actual case database\n// and refuses to render it as a source if it can\'t be confirmed',
+    "// before opening a training job, answer:\n// 1. does the best possible prompt already do this task correctly?\n// 2. if yes, is the only problem consistency, cost, or latency at scale?\n// only fine-tune if both checks point that way",
   sandbox: {
     kind: "explore",
     instructions:
-      "Click through five stages to see how a product turns a bare AI answer into something a user can actually verify, rather than just something they have to believe.",
+      "Click through each scenario and decide whether it calls for a better prompt or an actual fine-tune before reading the verdict.",
     stages: [
       {
-        label: "Stage 1: the bare answer",
+        label: "Scenario 1: the model ignores a rule you never wrote down",
         body:
-          'A support bot says "Your policy covers water damage under section 4.2" with no link and no quote. The user either takes it on faith or has to go dig through a policy PDF themselves to check — the product has handed the verification work back to the person who came to it for an answer.',
+          "A team wants replies under 50 words but never puts a word limit in the prompt, then plans a fine-tuning run to \"teach brevity.\" Verdict: prompt fix. Just add the constraint — the model was never told the rule it's being blamed for breaking.",
+        code: "prompt = \"Reply to the customer.\"\n// missing: \"Keep the reply under 50 words.\"",
       },
       {
-        label: "Stage 2: a clickable citation",
+        label: "Scenario 2: the task needs a house style no instruction captures",
         body:
-          'The same answer now comes with a link to section 4.2 and the exact sentence highlighted: "Water damage from a covered peril is included; damage from gradual leaks is excluded." One click confirms it, and the user can also see the part the bot didn\'t mention — the exclusion — instead of only getting the flattering half of the section.',
+          "A legal team needs contract summaries written in their firm's exact phrasing conventions, built up over decades, that can't be reduced to a short rule list. Verdict: fine-tune candidate. This is a style-transfer problem where examples teach something instructions can't compactly describe.",
+        code: "// hundreds of firm-authored summary pairs:\n// { contract_excerpt: ..., firm_style_summary: ... }",
       },
       {
-        label: "Stage 3: confidence reflected in the UI, not just claimed in words",
+        label: "Scenario 3: it works, but costs too much per call",
         body:
-          'Two answers, two different treatments: one cites three current internal docs that all agree and renders with a solid "verified" badge; the other is based on a single support ticket from two years ago and renders with a muted "unconfirmed, worth double-checking with a human" note. Same product, different visual and verbal weight based on actual evidence strength.',
+          "A prompt that works needs 1,200 tokens of instructions and examples resent on every single request, at huge volume. Verdict: fine-tune candidate, but for a cost reason, not a capability reason — bake the always-repeated instructions into the weights and cut the per-request prompt to almost nothing.",
+        code: "// current: 1,200-token instruction prompt x 2M requests/month\n// fine-tuned: near-empty prompt, same behavior baked into the model",
       },
       {
-        label: "Stage 4: verifying the citation before showing it",
+        label: "Scenario 4: the examples in the prompt are just wrong",
         body:
-          "Before any source is rendered to the user, a separate check confirms the linked document still exists and actually contains the quoted text — not just that the model generated something citation-shaped. A citation that fails this check gets dropped, and the answer is shown as unsourced rather than fake-sourced.",
+          "A classifier prompt includes three few-shot examples, and one of them is mislabeled. The team is about to build a 5,000-row training set because \"the model still gets confused.\" Verdict: prompt fix. Fix the one wrong example first — fine-tuning on a dataset built to compensate for a prompt bug just launders the same bug into the weights.",
+        code: "// few-shot example 3 (wrong):\n// { input: \"double charged\", label: \"bug\" }  // should be \"billing\"",
       },
       {
-        label: "Stage 5: when there's no good source",
+        label: "Scenario 5: it's inconsistent despite a genuinely good prompt",
         body:
-          'For a question with no solid backing in any document, the product says so directly: "I don\'t have a verified source for this — here\'s my best understanding, but please confirm with a human before relying on it." That sentence is less satisfying than a confident answer, and it\'s the one that keeps the product trustworthy the next hundred times.',
+          "The prompt is clear, well-tested, and includes solid examples, but the model still flips its answer on the same input across runs at a rate that hurts production reliability. Verdict: fine-tune candidate. When prompting is already good and the remaining gap is stability rather than confusion, training on curated examples locks in the behavior instructions alone can't guarantee.",
+        code: "// same input, 5 runs with the best prompt found:\n// billing, billing, bug, billing, billing  <- 20% flip rate",
       },
     ],
   },
   quizQuestion:
-    "A support bot answers a billing question and includes a citation like \"(Billing Policy §4.2)\", but that section doesn't actually exist in the linked document. What's the real risk this creates?",
-  quizCode: 'assistant: "Refunds within 60 days are covered. (Billing Policy §4.2)"\n// §4.2 does not exist in the linked document',
+    "A team's model mislabels tickets containing the word 'refund' as 'bug' about 30% of the time. They haven't yet added any examples or category definitions to their prompt. What should they try first?",
   quizOptions: [
     {
       key: "a",
-      label: "It's strictly better than no citation, since it at least gives the user something to click on",
+      label: "Start collecting and labeling a training set for a fine-tune, since 30% is a large error rate",
       correct: false,
     },
     {
       key: "b",
-      label:
-        "It's worse than no citation, because it looks verified while being unverifiable, which increases false trust in a claim that was never actually checked",
+      label: "Add clear category definitions and a few labeled examples to the prompt, then re-measure the error rate",
       correct: true,
     },
     {
       key: "c",
-      label: "There's no real risk, as long as the underlying refund claim happens to be true",
+      label: "Switch to a larger base model, since bigger models make fewer classification errors",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — a citation's whole value is signaling \"you can check this,\" so one that doesn't resolve to anything real removes the safety net while keeping the appearance of one, which is more dangerous than admitting no source exists.",
+    "Right — a 30% error rate with no definitions or examples in the prompt is a strong sign the task was never clearly specified, and clarifying it costs minutes; fine-tuning should wait until a well-specified prompt still can't hit the needed accuracy or consistency.",
   quizFeedbackIncorrect:
-    "Not quite — a fake citation isn't neutral or harmless just because the answer happens to be correct this time; it trains users to trust citations that were never actually verified, which fails badly the next time the underlying claim is wrong.",
+    "Not quite — before spending days on a training set or swapping models, the prompt hasn't even been given category definitions or examples yet, and that cheap fix routinely closes gaps this size on its own.",
   takeaway:
-    "Trust isn't earned by sounding confident — it's earned by making your claims cheap to check. Every citation, confidence cue, and source link you show is a promise that the user doesn't have to just believe you, and that promise only holds if it's actually true.",
+    "Fine-tuning is for a well-defined task the model already does correctly with a great prompt but not consistently, quickly, or cheaply enough — not a shortcut around the harder work of writing a clear prompt in the first place.",
 };
 
 export default content;

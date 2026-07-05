@@ -3,98 +3,81 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 9,
   orderIndex: 3,
-  phaseLabel: "TESTING (UNIT/INTEGRATION/E2E)",
-  title: "Fixtures and Mocks: Faking What a Test Shouldn't Need",
+  phaseLabel: "PANDAS + DATA WRANGLING",
+  title: "Cleaning messy data: duplicates and outliers",
   minutes: 22,
   concept:
-    "Real functions rarely operate on bare numbers — they work on a user account, a shopping cart, or a document, and testing them means first building that starting data. If ten different tests each need a sample user account, copying the same few lines of setup into every single test is repetitive, and the moment that shape changes — a new required field, say — you have to hunt down and fix it in ten places. A fixture solves this by moving that setup into its own function, written once, that any test can call to get a ready-made piece of test data. Crucially, a fixture has to build a brand-new copy every time it's called, not hand out one shared object — if two tests fought over the same object, a change one test makes would leak into the next test and make results depend on the order the tests happened to run in. So a good fixture is really just an ordinary function that constructs and returns fresh data, called at the start of every test that needs it.\n\nA fixture fakes the data a function starts with. Mocking fakes a dependency a function reaches out to while it runs. Say get_welcome_message(user_id) needs the user's name, so it calls get_user_from_db(user_id) — a function that, in a real app, opens a network connection and runs a SQL query against an actual database. Testing get_welcome_message shouldn't require a real, running, seeded database just to check one line of string formatting — that's slow, and it can fail for reasons that have nothing to do with get_welcome_message, like the network hiccuping. Mocking solves this by defining a fake get_user_from_db for the test that skips the database entirely and just returns a fixed, made-up user immediately. get_welcome_message calls it exactly the same way either way and has no idea the real database was never touched — but now the test runs instantly, needs no real infrastructure, and can't fail because of some unrelated outage.",
+    "Missing values aren't the only way data goes bad. Two more common problems: duplicate rows, where the exact same record got entered or merged into your table twice, and outliers, where a value is technically present but wildly outside what's normal — a typo that turns an age of 29 into 290, or a sensor glitch that reports a temperature of 9000. Detecting a duplicate means comparing two rows field by field: same name, same age, same city, on every field you care about, not just one. There's no shortcut around this — you have to write the comparison yourself, checking every field, because two rows only count as duplicates if all of them match. Detecting an outlier means picking a \"normal\" reference point (usually the column's mean) and flagging any value whose distance from that reference crosses some threshold you choose. Both of these are judgment calls with real consequences: dedupe too aggressively and you might merge two different people who happen to share a name; set an outlier threshold too tight and you'll flag legitimate extreme values as errors. Real pandas gives you both as near one-liners — df.duplicated() flags repeated rows across every column, and a z-score or IQR check flags outliers — but the logic underneath is exactly the field-by-field comparison and threshold check you're about to build.",
   conceptSimpler:
-    "A fixture is a recipe card for a test's starting ingredients — you follow it fresh for every dish instead of ladling out of one shared pot that every test's spoon has already been in. A mock is a stunt double: the scene calls for a real database, but a stand-in that says the right lines is faster and safer than doing the real stunt on every single take.",
+    "A duplicate is two index cards that say the exact same thing on every line — you have to actually check every line to be sure, not just glance at one field. An outlier is a card whose number is way off from what all the other cards say, further than some line you draw ahead of time.",
   vizStages: [
     {
-      label: "1. The repeated setup problem",
+      label: "1. Comparing two rows field by field",
       body:
-        "Two tests both need a sample user account, so both build one from scratch. It's only three lines, but copy it into ten tests and one small change to the user's shape means editing all ten.",
+        "There's no built-in \"are these dicts equal\" you can rely on here — write the comparison by hand, checking every field you care about. Two rows only count as the same if all of them match.",
       code:
-        'test1_user = {"name": "Alex", "age": 30, "verified": True}\nassert test1_user["age"] == 30\n\ntest2_user = {"name": "Alex", "age": 30, "verified": True}\ntest2_user["age"] = 31\nassert test2_user["age"] == 31',
+        'def rows_equal(a, b):\n    if a["name"] != b["name"]:\n        return False\n    if a["age"] != b["age"]:\n        return False\n    if a["city"] != b["city"]:\n        return False\n    return True\n\nrow1 = {"name": "Ava", "age": 29, "city": "NYC"}\nrow2 = {"name": "Ava", "age": 29, "city": "NYC"}\nrow3 = {"name": "Ava", "age": 30, "city": "NYC"}\nprint(rows_equal(row1, row2))\nprint(rows_equal(row1, row3))',
     },
     {
-      label: "2. Extract the setup into a fixture",
+      label: "2. Removing duplicates from a whole table",
       body:
-        "Instead of repeating those lines, wrap them in a function that builds and returns a fresh user account. Now the setup lives in exactly one place.",
+        "Keep a running list of rows already kept, and for each new row check it against every row already in that list using rows_equal. Only append it if nothing already there matches. This is exactly what df.drop_duplicates() does under the hood.",
       code:
-        'def make_test_user():\n    user = {"name": "Alex", "age": 30, "verified": True}\n    return user',
+        'def rows_equal(a, b):\n    if a["name"] != b["name"]:\n        return False\n    if a["age"] != b["age"]:\n        return False\n    if a["city"] != b["city"]:\n        return False\n    return True\n\ndef drop_duplicates(rows):\n    unique_rows = []\n    for row in rows:\n        is_duplicate = False\n        for kept in unique_rows:\n            if rows_equal(row, kept):\n                is_duplicate = True\n        if is_duplicate == False:\n            unique_rows.append(row)\n    return unique_rows\n\nrows = []\nrows.append({"name": "Ava", "age": 29, "city": "NYC"})\nrows.append({"name": "Ben", "age": 34, "city": "LA"})\nrows.append({"name": "Ava", "age": 29, "city": "NYC"})\nrows.append({"name": "Cy", "age": 41, "city": "SF"})\n\ndeduped = drop_duplicates(rows)\nprint(f"before: {len(rows)} rows, after dedup: {len(deduped)} rows")',
     },
     {
-      label: "3. Call it fresh, once per test",
+      label: "3. Building \"how far from the average\" by hand",
       body:
-        "Each test calls make_test_user() to get its own account, and can change it however it needs to without worrying about any other test.",
+        "There's no abs() in this sandbox, so a distance-from-average calculation needs to flip a negative difference by hand: if the difference is negative, negate it.",
       code:
-        'user1 = make_test_user()\nassert user1["age"] == 30\n\nuser2 = make_test_user()\nuser2["age"] = 31\nassert user2["age"] == 31',
+        'avg = 58.5\nvalue = 29\ndiff = value - avg\nif diff < 0:\n    diff = 0 - diff\nprint(f"distance from average: {diff}")',
     },
     {
-      label: "4. Why it has to be fresh, not shared",
+      label: "4. Flagging outliers with a threshold",
       body:
-        "If a test grabs the same already-built object instead of calling the fixture again, another test's changes are still sitting on it. The fixture function itself was never broken — reusing its output instead of recalling it was.",
+        "Compute the mean, then flag any row whose distance from that mean crosses a threshold you pick. Real pandas would compute this same distance across an entire column at once, but the logic — mean, distance, threshold — is identical.",
       code:
-        'shared_user = make_test_user()\n\nuser1 = shared_user\nuser1["age"] = 31\n\nuser2 = shared_user\nassert user2["age"] == 30\n# AssertionError: user2["age"] is 31, not 30 — user1 and user2\n# are literally the same object, so user1\'s change leaked in',
-    },
-    {
-      label: "5. A function that depends on a real database",
-      body:
-        "get_welcome_message needs a user's name, so it calls get_user_from_db(user_id). In a real app that function opens a connection and runs a query — infrastructure a test shouldn't need just to check a greeting string.",
-      code:
-        "def get_user_from_db(user_id):\n    # in a real app: opens a connection, runs a SQL query, returns a row\n    ...\n\ndef get_welcome_message(user_id):\n    user = get_user_from_db(user_id)\n    return f\"Welcome back, {user['name']}\"",
-    },
-    {
-      label: "6. Mock it: swap in a fake for the test",
-      body:
-        "For the test, define a version of get_user_from_db that returns a fixed fake user instead of touching a database. get_welcome_message calls it exactly the same way as before — it has no way of knowing it's not real.",
-      code:
-        'def get_user_from_db(user_id):\n    return {"id": user_id, "name": "Alex", "verified": True}\n\nmessage = get_welcome_message(42)\nassert message == "Welcome back, Alex", "should greet the mocked user by name"\nprint(message)\n# no real database was ever opened, queried, or even reachable',
+        'def mean_of(rows, column):\n    total = 0\n    count = 0\n    for row in rows:\n        total = total + row[column]\n        count = count + 1\n    return total / count\n\ndef find_outliers(rows, column, threshold):\n    avg = mean_of(rows, column)\n    outliers = []\n    for row in rows:\n        diff = row[column] - avg\n        if diff < 0:\n            diff = 0 - diff\n        if diff > threshold:\n            outliers.append(row)\n    return outliers\n\nages = []\nages.append({"name": "Ava", "age": 29})\nages.append({"name": "Ben", "age": 34})\nages.append({"name": "Cy", "age": 41})\nages.append({"name": "Dee", "age": 130})\n\nprint(f"average age: {mean_of(ages, \'age\')}")\noutliers = find_outliers(ages, "age", 30)\nfor o in outliers:\n    print(f"outlier: {o}")',
     },
   ],
   realWorldIntro:
-    "Testing frameworks like pytest have fixtures built in — the @pytest.fixture decorator marks a setup function that pytest automatically re-runs fresh before every test that asks for it. For mocking, Python's built-in unittest.mock (or pytest's own monkeypatch fixture) swaps a real function or object out for a fake one for the duration of a single test, then automatically puts the original back afterward.",
+    "Real pandas collapses the deduplication loop into df.drop_duplicates(), which compares every column across every row for you, and duplicated() to just flag them without removing anything. Outlier detection usually goes one step further than a raw distance-from-mean — a common real version uses the standard deviation to compute a \"z-score\" (how many standard deviations away a value is) so the threshold adapts to how spread out the data naturally is, instead of using one fixed number for every column.",
   realWorldCode:
-    '# tests/test_users.py\nimport pytest\n\n@pytest.fixture\ndef test_user():\n    return {"name": "Alex", "age": 30, "verified": True}\n\ndef test_default_age(test_user):\n    assert test_user["age"] == 30\n\ndef test_can_update_age(test_user):\n    test_user["age"] = 31\n    assert test_user["age"] == 31\n# pytest calls test_user() fresh for each test function above\n\n# tests/test_welcome.py\ndef test_welcome_message_uses_mocked_user(monkeypatch):\n    def fake_get_user_from_db(user_id):\n        return {"id": user_id, "name": "Alex", "verified": True}\n\n    monkeypatch.setattr("app.db.get_user_from_db", fake_get_user_from_db)\n    assert get_welcome_message(42) == "Welcome back, Alex"\n    # no real database connection was ever made',
+    '# real pandas — same two checks as near one-liners:\n# deduped = df.drop_duplicates()\n# is_dup = df.duplicated()                 # True/False per row, without dropping\n# z_scores = (df["age"] - df["age"].mean()) / df["age"].std()\n# outliers = df[z_scores.abs() > 3]         # more than 3 standard deviations away',
   sandbox: {
     kind: "code",
     challenge:
-      "get_welcome_message is being tested with a mocked get_user_from_db, but the mock's fake user doesn't match the shape the real function is supposed to return, causing a KeyError. Fix the mock's dict so it has the right key, without changing get_welcome_message itself.",
+      "Write rows_equal(a, b) comparing name, age, and city, then drop_duplicates(rows) using it. Separately, write mean_of(rows, column) and find_outliers(rows, column, threshold) that flags any row whose age is more than `threshold` away from the average. Run both on the sample data below.",
     starterCode:
-      'def get_user_from_db(user_id):\n    return {"id": user_id, "username": "Alex", "verified": True}\n\ndef get_welcome_message(user_id):\n    user = get_user_from_db(user_id)\n    return f"Welcome back, {user[\'name\']}"\n\nmessage = get_welcome_message(42)\nassert message == "Welcome back, Alex", "should greet the mocked user by name"\nprint(message)',
+      'def rows_equal(a, b):\n    if a["name"] != b["name"]:\n        return False\n    if a["age"] != b["age"]:\n        return False\n    if a["city"] != b["city"]:\n        return False\n    return True\n\ndef drop_duplicates(rows):\n    unique_rows = []\n    for row in rows:\n        is_duplicate = False\n        for kept in unique_rows:\n            if rows_equal(row, kept):\n                is_duplicate = True\n        if is_duplicate == False:\n            unique_rows.append(row)\n    return unique_rows\n\ndef mean_of(rows, column):\n    total = 0\n    count = 0\n    for row in rows:\n        total = total + row[column]\n        count = count + 1\n    return total / count\n\ndef find_outliers(rows, column, threshold):\n    avg = mean_of(rows, column)\n    outliers = []\n    for row in rows:\n        diff = row[column] - avg\n        if diff < 0:\n            diff = 0 - diff\n        if diff > threshold:\n            outliers.append(row)\n    return outliers\n\nrows = []\nrows.append({"name": "Ava", "age": 29, "city": "NYC"})\nrows.append({"name": "Ben", "age": 34, "city": "LA"})\nrows.append({"name": "Ava", "age": 29, "city": "NYC"})\nrows.append({"name": "Cy", "age": 41, "city": "SF"})\nrows.append({"name": "Dee", "age": 130, "city": "LA"})\n\ndeduped = drop_duplicates(rows)\nprint(f"before dedup: {len(rows)} rows, after dedup: {len(deduped)} rows")\n\nprint(f"average age (deduped): {mean_of(deduped, \'age\')}")\noutliers = find_outliers(deduped, "age", 30)\nfor o in outliers:\n    print(f"outlier: {o}")',
   },
   quizQuestion:
-    "Why must a fixture function return a brand-new object every time it's called, rather than one shared object reused across tests?",
+    "This rows_equal was written in a hurry and forgot to compare the age field. What does it print for these two rows, and why is that a problem for deduplication?",
   quizCode:
-    'shared_user = make_test_user()\nuser1 = shared_user\nuser1["age"] = 31\nuser2 = shared_user\nassert user2["age"] == 30  # fails — user2 is the same object as user1',
+    'def rows_equal(a, b):\n    if a["name"] != b["name"]:\n        return False\n    if a["city"] != b["city"]:\n        return False\n    return True\n\nrow1 = {"name": "Ava", "age": 29, "city": "NYC"}\nrow2 = {"name": "Ava", "age": 31, "city": "NYC"}\nprint(rows_equal(row1, row2))',
   quizOptions: [
     {
       key: "a",
-      label:
-        "So mutations one test makes can't leak into another test's starting data and make results depend on the order tests happen to run in",
+      label: "True — it treats two different people (or two real, different-aged records) as duplicates, since age is never checked",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "Because a function is only allowed to return a given dict value one time before it must build a different one",
+      label: "False — Python automatically compares every field even if the function only checks two of them",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "Because a test file is only allowed to define a single fixture function per file",
+      label: "It raises a KeyError because age is missing from the comparison",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — when two tests share the exact same object, one test's edits are still sitting there when the next test runs, so the fresh-copy-per-call is what keeps tests independent of each other and of run order.",
+    "Right — rows_equal only checks name and city, so it never even looks at age. Both checks it does perform pass (same name, same city), so it returns True and drop_duplicates would silently discard one of these rows — even though they might be two genuinely different records (or a real data point next to a typo) that just happen to share a name and city.",
   quizFeedbackIncorrect:
-    "Not quite — there's no such restriction on functions or files; the real reason is isolation: a shared object lets one test's mutations bleed into the next, which is exactly what a fixture is supposed to prevent.",
+    "Not quite — Python doesn't add field comparisons on its own; a function only checks exactly what you write inside it. Since rows_equal here never looks at age, it doesn't matter that 29 and 31 differ — it returns True because name and city both matched, meaning drop_duplicates would treat these as duplicates and quietly drop one, even if they were two different records that share a name and city by coincidence.",
   takeaway:
-    "A fixture removes repeated setup by moving it into one function, but it only works if that function is called fresh for every test. Hand out a shared object instead, and one test's changes silently become another test's wrong starting point. Mocking takes the same idea further: instead of faking a function's starting data, you fake a whole dependency — a database call, an API call — so a test can run fast and deterministically without any real infrastructure behind it, as long as the fake matches the shape the real thing would have returned.",
+    "A duplicate row is only a duplicate if every field you care about matches — comparing just one or two fields risks collapsing genuinely different records together. An outlier is a value farther from the average than some threshold you choose; both duplicate-detection and outlier-detection are judgment calls, and being explicit about exactly which fields and which threshold you used is what makes that judgment call reviewable later.",
 };
 
 export default content;

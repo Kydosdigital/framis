@@ -3,81 +3,101 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 15,
   orderIndex: 4,
-  phaseLabel: "STRUCTURED OUTPUTS + TOOL CALLING",
-  title: "The Safety Net: Surviving a Bad Tool Call",
-  minutes: 20,
+  phaseLabel: "SECURITY + AUTH PATTERNS",
+  title: "Why the padlock matters: HTTPS and the case against plaintext requests",
+  minutes: 18,
   concept:
-    "A tool call can fail for reasons that have nothing to do with your dispatcher's routing logic: the model might leave out an argument the real function needs, pass a value the function flat-out rejects, or name a city, currency, or record that simply doesn't exist. Each of those failure modes raises a different kind of error — a missing dict key raises KeyError, a value your function explicitly rejects raises ValueError — and if nothing catches it, that one bad call crashes the entire program, not just the one request that triggered it. Wrapping the risky step in try/except lets you catch specific error types by name and respond to each one on purpose, instead of letting any exception take down everything after it. The except block doesn't need to fix the underlying problem — its job is to produce a graceful fallback, like a message saying the action couldn't be completed, so the rest of the program, and the conversation, can keep going. This is what separates a demo from something you'd actually put in front of users: demos assume every tool call is well-formed, production code assumes some of them won't be.",
+    "Plain HTTP sends every request and response as readable plaintext across the network — anyone positioned between your browser and the server (a shared WiFi network, a compromised router, an ISP) can read exactly what you sent, including form fields, cookies, and session tokens, and can even modify it in transit. HTTPS fixes this by wrapping HTTP inside TLS (Transport Layer Security), which does two things before a single byte of your actual request is sent: it verifies the server's identity using a certificate signed by a trusted certificate authority, and it negotiates an encryption key that only your browser and that server know. From that point on, everything exchanged is ciphertext to anyone watching the wire — an eavesdropper sees scrambled bytes instead of your password, your session cookie, or the page content itself. This matters for every request, not just login forms, because a session cookie sniffed from any single unencrypted request is enough to hijack the entire logged-in session, and because a network attacker can inject or alter content in an unencrypted response before it ever reaches your browser. Modern servers reinforce this with HSTS (HTTP Strict Transport Security), a header that tells browsers \"never even attempt plain HTTP with this domain again,\" closing the gap where a first request might slip through unencrypted.",
   conceptSimpler:
-    "A try/except around a tool call is like a spotter under a trapeze artist — you're not trying to prevent every fall, you're making sure that when one happens, it ends in a safety net instead of the whole show stopping.",
+    "HTTP is like mailing a postcard — anyone who handles it along the way can read every word. HTTPS is like sealing that same message in a tamper-evident envelope that only the intended recipient can open, and that visibly shows if anyone tried to open it in transit.",
   vizStages: [
     {
-      label: "1. A tool call that looks fine but isn't",
+      label: "1. A request over plain HTTP",
       body:
-        "The dict has the right shape — a name and an arguments dict — but arguments is missing a key the real function actually needs. Nothing about the shape looks wrong until you try to use it.",
-      code: "call = {\"name\": \"convert_currency\", \"arguments\": {\"amount\": 50}}",
+        "The browser sends the request exactly as written — headers, cookies, and body all travel as readable text across every network hop between you and the server.",
+      code: "GET /account HTTP/1.1\nHost: framis.dev\nCookie: sid=8f2a9c1e7b4d...\n\n// visible in full to anyone on the network path",
     },
     {
-      label: "2. Without a safety net, one bad call takes down the batch",
+      label: "2. Anyone on the path can read it",
       body:
-        "dispatch reaches for args[\"currency\"], which was never there. That raises a KeyError, and with nothing catching it, the program stops right there — any calls still waiting never get a chance to run.",
-      code:
-        "result = dispatch(call)\n# KeyError: currency\n# program halts here — nothing after this line runs",
+        "On a shared network — coffee shop WiFi, an airport hotspot, a compromised link — a packet sniffer captures this traffic in full. The session cookie alone is enough to impersonate the logged-in user without ever needing a password.",
+      code: "// attacker's packet capture:\nGET /account HTTP/1.1\nCookie: sid=8f2a9c1e7b4d...\n// attacker copies this cookie into their own browser -> instantly logged in as the victim",
     },
     {
-      label: "3. Wrap the risky step in try/except",
+      label: "3. TLS negotiates a private channel first",
       body:
-        "Moving the call inside a try, with a matching except for each error type you expect, catches the failure right where it happens and gives you a chance to respond to it on purpose.",
-      code:
-        "try:\n    result = dispatch(call)\nexcept KeyError as e:\n    result = f\"missing argument: {e}\"\nexcept ValueError as e:\n    result = f\"couldn't complete: {e}\"",
+        "Before any HTTP data is sent, the browser and server perform a TLS handshake: the server presents a certificate proving its identity, and both sides agree on an encryption key that never travels across the network in the clear.",
+      code: "Client Hello  ->\n             <- Server Hello + Certificate\nKey exchange completes; both sides now share a secret key\n// only after this handshake does the actual HTTP request get sent",
     },
     {
-      label: "4. The rest of the batch survives",
+      label: "4. The same request, now unreadable in transit",
       body:
-        "One call fails and gets a fallback message instead of a crash. Every other call in the batch still runs normally, exactly as if nothing had gone wrong.",
-      code:
-        "print(result)\n# missing argument: currency\n# ...and the loop moves on to the next call",
+        "Once TLS is established, the identical HTTP request is encrypted before it leaves the browser. An eavesdropper on the exact same network sees only ciphertext — the cookie, the URL path, and the body are all unreadable without the negotiated key.",
+      code: "// what the attacker's packet capture shows instead:\n17 03 03 00 a4 3f 8e 2c d1 90 7b ... (encrypted bytes)\n// the cookie and request contents are cryptographically hidden",
     },
   ],
   realWorldIntro:
-    "In a live agent, one malformed tool call — the model forgetting to include \"city\", or asking to refund an order_id that doesn't exist — shouldn't end the conversation; catching the error and replying with something like \"I wasn't able to complete that\" keeps the session alive so the user can just try again.",
+    "In 2010, a tool called Firesheep made this concrete for millions of people: it sat on public WiFi and hijacked Facebook and Twitter sessions in one click, because those sites encrypted the login page but served everything afterward over plain HTTP, leaving session cookies exposed on every subsequent request — the incident is widely credited with pushing the industry toward \"HTTPS everywhere\" instead of encrypting only the login form.",
   realWorldCode:
-    "try:\n    result = dispatch(call)\nexcept KeyError as e:\n    result = \"Sorry, that request was missing some required information.\"\nexcept ValueError as e:\n    result = f\"Sorry, I couldn't do that: {e}\"",
+    "// the mistake Firesheep exploited:\napp.post(\"/login\", https, handleLogin);       // encrypted\napp.get(\"/timeline\", http, showTimeline);      // NOT encrypted — cookie leaks here too",
   sandbox: {
-    kind: "code",
-    challenge:
-      "Wrap each dispatch(call) in a try/except that catches both KeyError and ValueError, so a batch of tool calls keeps running even when one call is missing an argument or asks for something a tool can't handle.",
-    starterCode:
-      "def get_weather(city):\n    if city == \"Tokyo\":\n        return \"22C and clear\"\n    elif city == \"Paris\":\n        return \"15C and rainy\"\n    else:\n        raise ValueError(f\"no weather data for {city}\")\n\ndef convert_currency(amount, currency):\n    if currency == \"EUR\":\n        return amount * 0.92\n    elif currency == \"GBP\":\n        return amount * 0.79\n    else:\n        raise ValueError(f\"unsupported currency: {currency}\")\n\ndef dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"get_weather\":\n        return get_weather(args[\"city\"])\n    elif name == \"convert_currency\":\n        return convert_currency(args[\"amount\"], args[\"currency\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")\n\ncalls = []\ncalls.append({\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}})\ncalls.append({\"name\": \"convert_currency\", \"arguments\": {\"currency\": \"EUR\"}})\ncalls.append({\"name\": \"get_weather\", \"arguments\": {\"city\": \"Cairo\"}})\n\nfor call in calls:\n    try:\n        result = dispatch(call)\n        print(call[\"name\"], \"succeeded:\", result)\n    except KeyError as e:\n        print(call[\"name\"], \"failed, missing argument:\", e)\n    except ValueError as e:\n        print(call[\"name\"], \"failed:\", e)",
+    kind: "explore",
+    instructions:
+      "Click through each stage to compare what an attacker sitting on the same network sees under HTTP versus HTTPS, and what HSTS adds on top.",
+    stages: [
+      {
+        label: "HTTP: the request in the clear",
+        body:
+          "Every header and cookie is sent as plain text. A packet sniffer on the same WiFi network, or a malicious router, reads the entire request without needing to break any encryption at all.",
+        code: "GET /dashboard HTTP/1.1\nHost: framis.dev\nCookie: sid=8f2a9c1e7b4d...\nAuthorization: Bearer eyJhbGciOi...",
+      },
+      {
+        label: "HTTPS: the request encrypted",
+        body:
+          "The same request is wrapped in TLS before it leaves the device. The attacker still sees packets flowing across the network, but the contents are ciphertext — undecipherable without the session key negotiated during the handshake.",
+        code: "// wire capture of an HTTPS request:\n\\x17\\x03\\x03\\x00\\x9a\\x2f\\xc1\\x8e...\n// cookie, headers, and body are all inside this encrypted blob",
+      },
+      {
+        label: "Certificate validation stops impersonation",
+        body:
+          "TLS isn't only about encryption — the certificate proves you're actually talking to framis.dev and not an attacker's server pretending to be it. A mismatched or expired certificate triggers a browser warning instead of silently connecting.",
+        code: "// browser checks:\n// 1. Is this certificate signed by a trusted CA?\n// 2. Does it match the domain \"framis.dev\"?\n// 3. Has it expired?\n// any failure -> \"Your connection is not private\" warning, page blocked by default",
+      },
+      {
+        label: "The gap HSTS closes",
+        body:
+          "Without HSTS, a user's very first visit (or a link typed as http://) can go out over plain HTTP for a moment before any redirect to HTTPS happens — and that single unencrypted request is enough to leak a cookie. HSTS tells the browser to never attempt plain HTTP for this domain again, for a set period of time.",
+        code: "Strict-Transport-Security: max-age=63072000; includeSubDomains\n// browser now rewrites http://framis.dev requests to https:// BEFORE sending anything over the network",
+      },
+    ],
   },
   quizQuestion:
-    "This dispatch call is missing the \"currency\" argument, which raises a KeyError. There's an except ValueError clause listed first and an except KeyError clause listed second — which one actually runs?",
+    "A site encrypts its login form with HTTPS but serves the rest of the logged-in app over plain HTTP. What's the actual risk?",
   quizCode:
-    "def convert_currency(amount, currency):\n    if currency == \"EUR\":\n        return amount * 0.92\n    else:\n        return amount\n\ndef dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"convert_currency\":\n        return convert_currency(args[\"amount\"], args[\"currency\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")\n\ncall = {\"name\": \"convert_currency\", \"arguments\": {\"amount\": 50}}\n\ntry:\n    result = dispatch(call)\n    print(result)\nexcept ValueError as e:\n    print(f\"blocked: {e}\")\nexcept KeyError as e:\n    print(f\"missing field: {e}\")",
+    "app.post(\"/login\", requireHttps, handleLogin);\napp.get(\"/feed\", handleFeed); // no HTTPS enforced here",
   quizOptions: [
     {
       key: "a",
-      label:
-        "The except KeyError clause — it matches by the exception's actual type, not by which except is listed first",
-      correct: true,
-    },
-    {
-      key: "b",
-      label: "The except ValueError clause, since it's listed first and catches whatever error comes along",
+      label: "None — the password was already protected during login, which is the only sensitive data",
       correct: false,
     },
     {
+      key: "b",
+      label: "The session cookie sent with every /feed request is readable in plaintext, letting anyone on the network hijack the logged-in session",
+      correct: true,
+    },
+    {
       key: "c",
-      label: "Neither — once one except clause fails to match, the whole try/except is skipped and the error crashes the program",
+      label: "The risk is purely theoretical since most attackers can't access the same network as their target",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — each except clause only handles the type it names. The interpreter checks them in order and runs whichever one actually matches the raised type, skipping past ones that don't, so this KeyError lands in except KeyError even though it's listed second.",
+    "Right — this is exactly the Firesheep scenario: the password was protected once at login, but the session cookie riding along on every later unencrypted request is just as valuable and just as exposed to anyone sniffing the same network.",
   quizFeedbackIncorrect:
-    "Not quite — listing except ValueError first doesn't make it a catch-all for every error. The raised type is checked against each except clause in order until one matches, so this KeyError skips straight past except ValueError and into except KeyError.",
+    "Not quite — a session cookie is enough to fully impersonate a logged-in user without ever knowing the password, and shared networks (coffee shops, airports, conference WiFi) are common enough that this isn't theoretical — it's how Firesheep hijacked real sessions in 2010.",
   takeaway:
-    "A tool call can fail in ways your dispatcher's routing never anticipated — missing arguments, rejected values, unknown records. Wrapping the call in try/except with one clause per expected error type turns a program-ending crash into a graceful fallback, which is what makes a tool-calling agent survivable in production.",
+    "Encrypt every request, not just the login form — a session cookie sniffed off one unprotected page is just as damaging as a stolen password, which is why HTTPS (and HSTS to enforce it) needs to cover the whole app.",
 };
 
 export default content;

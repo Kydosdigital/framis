@@ -3,101 +3,113 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 12,
   orderIndex: 1,
-  phaseLabel: "CI/CD + DOCKER + DEPLOYMENT",
-  title: "Four gates between your commit and production",
+  phaseLabel: "MODEL EVALUATION + CROSS-VALIDATION",
+  title: "Train/Test Split: Why You Can't Grade Your Own Homework",
   minutes: 20,
   concept:
-    "A CI/CD pipeline is a fixed sequence of automated gates that your code has to pass through before it ever reaches real users: build, test, package, deploy. Build takes your source code and turns it into something runnable, catching things like missing files or syntax errors immediately. Test runs your automated test suite against that build, and if a single test fails, the pipeline stops right there — nothing broken moves forward. Package takes a build that passed its tests and seals it into a Docker image, a self-contained snapshot with your code plus every dependency and system library it needs, so it behaves identically on your laptop and on the server. Only after all three gates are green does deploy push that exact image out to production, which is why a passing pipeline feels boring — boring is the entire point, because it means a human didn't have to eyeball each step and hope nothing was missed.",
+    "So far, when you've checked whether a model \"works,\" you've probably scored it on the exact examples it was trained on — and that number lies to you. A model can memorize its training examples instead of learning the pattern behind them, the same way a student who's seen the exact exam questions in advance can score 100% without understanding a single concept underneath. The number that actually matters is how the model does on examples it has never seen, because that's your best proxy for how it'll perform once it's out in the real world looking at new data. The fix is a train/test split: before you train anything, you set aside a chunk of your labeled examples — commonly 20% — and don't let training touch them at all. You fit the model only on the remaining 80% (the training set), then afterward score it on the untouched 20% (the test set). One honesty note: real code always shuffles the examples randomly before slicing off that test portion, because if your data happens to be sorted — by date, by label, by anything — grabbing a contiguous block risks handing you a test set that isn't representative of the whole. Below, we deliberately skip that shuffle and just take the last 20% by position, purely so the split is identical every time you run it — real tools like scikit-learn's train_test_split shuffle by default.",
   conceptSimpler:
-    "It's an assembly line for your code: each station checks one thing and bolts on one part, and if a part fails inspection the line stops before a broken product reaches the loading dock.",
+    "It's like a teacher grading you on the exact worksheet you copied answers onto — grading you on new questions you've never seen is the only way to tell whether you actually learned the material or just memorized the answer key.",
   vizStages: [
     {
-      label: "1. Build",
+      label: "1. Ten houses, each with a size and a label",
       body:
-        "The pipeline pulls your latest commit and compiles or bundles it. A typo, a missing import, or a broken config file gets caught here — before anyone even runs a test.",
-      code: "$ npm run build\n> compiling TypeScript...\n> build succeeded (12.3s)",
+        "This is the full labeled dataset: for each house we know its size in square feet and whether it actually sold as \"expensive\" (1) or not (0).",
+      code:
+        "examples = []\nexamples.append({\"size\": 800, \"actual\": 0})\nexamples.append({\"size\": 900, \"actual\": 0})\nexamples.append({\"size\": 1000, \"actual\": 0})\nexamples.append({\"size\": 1100, \"actual\": 0})\nexamples.append({\"size\": 1600, \"actual\": 1})\nexamples.append({\"size\": 1700, \"actual\": 1})\nexamples.append({\"size\": 1800, \"actual\": 1})\nexamples.append({\"size\": 1900, \"actual\": 1})\nexamples.append({\"size\": 1450, \"actual\": 1})\nexamples.append({\"size\": 1550, \"actual\": 1})\nprint(f\"total examples: {len(examples)}\")",
     },
     {
-      label: "2. Test",
+      label: "2. Split by position — 80% train, 20% test",
       body:
-        "The freshly built code is run against your automated test suite. One failing test halts the entire pipeline — a broken feature never gets a chance to move further down the line.",
-      code: "$ npm test\n> 214 passed, 0 failed\n> test suite: PASS",
+        "split_index marks where train ends and test begins. Real code shuffles the examples first so position in the list has nothing to do with which set an example lands in — we skip that step here only so everyone gets the same, reproducible split to compare.",
+      code:
+        "split_index = len(examples) * 80 // 100\n\ntrain = []\ntest = []\nfor i in range(len(examples)):\n    if i < split_index:\n        train.append(examples[i])\n    else:\n        test.append(examples[i])\n\nprint(f\"train size: {len(train)}, test size: {len(test)}\")",
     },
     {
-      label: "3. Package",
+      label: "3. A simple rule, tuned by peeking at the training data",
       body:
-        "A build that passed its tests gets sealed into a Docker image — your code plus its exact runtime, libraries, and OS dependencies, frozen into one artifact that behaves the same everywhere.",
-      code: "$ docker build -t framis-api:a1b2c3 .\n> Successfully built a1b2c3\n> Successfully tagged framis-api:a1b2c3",
+        "This is a decision stump, like the ones from the trees module — one threshold, one split. We picked 1500 because it happens to sort every training example correctly. That's exactly the trap: it was chosen to fit this data, not because it reflects some universal truth about house prices.",
+      code:
+        "def predict(size):\n    if size >= 1500:\n        return 1\n    else:\n        return 0\n\ndef score(dataset):\n    correct = 0\n    for ex in dataset:\n        pred = predict(ex[\"size\"])\n        if pred == ex[\"actual\"]:\n            correct = correct + 1\n    return correct / len(dataset)",
     },
     {
-      label: "4. Deploy",
+      label: "4. Score on train vs. test — watch the gap appear",
       body:
-        "The tagged image is pushed to a registry and rolled out to production servers, replacing the old version. Because it's the exact image that already passed build and test, there are no surprises left to find.",
-      code: "$ kubectl set image deployment/api api=framis-api:a1b2c3\n> deployment \"api\" successfully rolled out",
+        "The rule scores a perfect 1.0 on the data it was tuned against, but drops to 0.5 the moment it faces houses it never got to peek at. That drop is the entire reason a train/test split exists — the training score was never trustworthy on its own.",
+      code:
+        "train_acc = score(train)\ntest_acc = score(test)\nprint(f\"train accuracy: {train_acc}\")\nprint(f\"test accuracy: {test_acc}\")",
     },
   ],
   realWorldIntro:
-    "A GitHub Actions or GitLab CI config file lists these stages explicitly, and a merge to main triggers all of them automatically, in order, with no human clicking anything.",
+    "In a real project you'd reach for scikit-learn's train_test_split, which shuffles your examples with a random seed before slicing off the test portion, so the split doesn't accidentally line up with how your data happens to be ordered.",
   realWorldCode:
-    "jobs:\n  build:\n    run: npm run build\n  test:\n    needs: build\n    run: npm test\n  package:\n    needs: test\n    run: docker build -t framis-api:$SHA .\n  deploy:\n    needs: package\n    run: kubectl set image deployment/api api=framis-api:$SHA",
+    "from sklearn.model_selection import train_test_split\n\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=0.2, random_state=42, shuffle=True\n)\n# shuffle=True (the default) randomizes example order before splitting\n# random_state=42 just makes that random shuffle reproducible run to run",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each pipeline stage below to see what runs there and what it would look like for that stage to fail.",
-    stages: [
-      {
-        label: "Build",
-        body:
-          "Source code is compiled or bundled into a runnable artifact. If a file won't parse or an import points to something that doesn't exist, the build fails immediately and nothing downstream even starts.",
-        code: "$ npm run build\n> ERROR: Cannot find module './utils/formatDate'\n> build failed",
-      },
-      {
-        label: "Test",
-        body:
-          "The automated test suite runs against the build. A single failing assertion — say, a checkout total calculated wrong — stops the pipeline so that bug can never reach a real customer.",
-        code: "$ npm test\n> FAIL src/cart.test.ts\n> expect(total).toBe(29.99) — received 27.99\n> test suite: FAILED",
-      },
-      {
-        label: "Package",
-        body:
-          "A passing build+test combo gets containerized into a Docker image with all its dependencies baked in. This step fails if the Dockerfile references a package version that no longer exists or a base image that can't be pulled.",
-        code: "$ docker build -t framis-api:a1b2c3 .\n> ERROR: failed to solve: node:18.9.2-slim: not found",
-      },
-      {
-        label: "Deploy",
-        body:
-          "The finished image is rolled out to production. This step fails if the server can't pull the image, runs out of resources, or the new container crashes on startup — triggering an automatic rollback to the last known-good version.",
-        code: "$ kubectl set image deployment/api api=framis-api:a1b2c3\n> Error: ImagePullBackOff\n> rolling back to framis-api:9f8e7d6",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Given 10 house examples, split them into train (first 80%) and test (last 20%) using index math, then score the provided predict() rule on both sets and compare the accuracy gap.",
+    starterCode:
+      "examples = []\nexamples.append({\"size\": 800, \"actual\": 0})\nexamples.append({\"size\": 900, \"actual\": 0})\nexamples.append({\"size\": 1000, \"actual\": 0})\nexamples.append({\"size\": 1100, \"actual\": 0})\nexamples.append({\"size\": 1600, \"actual\": 1})\nexamples.append({\"size\": 1700, \"actual\": 1})\nexamples.append({\"size\": 1800, \"actual\": 1})\nexamples.append({\"size\": 1900, \"actual\": 1})\nexamples.append({\"size\": 1450, \"actual\": 1})\nexamples.append({\"size\": 1550, \"actual\": 1})\n\n# real code shuffles the examples before splitting; we skip that here\n# so the split is identical every time this runs\nsplit_index = len(examples) * 80 // 100\n\ntrain = []\ntest = []\nfor i in range(len(examples)):\n    if i < split_index:\n        train.append(examples[i])\n    else:\n        test.append(examples[i])\n\nprint(f\"total examples: {len(examples)}\")\nprint(f\"train size: {len(train)}, test size: {len(test)}\")\n\ndef predict(size):\n    if size >= 1500:\n        return 1\n    else:\n        return 0\n\ndef score(dataset):\n    correct = 0\n    for ex in dataset:\n        pred = predict(ex[\"size\"])\n        if pred == ex[\"actual\"]:\n            correct = correct + 1\n    return correct / len(dataset)\n\ntrain_acc = score(train)\ntest_acc = score(test)\nprint(f\"train accuracy: {train_acc}\")\nprint(f\"test accuracy: {test_acc}\")",
   },
   quizQuestion:
-    "Your test suite has one failing test, but the packaging and deploy stages still successfully build a Docker image and ship it to production. What went wrong with the pipeline?",
+    "This code builds train/test sets for 12 examples using split_index = len(examples) * 80 // 100. How many examples end up in the test set?",
+  quizCode:
+    "examples = []\nfor i in range(12):\n    examples.append(i)\n\nsplit_index = len(examples) * 80 // 100\n\ntrain = []\ntest = []\nfor i in range(len(examples)):\n    if i < split_index:\n        train.append(examples[i])\n    else:\n        test.append(examples[i])\n\nprint(f\"train: {train}\")\nprint(f\"test: {test}\")",
   quizOptions: [
     {
       key: "a",
       label:
-        "The pipeline isn't actually configured to stop on test failure — each stage is running independently instead of depending on the previous stage passing",
+        "3 examples — 12 * 80 // 100 floors 9.6 down to 9, so the first 9 indices go to train and the remaining 3 go to test",
       correct: true,
     },
     {
       key: "b",
-      label: "Docker images can't contain failing tests, so the test failure was automatically ignored",
+      label: "2 examples — the split always rounds 20% down to the nearest even number",
       correct: false,
     },
     {
       key: "c",
-      label: "This is expected — deploy stages always run regardless of test results, as a safety net",
+      label: "4 examples — the split always rounds the test portion up to make sure it has enough data",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — a properly wired pipeline makes package and deploy depend on test passing first, so a failing test should have blocked everything after it; if broken code still shipped, the stages were running independently instead of gated in sequence.",
+    "Right — 12 * 80 // 100 is integer (floor) division, so 9.6 becomes 9. Indices 0 through 8 (9 examples) go to train, and whatever's left — indices 9, 10, 11, three examples — goes to test. There's no rounding up, just a hard floor.",
   quizFeedbackIncorrect:
-    "Not quite — the whole reason pipeline stages are ordered is so a failure early on (like a failing test) blocks every stage after it; if a broken build still deployed, the stages weren't actually gated on each other.",
+    "Not quite — 12 * 80 // 100 works out to 9.6, and // always floors (rounds down, never up), giving split_index = 9. That leaves indices 0–8 (9 examples) for train and indices 9–11 (3 examples) for test.",
   takeaway:
-    "A CI/CD pipeline is only as useful as its gates: build, test, package, and deploy each have to depend on the previous one succeeding, so that a single failure anywhere stops broken code before it reaches users.",
-  nextUpLabel: "LLM APIs + Tokens + Cost",
+    "Scoring a model on its own training data tells you how well it memorized, not how well it generalizes — that's why a train/test split exists. Set aside a portion of your data the model never trains on, score it only on that held-out portion, and treat the training score as background noise, not a result.",
+  explainers: [
+    {
+      id: "what-is-train-test-split",
+      term: "What's a Train/Test Split?",
+      emoji: "✂️",
+      shortDef:
+        "Dividing your labeled data into two pieces before training: one piece the model learns from, and one piece it never sees until you're ready to grade it.",
+      longDef:
+        "A train/test split reserves a portion of your labeled examples — commonly 20% — as a test set that training never touches. The model fits only on the remaining training set. Afterward, you score it on the test set to estimate how it'll perform on brand-new data it hasn't memorized any quirks of.",
+      whyMatters:
+        "Without this split, you have no honest way to know whether your model actually learned a generalizable pattern or just memorized the specific examples in front of it. Every serious evaluation in machine learning starts here.",
+      realWorldExample:
+        "It's the difference between a driving instructor testing you on the exact route you practiced a hundred times versus testing you on a street you've never driven down. Only the second test tells them whether you can actually drive.",
+      relatedTerms: ["what-is-generalization"],
+      expandedByDefault: true,
+    },
+    {
+      id: "what-is-generalization",
+      term: "What's Generalization?",
+      emoji: "🌍",
+      shortDef:
+        "A model's ability to perform well on new examples it never trained on — not just the examples it already saw.",
+      longDef:
+        "Generalization is the whole point of building a model. A model that only performs well on its training data hasn't learned anything useful — it's just memorized answers. A model that generalizes well has found a real pattern that also holds on data it's never encountered, which is the only kind of performance that matters once it's deployed.",
+      whyMatters:
+        "Every metric you compute on a test set is really an attempt to measure generalization, since you can never see every example a deployed model will encounter in the future.",
+      realWorldExample:
+        "A GPS app that only knows the route from your house to your office isn't actually useful — a GPS that generalizes can route you anywhere, including streets it's never specifically been told about before.",
+      relatedTerms: ["what-is-train-test-split"],
+    },
+  ],
 };
 
 export default content;

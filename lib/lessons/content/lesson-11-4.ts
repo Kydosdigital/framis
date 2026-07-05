@@ -3,101 +3,129 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 11,
   orderIndex: 4,
-  phaseLabel: "SECURITY + AUTH PATTERNS",
-  title: "Why the padlock matters: HTTPS and the case against plaintext requests",
-  minutes: 18,
+  phaseLabel: "CLASSICAL MACHINE LEARNING",
+  title: "K-Means: Finding Groups Nobody Labeled",
+  minutes: 24,
   concept:
-    "Plain HTTP sends every request and response as readable plaintext across the network — anyone positioned between your browser and the server (a shared WiFi network, a compromised router, an ISP) can read exactly what you sent, including form fields, cookies, and session tokens, and can even modify it in transit. HTTPS fixes this by wrapping HTTP inside TLS (Transport Layer Security), which does two things before a single byte of your actual request is sent: it verifies the server's identity using a certificate signed by a trusted certificate authority, and it negotiates an encryption key that only your browser and that server know. From that point on, everything exchanged is ciphertext to anyone watching the wire — an eavesdropper sees scrambled bytes instead of your password, your session cookie, or the page content itself. This matters for every request, not just login forms, because a session cookie sniffed from any single unencrypted request is enough to hijack the entire logged-in session, and because a network attacker can inject or alter content in an unencrypted response before it ever reaches your browser. Modern servers reinforce this with HSTS (HTTP Strict Transport Security), a header that tells browsers \"never even attempt plain HTTP with this domain again,\" closing the gap where a first request might slip through unencrypted.",
+    "Every algorithm so far in this module learned from labeled examples — each one came with a known right answer to match. K-means clustering is different: it's unsupervised, meaning the points have no labels at all, and the algorithm's whole job is to discover groups in the data on its own. The algorithm is a genuinely simple loop, repeated until it stabilizes. Pick a number of clusters, k, and start with k initial centroids (a centroid is just a point representing the \"center\" of a cluster — here we grab two of the actual data points to start). Then repeat two steps: first, the assignment step — for every point, measure its distance to every centroid and assign it to whichever one is closest; second, the update step — recompute each centroid as the average (the mean) of every point currently assigned to it. Do that a few times and the centroids stop moving (or nearly stop) once every point is already closer to its own cluster's centroid than to the other one — that's convergence. Real k-means measures distance with true Euclidean distance, which needs a square root; our sandbox has no sqrt(), so instead we compare squared distances, and it's mathematically fine to do that, not just a shortcut: square root is a monotonically increasing function, meaning if a^2 < b^2 for two non-negative numbers, then a < b too — so whichever centroid has the smaller squared distance also has the smaller true distance, and comparing squared distances always picks the same nearest centroid a real square root would. The other simplification here is initialization: real k-means implementations usually use a smarter seeding strategy called k-means++ that spreads the initial centroids out on purpose (or run the whole algorithm from several random starting points and keep the best one), while we just grab two actual data points to start — a real, workable choice, just a cruder one than production libraries make.",
   conceptSimpler:
-    "HTTP is like mailing a postcard — anyone who handles it along the way can read every word. HTTPS is like sealing that same message in a tamper-evident envelope that only the intended recipient can open, and that visibly shows if anyone tried to open it in transit.",
+    "Imagine dropping two pins on a map at random and having every nearby town silently attach itself to whichever pin is closer. Then you drag each pin to sit at the average location of the towns now attached to it, and repeat — after a couple of rounds, the pins settle right in the middle of two natural clusters of towns, even though nobody ever told you where those clusters were.",
   vizStages: [
     {
-      label: "1. A request over plain HTTP",
+      label: "1. Distance without a square root",
       body:
-        "The browser sends the request exactly as written — headers, cookies, and body all travel as readable text across every network hop between you and the server.",
-      code: "GET /account HTTP/1.1\nHost: framis.dev\nCookie: sid=8f2a9c1e7b4d...\n\n// visible in full to anyone on the network path",
+        "Real distance between two points uses the Pythagorean theorem, which ends in a square root. Our sandbox has no sqrt(), but for comparing \"which centroid is closer,\" the squared distance alone is enough — squaring never flips which of two non-negative distances is smaller.",
+      code:
+        "def squared_distance(a, b):\n    dx = a[\"x\"] - b[\"x\"]\n    dy = a[\"y\"] - b[\"y\"]\n    return dx * dx + dy * dy\n\npoint = {\"x\": 3, \"y\": 3}\ncentroid_a = {\"x\": 1, \"y\": 1}\ncentroid_b = {\"x\": 8, \"y\": 8}\nprint(squared_distance(point, centroid_a))\nprint(squared_distance(point, centroid_b))\n\n8\n50",
     },
     {
-      label: "2. Anyone on the path can read it",
+      label: "2. Assignment: every point joins its closest centroid",
       body:
-        "On a shared network — coffee shop WiFi, an airport hotspot, a compromised link — a packet sniffer captures this traffic in full. The session cookie alone is enough to impersonate the logged-in user without ever needing a password.",
-      code: "// attacker's packet capture:\nGET /account HTTP/1.1\nCookie: sid=8f2a9c1e7b4d...\n// attacker copies this cookie into their own browser -> instantly logged in as the victim",
+        "Starting centroids are just two of the actual data points: (1, 1) and (8, 8). Every point gets compared to both and joins whichever one it's closer to — including a middling point at (4, 4), which is still noticeably closer to (1, 1) than to (8, 8).",
+      code:
+        "centroid0 = {\"x\": 1, \"y\": 1}\ncentroid1 = {\"x\": 8, \"y\": 8}\nmiddle_point = {\"x\": 4, \"y\": 4}\nprint(squared_distance(middle_point, centroid0))\nprint(squared_distance(middle_point, centroid1))\n\n18\n32",
     },
     {
-      label: "3. TLS negotiates a private channel first",
+      label: "3. Update: recompute each centroid as an average",
       body:
-        "Before any HTTP data is sent, the browser and server perform a TLS handshake: the server presents a certificate proving its identity, and both sides agree on an encryption key that never travels across the network in the clear.",
-      code: "Client Hello  ->\n             <- Server Hello + Certificate\nKey exchange completes; both sides now share a secret key\n// only after this handshake does the actual HTTP request get sent",
+        "Once every point has picked a side, each centroid moves to the average x and average y of everyone now assigned to it — a real centroid recomputation, just in two dimensions.",
+      code:
+        "def average_points(points):\n    total_x = 0\n    total_y = 0\n    for p in points:\n        total_x = total_x + p[\"x\"]\n        total_y = total_y + p[\"y\"]\n    n = len(points)\n    result = {\"x\": total_x / n, \"y\": total_y / n}\n    return result",
     },
     {
-      label: "4. The same request, now unreadable in transit",
+      label: "4. Repeat until the centroids stop moving",
       body:
-        "Once TLS is established, the identical HTTP request is encrypted before it leaves the browser. An eavesdropper on the exact same network sees only ciphertext — the cookie, the URL path, and the body are all unreadable without the negotiated key.",
-      code: "// what the attacker's packet capture shows instead:\n17 03 03 00 a4 3f 8e 2c d1 90 7b ... (encrypted bytes)\n// the cookie and request contents are cryptographically hidden",
+        "After the first update, centroid0 moves from (1, 1) to (2.125, 2.125) — pulled slightly toward the middle point that joined it — while centroid1 barely moves. Run the loop again with the updated centroids and every point lands in the exact same cluster as before: the centroids stop changing, which is what convergence looks like.",
+      code:
+        "iteration 1 -> centroid0: (1, 1),     centroid1: (8, 8)\niteration 2 -> centroid0: (2.125, 2.125), centroid1: (8.5, 8.5)\niteration 3 -> centroid0: (2.125, 2.125), centroid1: (8.5, 8.5)  # unchanged: converged",
     },
   ],
   realWorldIntro:
-    "In 2010, a tool called Firesheep made this concrete for millions of people: it sat on public WiFi and hijacked Facebook and Twitter sessions in one click, because those sites encrypted the login page but served everything afterward over plain HTTP, leaving session cookies exposed on every subsequent request — the incident is widely credited with pushing the industry toward \"HTTPS everywhere\" instead of encrypting only the login form.",
+    "scikit-learn's KMeans uses real Euclidean distance (with the square root our sandbox can't compute) and a smarter seeding strategy called k-means++ that spreads the initial centroids apart on purpose, then runs the whole assignment/update loop from several different random starts (n_init) and keeps whichever run ends with the tightest clusters — since a bad set of starting centroids can occasionally get k-means stuck in a worse grouping than another starting point would have found.",
   realWorldCode:
-    "// the mistake Firesheep exploited:\napp.post(\"/login\", https, handleLogin);       // encrypted\napp.get(\"/timeline\", http, showTimeline);      // NOT encrypted — cookie leaks here too",
+    "from sklearn.cluster import KMeans\n\nkm = KMeans(n_clusters=2, n_init=10)\nkm.fit(X)\n# under the hood: real Euclidean distance, k-means++ seeding,\n# and 10 random restarts — same assign-then-average loop you just built",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each stage to compare what an attacker sitting on the same network sees under HTTP versus HTTPS, and what HSTS adds on top.",
-    stages: [
-      {
-        label: "HTTP: the request in the clear",
-        body:
-          "Every header and cookie is sent as plain text. A packet sniffer on the same WiFi network, or a malicious router, reads the entire request without needing to break any encryption at all.",
-        code: "GET /dashboard HTTP/1.1\nHost: framis.dev\nCookie: sid=8f2a9c1e7b4d...\nAuthorization: Bearer eyJhbGciOi...",
-      },
-      {
-        label: "HTTPS: the request encrypted",
-        body:
-          "The same request is wrapped in TLS before it leaves the device. The attacker still sees packets flowing across the network, but the contents are ciphertext — undecipherable without the session key negotiated during the handshake.",
-        code: "// wire capture of an HTTPS request:\n\\x17\\x03\\x03\\x00\\x9a\\x2f\\xc1\\x8e...\n// cookie, headers, and body are all inside this encrypted blob",
-      },
-      {
-        label: "Certificate validation stops impersonation",
-        body:
-          "TLS isn't only about encryption — the certificate proves you're actually talking to framis.dev and not an attacker's server pretending to be it. A mismatched or expired certificate triggers a browser warning instead of silently connecting.",
-        code: "// browser checks:\n// 1. Is this certificate signed by a trusted CA?\n// 2. Does it match the domain \"framis.dev\"?\n// 3. Has it expired?\n// any failure -> \"Your connection is not private\" warning, page blocked by default",
-      },
-      {
-        label: "The gap HSTS closes",
-        body:
-          "Without HSTS, a user's very first visit (or a link typed as http://) can go out over plain HTTP for a moment before any redirect to HTTPS happens — and that single unencrypted request is enough to leak a cookie. HSTS tells the browser to never attempt plain HTTP for this domain again, for a set period of time.",
-        code: "Strict-Transport-Security: max-age=63072000; includeSubDomains\n// browser now rewrites http://framis.dev requests to https:// BEFORE sending anything over the network",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Given seven 2D points, write squared_distance(a, b) and average_points(points), then run the assign-and-update loop for 3 iterations, printing the centroids and cluster sizes each time to watch it converge.",
+    starterCode:
+      "def squared_distance(a, b):\n    dx = a[\"x\"] - b[\"x\"]\n    dy = a[\"y\"] - b[\"y\"]\n    return dx * dx + dy * dy\n\ndef average_points(points):\n    total_x = 0\n    total_y = 0\n    for p in points:\n        total_x = total_x + p[\"x\"]\n        total_y = total_y + p[\"y\"]\n    n = len(points)\n    result = {\"x\": total_x / n, \"y\": total_y / n}\n    return result\n\npoints = []\npoints.append({\"x\": 1, \"y\": 1})\npoints.append({\"x\": 1.5, \"y\": 2})\npoints.append({\"x\": 2, \"y\": 1.5})\npoints.append({\"x\": 8, \"y\": 8})\npoints.append({\"x\": 9, \"y\": 8.5})\npoints.append({\"x\": 8.5, \"y\": 9})\npoints.append({\"x\": 4, \"y\": 4})\n\n# start by picking two of the actual points as initial centroids\ncentroid0 = {\"x\": 1, \"y\": 1}\ncentroid1 = {\"x\": 8, \"y\": 8}\n\nfor iteration in range(3):\n    print(f\"=== iteration {iteration + 1} ===\")\n    print(f\"centroid0: {centroid0}\")\n    print(f\"centroid1: {centroid1}\")\n\n    cluster0 = []\n    cluster1 = []\n\n    for p in points:\n        d0 = squared_distance(p, centroid0)\n        d1 = squared_distance(p, centroid1)\n        if d0 <= d1:\n            cluster0.append(p)\n        else:\n            cluster1.append(p)\n\n    print(f\"cluster0 size: {len(cluster0)}, cluster1 size: {len(cluster1)}\")\n\n    centroid0 = average_points(cluster0)\n    centroid1 = average_points(cluster1)\n\nprint(f\"final centroid0: {centroid0}\")\nprint(f\"final centroid1: {centroid1}\")",
   },
   quizQuestion:
-    "A site encrypts its login form with HTTPS but serves the rest of the logged-in app over plain HTTP. What's the actual risk?",
+    "point = (3, 3), centroid_a = (1, 1), centroid_b = (8, 8). squared_distance(point, centroid_a) = 8 and squared_distance(point, centroid_b) = 50. Which centroid does k-means assign this point to, and would the answer change if we used real (square-rooted) distance instead?",
   quizCode:
-    "app.post(\"/login\", requireHttps, handleLogin);\napp.get(\"/feed\", handleFeed); // no HTTPS enforced here",
+    "point = {\"x\": 3, \"y\": 3}\ncentroid_a = {\"x\": 1, \"y\": 1}\ncentroid_b = {\"x\": 8, \"y\": 8}\nprint(squared_distance(point, centroid_a))\nprint(squared_distance(point, centroid_b))",
   quizOptions: [
     {
       key: "a",
-      label: "None — the password was already protected during login, which is the only sensitive data",
-      correct: false,
-    },
-    {
-      key: "b",
-      label: "The session cookie sent with every /feed request is readable in plaintext, letting anyone on the network hijack the logged-in session",
+      label:
+        "centroid_a in both cases — square root is monotonically increasing, so whichever squared distance is smaller, the real (square-rooted) distance is guaranteed to be smaller too",
       correct: true,
     },
     {
+      key: "b",
+      label:
+        "centroid_b, because a larger squared distance actually means the point is closer once you account for the square",
+      correct: false,
+    },
+    {
       key: "c",
-      label: "The risk is purely theoretical since most attackers can't access the same network as their target",
+      label:
+        "centroid_a with squared distance, but it would flip to centroid_b once you take the real square root, since square-rooting can reorder which distance is smaller",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — this is exactly the Firesheep scenario: the password was protected once at login, but the session cookie riding along on every later unencrypted request is just as valuable and just as exposed to anyone sniffing the same network.",
+    "Right — 8 < 50, so centroid_a wins on squared distance, and the real distances (√8 ≈ 2.83 and √50 ≈ 7.07) come out in that exact same order. Square root never changes which of two non-negative numbers is smaller, so comparing squared distances always picks the same nearest centroid a real square root would — that's exactly why it's safe to skip the square root entirely when all you need is \"which one is closer.\"",
   quizFeedbackIncorrect:
-    "Not quite — a session cookie is enough to fully impersonate a logged-in user without ever knowing the password, and shared networks (coffee shops, airports, conference WiFi) are common enough that this isn't theoretical — it's how Firesheep hijacked real sessions in 2010.",
+    "Not quite — a bigger squared distance always means a bigger real distance too, never the reverse, and taking a square root never reorders which of two non-negative numbers was smaller. Since 8 < 50, centroid_a is closer on squared distance, and it's still closer once you take the real square root (√8 ≈ 2.83 versus √50 ≈ 7.07) — the ordering is identical either way.",
   takeaway:
-    "Encrypt every request, not just the login form — a session cookie sniffed off one unprotected page is just as damaging as a stolen password, which is why HTTPS (and HSTS to enforce it) needs to cover the whole app.",
+    "K-means alternates between assigning every point to its nearest centroid and recomputing each centroid as the average of its assigned points, repeating until the assignments stop changing. Comparing squared distances instead of true distances is a genuinely valid simplification — square root never changes which of two distances is smaller — and it's the one piece of unsupervised learning in this module: no labels anywhere, just structure the algorithm finds in the raw points themselves.",
+  explainers: [
+    {
+      id: "what-is-unsupervised-learning",
+      term: "What's Unsupervised Learning?",
+      emoji: "🔍",
+      shortDef:
+        "Unsupervised learning finds structure in data that has no labels at all — there's no known right answer to check predictions against.",
+      longDef:
+        "Every other lesson in this module was supervised: each example came with a label (passed or failed, class 0 or 1) that the model was trying to predict. K-means gets no such labels — it's only given raw points, and its job is to discover which ones naturally group together, based purely on how close they sit to one another.",
+      whyMatters:
+        "Most real-world data isn't labeled — nobody hand-tags millions of customer records with \"these are similar shoppers.\" Unsupervised methods like k-means let you find structure (like customer segments) in exactly that kind of raw, unlabeled data.",
+      realWorldExample:
+        "A store's customer data might have no \"segment\" column at all — but running k-means on purchase patterns can reveal that customers naturally split into groups like \"weekend bulk shoppers\" and \"weekday small-basket shoppers,\" without anyone ever having labeled a single customer that way.",
+      relatedTerms: ["what-is-clustering", "what-is-centroid"],
+      expandedByDefault: true,
+    },
+    {
+      id: "what-is-clustering",
+      term: "What's Clustering?",
+      emoji: "🔵",
+      shortDef:
+        "Clustering means grouping data points so that points inside the same group are close together, and points in different groups are far apart.",
+      longDef:
+        "K-means is one specific way to do clustering: pick a number of groups (k), then alternate between assigning each point to its nearest group center and recomputing each center as the average of its group, until the groups stop changing.",
+      whyMatters:
+        "Clustering shows up constantly in practice — grouping similar customers, similar documents, similar images, or similar sensor readings, all without needing anyone to have labeled the \"correct\" groups in advance.",
+      realWorldExample:
+        "It's like sorting a mixed pile of photos into stacks by who's in them, with no captions to go on — you group photos by visual similarity, the same way k-means groups points by numeric similarity.",
+      relatedTerms: ["what-is-unsupervised-learning", "what-is-centroid"],
+    },
+    {
+      id: "what-is-centroid",
+      term: "What's a Centroid?",
+      emoji: "📍",
+      shortDef:
+        "A centroid is the \"center\" of a cluster — literally the average position of every point currently assigned to it.",
+      longDef:
+        "K-means starts with a few initial centroids (here, just two actual data points), then repeatedly recomputes each one as the average x and average y of whichever points are currently closest to it. As points get reassigned between updates, the centroids drift toward the true middle of their group until they stop moving.",
+      whyMatters:
+        "The centroid is both the thing k-means is trying to find and the yardstick it uses to decide cluster membership at every step — the whole algorithm is just this one idea (average position) applied over and over.",
+      realWorldExample:
+        "It's like the center of mass of a group of people standing in a room — if people wander closer to one side, the center of mass shifts toward them; k-means just repeats that recalculation until nobody's shifting sides anymore.",
+      relatedTerms: ["what-is-clustering"],
+    },
+  ],
 };
 
 export default content;

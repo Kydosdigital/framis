@@ -3,84 +3,80 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 17,
   orderIndex: 2,
-  phaseLabel: "PROBABILITY + STATISTICS",
-  title: "The billionaire walks in: mean vs. median",
+  phaseLabel: "LLM APIS + TOKENS + COST",
+  title: "It's a Transcript, Not a Textbox: Structuring a Chat Call",
   minutes: 18,
   concept:
-    "The mean (what people usually call \"the average\") is the sum of every value divided by how many values there are — a for-loop that adds each number to a running total, then one division at the end, gives you the mean directly. The median is a completely different idea: it's the value that sits exactly in the middle once every number is arranged from smallest to largest, so it's found by position, not by arithmetic on the values themselves. Because the mean adds up every value, one extreme number can drag it far from where most of the data actually sits; the median barely moves in that same situation, since one huge value just becomes the new largest item at the end of the line without disturbing the middle. This is exactly what \"outliers\" are — data points far outside where the rest of the data clusters — and mean vs. median is really a story about how differently two ordinary-sounding statistics react to them. Neither one is \"more correct\"; they answer different questions, and a good analyst reports both so a single freak value can't quietly distort the story.",
+    "A chat API call isn't one long string — it's a list of message dicts, each one shaped like {\"role\": \"user\", \"content\": \"...\"}. The role tells the model who is speaking: \"system\" sets up how the model should behave for the whole conversation, \"user\" is what the human typed, and \"assistant\" is what the model said back. When you call the API, you send the entire list of messages so far, and the model reads all of it as context before generating its reply — that reply is the \"completion,\" and it comes back as a new assistant message you append to the same list. To continue the conversation, you don't start over: you add the user's next message onto that growing list and send the whole thing again, which is exactly why longer conversations cost more tokens with every turn. The list itself is the conversation's memory — the model has no memory of its own between calls, so whatever isn't in that list didn't happen as far as it's concerned.",
   conceptSimpler:
-    "It's like reporting the \"average\" wealth in a coffee shop — swap in one billionaire customer and the average shoots into the millions, but the median customer, the one literally in the middle of the line, is exactly as un-rich as before.",
+    "A chat API call is like handing someone the entire transcript of a conversation before asking them to say the next line — they don't remember yesterday's chat, so you have to hand them the whole script every single time.",
   vizStages: [
     {
-      label: "1. Five response times, no drama",
+      label: "1. One message is just a dict",
       body:
-        "Sum every value in a loop, then divide by the count — that's the mean. Here all five API response times are close together, so the mean lands right in the middle of the pack.",
-      code:
-        'times = [8, 9, 10, 11, 12]\n\ntotal = 0\nfor t in times:\n    total = total + t\nmean = total / len(times)\nprint(mean)\n\n# 10',
+        "The smallest building block is a dict with two keys: who's talking, and what they said. Nothing fancier than that.",
+      code: "{\"role\": \"user\", \"content\": \"My order hasn't arrived yet.\"}",
     },
     {
-      label: "2. The median: found by position, not addition",
+      label: "2. A conversation is a list of them",
       body:
-        "Because the list is already sorted smallest to largest, the median is just the item sitting at the halfway point — index len(times) // 2. No sum, no division by every value, just a lookup.",
+        "A real request sends a list of these dicts in order. The system message (if there is one) usually comes first and sets the tone for everything that follows.",
       code:
-        'middle_index = len(times) // 2\nmedian = times[middle_index]\nprint(median)\n\n# 10 - same as the mean, since this data has no outliers',
+        "messages = [\n  {\"role\": \"system\", \"content\": \"You are a support agent.\"},\n  {\"role\": \"user\", \"content\": \"My order hasn't arrived yet.\"}\n]",
     },
     {
-      label: "3. One outlier slips into the data",
+      label: "3. The completion is the model's reply",
       body:
-        "Swap the last, largest value for something way bigger — say a request that hung and took 212ms instead of 12ms. Rerun the exact same mean calculation.",
-      code:
-        'times = [8, 9, 10, 11, 212]\n\ntotal = 0\nfor t in times:\n    total = total + t\nmean = total / len(times)\nprint(mean)\n\n# 50 - even though four of the five requests were still fast',
+        "The API doesn't return a whole new conversation — it returns one new message, generated by the model, that continues the list you sent.",
+      code: "{\"role\": \"assistant\", \"content\": \"I'm sorry to hear that — can you share your order number?\"}",
     },
     {
-      label: "4. The median barely notices",
+      label: "4. You append it and send again",
       body:
-        "Run the median calculation on the same outlier-containing list. The huge value just becomes the new last item in sorted order — the middle position, and the value sitting there, doesn't change at all.",
+        "To keep the conversation going, that assistant reply gets appended to the list, then the user's next message gets appended too, and the whole thing is sent again on the next call.",
       code:
-        'middle_index = len(times) // 2\nmedian = times[middle_index]\nprint(median)\n\n# 10 - unchanged, because the outlier didn\'t move what\'s in the middle',
+        "messages.append(assistant_reply)\nmessages.append({\"role\": \"user\", \"content\": \"It's ORD-4471.\"})",
     },
   ],
   realWorldIntro:
-    "This is exactly why production dashboards show median latency (often called p50) right next to average latency: a handful of slow, timed-out requests can drag the mean far above what a typical user actually experiences, while the median stays anchored to what most requests really look like.",
+    "OpenAI's chat completions API and Anthropic's messages API both work exactly this way — you POST a messages array of role/content pairs, and the response contains one new message to add back onto that array before your next call.",
   realWorldCode:
-    'latencies = [42, 45, 48, 50, 415]\n\ntotal = 0\nfor t in latencies:\n    total = total + t\nmean = total / len(latencies)\n\nmiddle_index = len(latencies) // 2\nmedian = latencies[middle_index]\n\nprint(f"mean latency: {mean}ms")\nprint(f"median latency: {median}ms")',
+    "response = client.chat.completions.create(\n  model=\"gpt-4o-mini\",\n  messages=messages\n)",
   sandbox: {
     kind: "code",
     challenge:
-      "This script crashes trying to print the median — fix the middle-index calculation so it lands on a whole number instead of a fraction, then rerun it to see both stats print cleanly.",
+      "Build a growing list of message dicts representing a multi-turn support conversation, then check whether it ends on a user turn.",
     starterCode:
-      'times = [4, 7, 9, 20, 40]\n\ntotal = 0\nfor t in times:\n    total = total + t\n\nmean = total / len(times)\n\nmiddle_index = len(times) / 2\nmedian = times[middle_index]\n\nprint(f"mean response time: {mean}")\nprint(f"median response time: {median}")',
+      "def make_message(role, content):\n    return {\"role\": role, \"content\": content}\n\nmessages = []\nmessages.append(make_message(\"system\", \"You are a helpful support assistant.\"))\nmessages.append(make_message(\"user\", \"My order hasn't arrived yet.\"))\nmessages.append(make_message(\"assistant\", \"I'm sorry to hear that. Can you share your order number?\"))\nmessages.append(make_message(\"user\", \"It's ORD-4471.\"))\n\nfor m in messages:\n    print(m[\"role\"], \":\", m[\"content\"])\n\nuser_turns = 0\nfor m in messages:\n    if m[\"role\"] == \"user\":\n        user_turns = user_turns + 1\n\nprint(\"user turns so far:\", user_turns)\n\nlast_index = len(messages) - 1\nlast_message = messages[last_index]\n\nif last_message[\"role\"] == \"user\":\n    print(\"ready to call the API for a new assistant reply\")\nelse:\n    print(\"already ended on an assistant turn\")",
   },
   quizQuestion:
-    "Five response times are recorded: 8, 9, 10, 11, and 212 milliseconds. The mean comes out to 50ms and the median comes out to 10ms. Which number better describes a \"typical\" request?",
+    "This code builds a messages list and checks the role of the last entry before calling the API. What does last_role(messages) print, and why does that matter for a chat completion call?",
   quizCode:
-    'times = [8, 9, 10, 11, 212]\n# mean: 50\n# median: 10',
+    "messages = []\nmessages.append({\"role\": \"system\", \"content\": \"You are terse.\"})\nmessages.append({\"role\": \"user\", \"content\": \"What's 2+2?\"})\n\ndef last_role(msgs):\n    last_index = len(msgs) - 1\n    last_message = msgs[last_index]\n    return last_message[\"role\"]\n\nprint(last_role(messages))",
   quizOptions: [
     {
       key: "a",
       label:
-        "The median (10ms), because it depends only on the position of values once sorted, so the one extreme outlier barely affects it",
+        "\"user\" — a chat API call expects the list to end on a user (or tool) turn, since it's generating the next assistant reply to respond to that",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "The mean (50ms), because it factors in every single value, so it's always the more complete and accurate summary",
+      label: "\"system\" — the system message always counts as the most recent entry no matter what's appended after it",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "Neither is meaningful once a dataset contains an outlier — both statistics become unusable at that point",
+      label: "\"assistant\" — every conversation is required to end on an assistant message before you can send it",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — four of the five requests were fast, and the median reflects that because it only cares about the middle position in sorted order; the mean gets pulled way up because it adds the outlier's full value into the total.",
+    "Right — the last entry appended was the user's question, so last_role returns \"user\"; sending the list now makes sense, since the model has something fresh to respond to and its reply becomes the next assistant message.",
   quizFeedbackIncorrect:
-    "Not quite — \"uses every value\" is exactly the mean's weakness here, since it means one 212ms straggler can drag the average to 50ms even though four out of five requests were fast; the median (10ms) reflects the typical request much better.",
+    "Not quite — messages append in order, and \"user\" was the last one added here, not \"system\" or \"assistant\"; a chat call is meant to end on a user (or tool) turn so the model has something new to reply to.",
   takeaway:
-    "Mean is sum divided by count and factors in every value, so a single extreme outlier can drag it far from where the data actually clusters. Median is the middle value once sorted, found by position rather than arithmetic, which makes it far more resistant to outliers — report both when an outlier is possible.",
+    "A chat API call is a list of role/content dicts, not a single string — the model reads the whole list as context and returns one new assistant message, which you append before sending the growing list again on the next turn.",
 };
 
 export default content;

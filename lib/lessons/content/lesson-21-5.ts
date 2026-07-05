@@ -1,7 +1,7 @@
 import type { LessonData } from "../types";
 
 const content: LessonData = {
-  num: 17,
+  num: 21,
   orderIndex: 5,
   phaseLabel: "PROBABILITY + STATISTICS",
   title: "The test came back positive — now what? Conditional probability + Bayes' theorem",

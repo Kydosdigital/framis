@@ -114,7 +114,7 @@ export default function RagLesson() {
     supabase
       .from("lessons")
       .select("id, content, modules!inner(module_number)")
-      .eq("modules.module_number", 14)
+      .eq("modules.module_number", 18)
       .eq("order_index", 1)
       .single()
       .then(({ data }) => {
@@ -166,7 +166,7 @@ export default function RagLesson() {
   return (
     <div>
       <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
-        MODULE 14 · EMBEDDINGS + RAG · LESSON 1 OF {moduleLessonList(14).length}
+        MODULE 18 · EMBEDDINGS + RAG · LESSON 1 OF {moduleLessonList(18).length}
       </div>
       <h1 className="mb-2.5 font-inter text-[30px] font-bold tracking-[-0.02em]">
         RAG — teaching an LLM to cite its sources

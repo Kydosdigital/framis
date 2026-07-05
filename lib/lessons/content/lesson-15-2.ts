@@ -3,114 +3,107 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 15,
   orderIndex: 2,
-  phaseLabel: "STRUCTURED OUTPUTS + TOOL CALLING",
-  title: "The Contract: Writing a JSON Schema the Model Can't Ignore",
-  minutes: 18,
+  phaseLabel: "SECURITY + AUTH PATTERNS",
+  title: "One quote breaks everything: SQL injection and string concatenation",
+  minutes: 20,
   concept:
-    "A JSON schema is a plain dict that names every field a response must contain and the exact type each one must be — string, number, boolean, list, or object. Instead of hoping the model happens to phrase its answer the same way every time, you attach a schema with \"type\": \"object\", a \"properties\" dict describing each field, and a \"required\" list naming which fields must always be present. Fields with a fixed set of valid values — a currency code, a status label — use \"enum\" so the model can only pick from options you actually offered, and \"additionalProperties\": false stops it from tacking on fields you never defined. This turns \"return something like a city and a temperature\" into a contract precise enough that your code can read result[\"temperature_c\"] and trust that it exists and is actually a number, not a guess extracted from a sentence.",
+    "SQL injection happens when you build a database query by gluing user input directly into a string instead of treating it as data. If your code writes \"SELECT * FROM users WHERE username = '\" + username + \"'\", the database can't tell the difference between the username you meant to insert and actual SQL commands hidden inside it. An attacker who types something like ' OR '1'='1 as their username turns your intended query into one that's always true, and one who types '; DROP TABLE users; -- can append an entirely new command that deletes your data. The fix is to never build queries by concatenating strings at all — instead you use parameterized queries (also called prepared statements), where the query structure is sent to the database separately from the values, so user input is always treated as a literal value and never as executable SQL, no matter what characters it contains. Every mainstream database driver and ORM (pg, Prisma, Sequelize, Knex) supports this natively — there is essentially never a good reason to hand-build a SQL string from user input.",
   conceptSimpler:
-    "A JSON schema is a fill-in-the-blank form instead of a blank sheet of paper — the model can only write inside the blanks you drew, in the format you labeled each one with.",
+    "Concatenating user input into SQL is like faxing someone a form letter where the reader typed their own paragraph into the middle of your instructions — if they're clever, their paragraph can rewrite what the rest of the letter says to do.",
   vizStages: [
     {
-      label: "1. Freeform text is a guessing game",
+      label: "1. A normal, well-behaved login",
       body:
-        "Without a schema, the model answers in prose. Somewhere in that sentence is the number you need, but you have to parse English to find it, and the parsing breaks the moment the wording changes.",
-      code:
-        "# no schema, just a prompt\n\"Tell me the weather in Tokyo\"\n\n# model replies with prose:\n\"It's currently 22C and clear in Tokyo.\"",
+        "Your app builds a query by inserting the username someone typed into a template string. For an honest username like \"amy\", this works exactly as intended.",
+      code: "const username = \"amy\";\nconst query = \"SELECT * FROM users WHERE username = '\" + username + \"'\";\n// query = SELECT * FROM users WHERE username = 'amy'",
     },
     {
-      label: "2. A schema names the exact shape",
+      label: "2. An attacker changes the shape of the input",
       body:
-        "You write out every field the response must have, and the type each one must be. This dict is sent alongside the prompt as part of the request.",
-      code:
-        "weather_schema = {\n  \"type\": \"object\",\n  \"properties\": {\n    \"city\": {\"type\": \"string\"},\n    \"temperature_c\": {\"type\": \"number\"},\n    \"condition\": {\"type\": \"string\"}\n  },\n  \"required\": [\"city\", \"temperature_c\", \"condition\"]\n}",
+        "Instead of a name, the attacker submits text containing a stray quote and SQL syntax. Your concatenation code has no idea this input is \"special\" — it just glues it in like any other string.",
+      code: "const username = \"' OR '1'='1\";\nconst query = \"SELECT * FROM users WHERE username = '\" + username + \"'\";",
     },
     {
-      label: "3. The response comes back matching, field for field",
+      label: "3. The database sees a different query entirely",
       body:
-        "With the schema attached, the model no longer replies in prose — it replies in exactly the shape you asked for, which your code can read directly with no parsing at all.",
-      code:
-        "{\n  \"city\": \"Tokyo\",\n  \"temperature_c\": 22,\n  \"condition\": \"clear\"\n}",
+        "Once concatenated, the extra quote closes the string early and '1'='1' adds a condition that's always true — so the WHERE clause matches every row in the table, not just one user.",
+      code: "// query is now:\nSELECT * FROM users WHERE username = '' OR '1'='1'\n// returns EVERY user — often the app just logs in as the first row",
     },
     {
-      label: "4. enum and additionalProperties keep it inside the lines",
+      label: "4. Parameterized queries close the door",
       body:
-        "enum restricts a field to a fixed list of allowed values, so the model can't invent a new one. additionalProperties: false stops it from adding fields you never defined — together they make the shape exact, not just close.",
-      code:
-        "\"condition\": {\n  \"type\": \"string\",\n  \"enum\": [\"clear\", \"rain\", \"snow\", \"cloudy\"]\n},\n\"additionalProperties\": false",
+        "A parameterized query sends the SQL structure and the user's value as two separate things. The database driver treats the placeholder as a literal value no matter what's inside it — quotes, semicolons, whole SQL statements — none of it is ever interpreted as code.",
+      code: "const query = \"SELECT * FROM users WHERE username = $1\";\nawait db.query(query, [username]);\n// even username = \"' OR '1'='1\" is matched literally — zero rows returned",
     },
   ],
   realWorldIntro:
-    "Both Anthropic's and OpenAI's structured-output modes accept a JSON schema alongside the prompt and constrain generation so the response validates against it — it's exactly how a booking assistant guarantees departure_date always comes back as a real date string instead of \"next Tuesday\" or \"the 14th.\"",
+    "In the 2015 TalkTalk breach, attackers used a SQL injection vulnerability in a legacy webpage to pull personal data on hundreds of thousands of customers, costing the UK telecom a record regulatory fine at the time — years after SQL injection had already been a well-known, well-solved problem, the app just hadn't been fixed.",
   realWorldCode:
-    "{\n  \"name\": \"book_flight\",\n  \"description\": \"Books a one-way flight\",\n  \"input_schema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"origin\": {\"type\": \"string\"},\n      \"destination\": {\"type\": \"string\"},\n      \"date\": {\"type\": \"string\"}\n    },\n    \"required\": [\"origin\", \"destination\", \"date\"]\n  }\n}",
+    "// the vulnerable pattern behind countless breaches:\nconst query = \"SELECT * FROM accounts WHERE id = \" + req.params.id;\n// req.params.id = \"1; DROP TABLE accounts; --\" is catastrophic if this ever runs",
   sandbox: {
     kind: "explore",
     instructions:
-      "Click through each response and decide whether it actually satisfies the schema above it, or where exactly it breaks the contract.",
+      "Click through each stage to see how the same input is handled by a vulnerable, concatenated query versus a safe, parameterized one.",
     stages: [
       {
-        label: "The schema",
+        label: "Vulnerable: string concatenation",
         body:
-          "Every response to this expense-logging tool is supposed to match this exact shape: an amount that's a number, a category from a fixed list, and required means those two fields must always be present.",
-        code:
-          "schema = {\n  \"type\": \"object\",\n  \"properties\": {\n    \"amount\": {\"type\": \"number\"},\n    \"category\": {\n      \"type\": \"string\",\n      \"enum\": [\"food\", \"travel\", \"software\", \"other\"]\n    },\n    \"note\": {\"type\": \"string\"}\n  },\n  \"required\": [\"amount\", \"category\"]\n}",
+          "The query is assembled by joining strings together. Whatever the user typed becomes a literal part of the SQL text the database executes — there's no boundary between \"code\" and \"data.\"",
+        code: "const query = \"SELECT * FROM users WHERE email = '\" + email + \"' AND password = '\" + password + \"'\";",
       },
       {
-        label: "A valid response",
+        label: "Classic auth-bypass payload",
         body:
-          "Both required fields are present, amount is a real number, category is one of the four allowed strings, and the optional note is just a bonus string. This satisfies the schema completely.",
-        code: "{\"amount\": 42.50, \"category\": \"food\", \"note\": \"team lunch\"}",
+          "Typing admin@example.com'-- as the email comments out the rest of the query, including the password check entirely — the attacker logs in as admin without knowing the password.",
+        code: "email = \"admin@example.com'--\"\n// resulting query:\nSELECT * FROM users WHERE email = 'admin@example.com'--' AND password = ''\n// everything after -- is a SQL comment and is ignored",
       },
       {
-        label: "Missing a required field",
+        label: "Data exfiltration with UNION",
         body:
-          "category never showed up in this response. The moment your dispatcher does args[\"category\"], it hits a KeyError — required isn't a suggestion, it's the one guarantee your code was relying on.",
-        code: "{\"amount\": 42.50, \"note\": \"team lunch\"}",
+          "Injection isn't only about bypassing logins — a UNION SELECT payload can append a second query that pulls data from a completely different table, like a passwords or credit_cards table the input field was never meant to touch.",
+        code: "email = \"x' UNION SELECT card_number, cvv FROM credit_cards --\"\n// the app's search results page now silently displays stolen card data",
       },
       {
-        label: "Wrong type for a field",
+        label: "Destructive payload",
         body:
-          "amount is supposed to be a number, but this response sent the string \"19.99\" instead. It might print fine, but the instant you try to add it into a running total, it breaks or silently does string concatenation instead of math.",
-        code: "{\"amount\": \"19.99\", \"category\": \"food\"}",
+          "Some database drivers allow \"stacked\" queries, where a semicolon starts a brand-new statement. That turns a simple lookup field into a way to modify or destroy data outright.",
+        code: "id = \"7; DROP TABLE orders; --\"\n// resulting query:\nSELECT * FROM orders WHERE id = 7; DROP TABLE orders; --",
       },
       {
-        label: "A value outside the enum",
+        label: "Safe: parameterized query",
         body:
-          "The schema says category must be one of four exact strings, but this response invents a fifth. A strict validator rejects this outright — and even without one, \"entertainment\" won't match any branch of your dispatcher's if/elif logic.",
-        code: "{\"amount\": 15, \"category\": \"entertainment\"}",
+          "The placeholder ($1, $2, or ? depending on the library) is filled in by the database driver itself, after the query plan is already fixed. The user's text is bound as a value, never spliced into the SQL — so quotes, semicolons, and comment markers all lose their special meaning.",
+        code: "const query = \"SELECT * FROM users WHERE email = $1 AND password_hash = $2\";\nawait db.query(query, [email, passwordHash]);\n// any of the payloads above just fail to match a row — no exploit possible",
       },
     ],
   },
   quizQuestion:
-    "Does this response actually satisfy the schema above it, and why?",
+    "A login form builds its query like this. What's the safest fix, and why?",
   quizCode:
-    "schema = {\n  \"type\": \"object\",\n  \"properties\": {\n    \"city\": {\"type\": \"string\"},\n    \"temperature_c\": {\"type\": \"number\"}\n  },\n  \"required\": [\"city\", \"temperature_c\"]\n}\n\nresponse = {\"city\": \"Tokyo\", \"temperature_c\": \"22\"}",
+    "const query = \"SELECT * FROM users WHERE username = '\" + username + \"'\";\ndb.raw(query);",
   quizOptions: [
     {
       key: "a",
-      label:
-        "No — temperature_c is required to be a number, but the response sent the string \"22\" instead",
-      correct: true,
-    },
-    {
-      key: "b",
-      label:
-        "Yes — \"22\" and 22 are close enough that a schema treats them as the same value",
+      label: "Strip out single quote characters from the username before concatenating it",
       correct: false,
     },
     {
+      key: "b",
+      label: "Switch to a parameterized query so the value is bound separately from the SQL structure",
+      correct: true,
+    },
+    {
       key: "c",
-      label: "No — the response is missing the required city field",
+      label: "Keep concatenation but only allow it on the login page, since that's the highest-risk query",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — required only checks that a field is present at all; type is a separate rule, and a quoted \"22\" is a string, not a number, so this response fails validation even though a human would read it as basically the same thing.",
+    "Right — parameterized queries eliminate the entire class of attack by never letting user input be interpreted as SQL syntax, regardless of what characters it contains.",
   quizFeedbackIncorrect:
-    "Not quite — city is present and is a string, satisfying that property fine. The real problem is temperature_c: the schema requires it to be a number, but the response sent it as the string \"22\" instead.",
+    "Not quite — blocklisting characters like quotes is a losing game (attackers find encodings and edge cases you didn't block), and every concatenated query is equally exploitable, not just the login one; parameterized queries are the only reliable fix.",
   takeaway:
-    "A JSON schema turns \"return something like a city and a temperature\" into an enforceable contract — required lists which fields must exist, type constrains their shape, and enum plus additionalProperties close off values and fields you never defined, so your code can trust the response instead of parsing prose.",
+    "Never build a SQL query by gluing strings together — use parameterized queries so user input is always treated as a value, never as code the database might execute.",
 };
 
 export default content;

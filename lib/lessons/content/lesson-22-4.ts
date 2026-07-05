@@ -3,112 +3,80 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 22,
   orderIndex: 4,
-  phaseLabel: "HUMAN-IN-THE-LOOP + GUARDRAILS",
-  title: "The Review Screen Is Part of the Guardrail, Not an Afterthought",
-  minutes: 18,
+  phaseLabel: "LINEAR ALGEBRA BASICS",
+  title: "Cosine similarity: comparing direction, not just magnitude",
+  minutes: 20,
   concept:
-    "All the careful work of deciding when to escalate and to whom falls apart if the screen a human actually sees is a wall of raw logs with an 'approve' button at the bottom. A well-designed review UI puts the model's recommended action and its stated confidence front and center — not buried under everything the model considered — because a reviewer's first job is to judge one specific recommendation, not to re-derive the whole decision from scratch. Right below that recommendation belongs the evidence that actually matters: the specific order, the account history, the flagged pattern — not a full transcript of every tool call the model made along the way, most of which is noise to a human under time pressure. Overriding a recommendation should be fast and structured — a small set of buttons like approve, modify, or reject with a required reason code — rather than a blank text box, both because free text is slower to act on and because structured reasons are the only kind of feedback that can be fed back into improving the thresholds and the model later. And because a reviewer only has so much attention in a shift, the UI should actively fight decision fatigue: batching similar low-stakes cases together, and making sure the cases that truly need careful judgment don't get rubber-stamped just because they arrived case #47 in a long queue.",
+    "The dot product has a blind spot: it conflates \"pointing the same way\" with \"being big.\" A vector that's simply longer — because it represents a longer document, a louder signal, or a more emphatic score — can rack up a bigger dot product even when it points in a less similar direction than a shorter vector that's actually aligned. Cosine similarity fixes this by dividing the dot product by the product of the two vectors' magnitudes, which cancels their lengths out entirely and leaves a pure measure of direction: a value of 1 means the vectors point exactly the same way, 0 means they're unrelated (perpendicular), and -1 means they point exactly opposite. You can spot the cleanest case without doing any division at all — if the dot product exactly equals magnitude(a) times magnitude(b), the cosine similarity is exactly 1, meaning the vectors are perfectly aligned (one is just a scaled-up or scaled-down copy of the other). That's why real embedding search almost always compares vectors with cosine similarity, or normalizes every vector to the same length before storing it, so a document doesn't win a search just because its embedding happens to be \"louder.\"",
   conceptSimpler:
-    "It's like the difference between an ER doctor getting a one-page chart with vitals, the suspected diagnosis, and relevant history highlighted, versus getting handed the patient's entire decade of medical records and being told to find what matters themselves — both technically give the doctor 'the information,' but only one lets them actually do their job well.",
+    "It's the difference between asking \"who spent the most money at the store\" versus \"who bought the same kind of stuff\" — cosine similarity divides out the total spent so you're comparing taste, not budget.",
   vizStages: [
     {
-      label: "The wrong way: dump the model's raw output",
+      label: "1. Same direction, different length",
       body:
-        "A review screen that just pastes the model's full reasoning trace and every tool call it made forces the human to read through all of it before finding the one thing they're actually being asked to decide. Under time pressure, most reviewers will skim past the parts that matter along with the noise.",
-      code:
-        "[raw log]\nstep 1: fetched order #48213\nstep 2: checked refund policy table\nstep 3: computed risk score 0.71\nstep 4: checked prior refund count: 3\nstep 5: recommendation: escalate\n[approve] [reject]",
+        "query = [3, 4] and aligned = [6, 8] point in exactly the same direction — aligned is just query with every entry doubled. Their dot product is 3×6 + 4×8 = 50.",
+      code: "query = [3, 4]\naligned = [6, 8]\n# dot_product(query, aligned) = 3*6 + 4*8 = 50",
     },
     {
-      label: "The right way: recommendation first, evidence right beneath it",
+      label: "2. A different direction with a bigger raw score",
       body:
-        "The same case, redesigned: the recommended action and confidence are the first thing on the screen, in large type, followed immediately by only the two or three facts that actually drove the recommendation — order details and refund history — with everything else collapsed unless the reviewer chooses to dig deeper.",
-      code:
-        "RECOMMENDATION: escalate_to_human  (confidence 0.71)\nWHY: amount above auto-approve ceiling, no fraud signals\nEVIDENCE: order #48213 · 3 prior refunds, all approved\n[show full reasoning trace ▾]",
+        "skewed = [5, 12] points in a noticeably different direction than query, yet its dot product is 3×5 + 4×12 = 63 — higher than aligned's 50. By raw dot product alone, skewed looks like the \"better match,\" even though it isn't the true direction match.",
+      code: "query = [3, 4]\nskewed = [5, 12]\n# dot_product(query, skewed) = 3*5 + 4*12 = 63  -- bigger than 50!",
     },
     {
-      label: "Structured overrides, not free-text essays",
+      label: "3. Divide out the magnitudes to see direction",
       body:
-        "Instead of one open text box for the reviewer's decision, the UI offers a small set of buttons — approve, modify, reject — each of which requires picking a reason code from a short list rather than typing a paragraph. This is faster for the human in the moment, and it produces data that's actually usable later.",
+        "magnitude(query) is 5, magnitude(aligned) is 10, and magnitude(skewed) is 13. For aligned, the dot product (50) exactly equals 5 × 10 — a dead giveaway that cosine similarity is exactly 1, perfectly aligned. For skewed, the dot product (63) falls short of 5 × 13 = 65, so its cosine similarity is less than 1.",
       code:
-        "[Approve]  [Modify]  [Reject]\nreason (required): \"policy_match_incorrect\" | \"amount_miscalculated\" | \"other\"",
+        "print(50 == 5 * 10)   # True  -> aligned has cosine similarity exactly 1\nprint(63 < 5 * 13)    # True  -> skewed has cosine similarity less than 1",
     },
     {
-      label: "Every override becomes a data point, not just a decision",
+      label: "4. Direction wins over raw size",
       body:
-        "When a reviewer rejects or modifies a recommendation, the structured reason code gets logged alongside the case and fed back into the system — this is exactly the signal that later gets used to recalibrate confidence thresholds or retrain the model, closing the loop between 'a human disagreed' and 'the system gets better.'",
+        "Once you divide out magnitude, the ranking flips back to the truth: aligned is the perfect direction match (cosine similarity 1), while skewed only looked better because it happened to be a longer vector. This is exactly why similarity search normalizes by magnitude instead of trusting the raw dot product.",
       code:
-        "override_log.append({\"case_id\": \"req-101\", \"model_action\": \"escalate\", \"human_action\": \"reject\", \"reason\": \"amount_miscalculated\"})",
-    },
-    {
-      label: "Fighting decision fatigue on purpose",
-      body:
-        "A reviewer who approves 200 similar low-stakes cases in a row is prone to rubber-stamping case 201 too, even if it's actually different. Good review UIs batch near-identical low-stakes cases together for fast bulk handling, while visually distinguishing the rare, high-stakes case so it doesn't get the same one-click treatment as everything around it.",
-      code:
-        "batch: 40 cases, all \"amount < $20, exact policy match\" -> bulk-approve view\nflagged: 1 case, \"amount $18,000, ambiguous reason\" -> full detail view, no bulk action",
+        "# raw dot product ranking: skewed (63) > aligned (50)\n# cosine similarity ranking: aligned (1) > skewed (63/65, less than 1)",
     },
   ],
   realWorldIntro:
-    "Content-moderation tools like the review queues built on top of systems from companies such as Sift or internal trust-and-safety tooling at large platforms follow this exact pattern: the flagged content and the model's stated reason sit at the top of the screen, a fixed set of action buttons with required reason codes sits right below it, and every human decision is logged in a structured format specifically so it can be used to audit and retrain the model later.",
+    "Real documents and queries naturally produce embeddings of different magnitudes — a long, detail-heavy document can end up with a \"bigger\" vector than a short, precise one purely due to length, not relevance. Vector databases like Pinecone and pgvector let you choose \"cosine\" as the similarity metric specifically so search results are ranked by meaning (direction) instead of by which embedding happened to be the largest.",
+  realWorldCode:
+    "index = create_index(metric=\"cosine\")\n# under the hood, this is just:\n# cosine_similarity(a, b) = dot_product(a, b) / (magnitude(a) * magnitude(b))",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each version of the same review case to see how the same underlying decision gets easier or harder to review well depending on how the screen is built.",
-    stages: [
-      {
-        label: "Version 1: everything, in the order the model produced it",
-        body:
-          "The screen shows the model's entire chain of steps top to bottom, ending in an approve/reject button. There's no visual distinction between the two facts that actually mattered and the eight that didn't, so the reviewer has to read the whole thing every time just to find the recommendation.",
-      },
-      {
-        label: "Version 2: the recommendation is the headline",
-        body:
-          "The same case, but now 'escalate_to_human, confidence 0.71' is the first thing visible, in large text, with the full reasoning trace collapsed behind a 'show more' toggle. A reviewer can act on the headline alone for most cases and only expand the details when something looks off — this cuts review time without hiding information, since it's still one click away.",
-      },
-      {
-        label: "A free-text box versus reason-coded buttons",
-        body:
-          "One version asks the reviewer to type why they're overriding a recommendation. Another gives them three buttons — approve, modify, reject — each requiring a pick from a short list of reason codes. The second version is faster for the reviewer in the moment, and unlike free text, every one of those reasons can be counted, grouped, and used later to see whether the model is consistently wrong in one particular way.",
-      },
-      {
-        label: "200 routine approvals in a row, then one that isn't routine",
-        body:
-          "A reviewer has approved 200 near-identical low-dollar cases this shift. Case 201 looks the same at a glance but actually involves ten times the dollar amount. A UI that renders every case identically invites the reviewer to click through it the same way as the last 200 — a well-designed screen visually flags anything that breaks the pattern (different color, a warning badge, no bulk-action button) specifically so it doesn't get the autopilot treatment.",
-      },
-      {
-        label: "What happens to a rejected recommendation",
-        body:
-          "A reviewer rejects the model's recommendation and picks the reason 'amount_miscalculated.' If the UI just closes the case, that signal is lost. If the UI logs the model's original action, the human's action, and the reason code together, that record becomes exactly the input needed to check whether the model's math is systematically off in some category of case — turning one override into an improvement for every future case like it.",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Compute dot products and magnitudes for query vs. two candidates, then use the equals/less-than comparison (no decimals needed) to reveal which candidate is truly more aligned in direction.",
+    starterCode:
+      "def dot_product(vec_a, vec_b):\n    total = 0\n    for i in range(len(vec_a)):\n        total = total + vec_a[i] * vec_b[i]\n    return total\n\ndef sum_of_squares(vec):\n    total = 0\n    for i in range(len(vec)):\n        total = total + vec[i] * vec[i]\n    return total\n\ndef magnitude(vec):\n    target = sum_of_squares(vec)\n    for guess in range(0, target + 1):\n        if guess * guess == target:\n            return guess\n    return -1\n\nquery = [3, 4]\naligned = [6, 8]\nskewed = [5, 12]\n\ndot_aligned = dot_product(query, aligned)\ndot_skewed = dot_product(query, skewed)\n\nproduct_aligned = magnitude(query) * magnitude(aligned)\nproduct_skewed = magnitude(query) * magnitude(skewed)\n\nprint(f\"dot(query, aligned) = {dot_aligned}, magnitude product = {product_aligned}\")\nprint(f\"dot(query, skewed) = {dot_skewed}, magnitude product = {product_skewed}\")\n\nif dot_aligned == product_aligned:\n    print(\"aligned points in exactly the same direction as query (cosine similarity = 1)\")\n\nif dot_skewed < product_skewed:\n    print(\"skewed points in a different direction than query (cosine similarity < 1)\")\n\nprint(f\"raw dot product alone says skewed ({dot_skewed}) beats aligned ({dot_aligned})\")\nprint(\"cosine similarity reveals aligned is the true direction match\")",
   },
   quizQuestion:
-    "Two review UIs show the same escalated refund case. One lets the reviewer type a free-text explanation if they disagree with the model. The other requires picking a reason code from a short fixed list. Why might the fixed list actually be the better design, even though it gives the reviewer less freedom?",
+    "query = [3, 4], option_1 = [9, 12], option_2 = [8, 6]. Using dot_product and magnitude, which option is more cosine-similar to query, and how can you tell without computing a decimal?",
+  quizCode:
+    "query = [3, 4]\noption_1 = [9, 12]\noption_2 = [8, 6]\nprint(dot_product(query, option_1), magnitude(query) * magnitude(option_1))\nprint(dot_product(query, option_2), magnitude(query) * magnitude(option_2))",
   quizOptions: [
     {
       key: "a",
       label:
-        "Structured reason codes can be counted and grouped across many cases, which makes it possible to later detect patterns like 'the model keeps getting one specific thing wrong' — free text can't be aggregated the same way without extra work",
+        "option_1 — its dot product (75) exactly equals magnitude(query) times magnitude(option_1) (5 × 15 = 75), which is only possible when cosine similarity is exactly 1",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "Free text should never be allowed anywhere in a review UI, since reviewers can't be trusted to describe their reasoning",
+      label: "option_2 — its dot product uses smaller numbers, so it must be the \"purer\" direction match",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "It doesn't actually matter which one is used, since the model's original recommendation is the only thing that gets logged either way",
+      label: "They're equally similar, since both dot products are positive and every entry in every vector is positive",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — the point isn't to restrict the reviewer for its own sake, it's that a fixed set of reason codes turns every override into structured, countable data, which is what actually lets a team later notice patterns like recurring miscalculations and feed that back into the system.",
+    "Right — option_1 is literally query scaled by 3, so it points in exactly the same direction; the giveaway is that its dot product exactly matches magnitude(query) × magnitude(option_1) (75 = 5 × 15), which only happens at a cosine similarity of 1.",
   quizFeedbackIncorrect:
-    "Not quite — this isn't about whether reviewers can be trusted, and the human's decision absolutely gets logged too. The real advantage of a fixed reason-code list is that it produces data that can be aggregated across many cases, which free text makes much harder to do without extra processing.",
+    "Not quite — smaller raw numbers don't imply better alignment, and both vectors having positive entries only means they're in the same general quadrant, not that they point the same way; option_2's dot product (48) falls short of its magnitude product (5 × 10 = 50), so its cosine similarity is less than 1.",
   takeaway:
-    "The review screen is a guardrail in its own right: surface the recommendation before the raw reasoning, make overrides fast and structured instead of free-form, and design deliberately against the fatigue that turns careful review into rubber-stamping.",
+    "Cosine similarity is a dot product with the vectors' lengths divided back out, so it measures whether two things point the same way instead of just whether they're both \"big\" — that's the fix that makes embedding search compare meaning, not size.",
 };
 
 export default content;

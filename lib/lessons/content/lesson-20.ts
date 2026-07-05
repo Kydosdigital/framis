@@ -3,106 +3,81 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 20,
   orderIndex: 1,
-  phaseLabel: "FINE-TUNING + DATASET QUALITY",
-  title: "100 clean examples beat 10,000 messy ones",
+  phaseLabel: "EVALS + SAFETY + GUARDRAILS",
+  title: "37 out of 40: the eval loop that scores a prompt instead of guessing",
   minutes: 20,
   concept:
-    "When you fine-tune a model, it doesn't learn the task you meant to teach — it learns the exact pattern sitting in your training examples, including every inconsistency, contradiction, and mislabeled row. A dataset of 10,000 examples where the formatting wanders, the tone shifts, and a chunk of the labels are just wrong will teach the model to be inconsistent, because \"sometimes do it this way, sometimes do it that way\" is a real pattern it will faithfully reproduce. A dataset of 100 examples that are consistently formatted, cover a genuinely diverse set of real cases, and are correctly labeled gives the model one clear signal to lock onto, and it will generalize from that signal far better than it generalizes from noise. Size only helps once quality is already high — piling more messy examples on top of a messy dataset just teaches the model to be confidently wrong at a larger scale. This is why experienced teams spend most of their fine-tuning time auditing and cleaning examples by hand, not scraping more data.",
+    "An eval is nothing more exotic than a for-loop with a scoreboard: you keep a list of test cases, where each one pairs an input with the expected correct answer, and you run every input through your model or prompt to get its actual output. For each test case you compare actual to expected, and every time they match exactly, you add one to a passed counter — no partial credit, no vibes, just equal or not equal. Once the loop finishes, you divide passed by the total number of test cases to get a single number, like 37 out of 40, that summarizes how the whole prompt performed across every example at once. That number is the entire point: instead of eyeballing five outputs and declaring a prompt change \"feels better,\" you get a repeatable score you can compare directly against the score from before the change. Run the exact same test cases through two different prompts and \"I think this is an improvement\" turns into \"this raised the pass rate from 34/40 to 37/40\" — a claim you can actually defend.",
   conceptSimpler:
-    "Training a model on a messy dataset is like a student studying from lecture notes where half the definitions contradict each other — more pages of contradictory notes don't help them learn faster, they just learn to be unsure.",
+    "It's grading a stack of quizzes against an answer key: you don't debate whether an answer feels close enough, you check it against the key and tally how many were exactly right.",
   vizStages: [
     {
-      label: "1. Same task, two datasets",
+      label: "1. Start with an answer key",
       body:
-        "Imagine fine-tuning a model to classify support tickets as \"billing\", \"bug\", or \"question\". Dataset A has 10,000 rows scraped from old support logs. Dataset B has 150 rows a human carefully reviewed.",
-      code: "datasetA.length; // 10,000 (scraped, unreviewed)\ndatasetB.length; // 150   (hand-audited)",
+        "Each test case is just an input paired with the one correct expected answer — the ground truth you're grading against, decided before you ever run the model.",
+      code:
+        "test_cases = []\ntest_cases.append({\"input\": \"capital of France\", \"expected\": \"Paris\"})\ntest_cases.append({\"input\": \"2 + 2\", \"expected\": \"4\"})",
     },
     {
-      label: "2. What's actually inside dataset A",
+      label: "2. Run every case through the model",
       body:
-        "Some rows label the same kind of ticket differently depending on who wrote it, some completions include stray notes like \"(check with Dana)\" that leaked in from an internal tool, and formatting ranges from full sentences to one-word answers.",
-      code: "{ prompt: \"Card was charged twice\", completion: \"billing\" }\n{ prompt: \"Charged twice for one order\", completion: \"bug\" } // contradicts above\n{ prompt: \"App crashes on login\", completion: \"Bug - (check with Dana)\" }",
+        "The loop feeds each test case's input to the model (or your prompt) and captures whatever it comes back with as \"actual\" — no judgment yet, just collection.",
+      code: "for case in test_cases:\n    actual = model_answer(case[\"input\"])",
     },
     {
-      label: "3. What's inside dataset B",
+      label: "3. Compare, don't judge",
       body:
-        "Every row follows the same label set and format, edge cases are represented on purpose (ambiguous tickets, short tickets, angry-tone tickets), and a human double-checked every label before it went in.",
-      code: "{ prompt: \"Card was charged twice\", completion: \"billing\" }\n{ prompt: \"Charged twice for one order\", completion: \"billing\" }\n{ prompt: \"App crashes on login\", completion: \"bug\" }",
+        "actual gets checked against expected with a plain equality check. A match increments the passed counter; a mismatch just gets logged so you know which case broke.",
+      code:
+        "if actual == case[\"expected\"]:\n    passed = passed + 1\nelse:\n    print(f\"FAIL: {case['input']}\")",
     },
     {
-      label: "4. The model trained on each",
+      label: "4. Collapse it into one score",
       body:
-        "The model fine-tuned on the 10,000 messy rows learns that ticket categories are fuzzy and interchangeable, so its predictions on new tickets are inconsistent. The model fine-tuned on the 150 clean rows learns a crisp boundary between categories and applies it reliably to tickets it has never seen.",
-      code: "// messy-trained model on a new ticket:\nclassify(\"Charged for canceled plan\"); // \"bug\" one run, \"billing\" the next\n\n// clean-trained model on the same ticket:\nclassify(\"Charged for canceled plan\"); // \"billing\", consistently",
+        "After every test case has been checked, passed divided by the total test count becomes a single number — the pass rate — that you can track release over release.",
+      code: "print(f\"{passed}/{len(test_cases)} passed\")",
     },
   ],
   realWorldIntro:
-    "OpenAI's own fine-tuning guidance explicitly recommends starting with a small set of 50-100 carefully reviewed examples rather than dumping in every log you have, because a handful of clean examples exposes bad patterns you can fix before they get baked into thousands of rows.",
+    "Before merging a change to a production system prompt, teams run it against a frozen regression suite of hundreds of labeled examples and block the merge if the pass rate drops, no matter how good the new prompt looked in a handful of manual tries.",
   realWorldCode:
-    "// before scaling up, audit a small batch by hand:\nconst sample = trainingSet.slice(0, 50);\n// check: same label schema? same output format? any wrong labels?\n// fix the pattern here first — then decide if you even need more rows",
+    "score_before = run_eval(regression_suite)  # old prompt: 187/200\nscore_after = run_eval(regression_suite)   # new prompt: 179/200\nif score_after < score_before:\n    print(\"regression detected — do not ship\")",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each training example pair and decide what makes it good or bad before reading the explanation.",
-    stages: [
-      {
-        label: "Example 1: inconsistent format",
-        body:
-          "The completion format doesn't match the rest of the dataset — some rows return a bare word, this one returns a full sentence with extra punctuation. A model trained on a mix of formats will randomly pick one at inference time.",
-        code: "{ prompt: \"Refund never arrived\", completion: \"This is definitely a billing issue!!\" }\n// rest of dataset uses: completion: \"billing\"",
-      },
-      {
-        label: "Example 2: contradictory label",
-        body:
-          "This prompt is nearly identical to another example elsewhere in the set, but labeled differently with no clear reason why. The model can't learn a rule from two contradictory data points — it just learns that the rule doesn't matter.",
-        code: "{ prompt: \"I was billed twice for my subscription\", completion: \"bug\" }\n// elsewhere: { prompt: \"Billed twice this month\", completion: \"billing\" }",
-      },
-      {
-        label: "Example 3: leaked internal note",
-        body:
-          "The completion contains text that only makes sense inside the original support tool (a reminder to check with a coworker) and was never meant to be a category label. Training on this teaches the model to output junk alongside real answers.",
-        code: "{ prompt: \"Payment method declined\", completion: \"billing (check with Dana before closing)\" }",
-      },
-      {
-        label: "Example 4: a genuinely good example",
-        body:
-          "Consistent format, correct label, and a realistic phrasing a real user would type. This is the kind of row that, repeated with real variety across edge cases, actually teaches the model the boundary you want.",
-        code: "{ prompt: \"My card got charged twice for the same order\", completion: \"billing\" }",
-      },
-      {
-        label: "Example 5: good example, harder edge case",
-        body:
-          "Same clean format and correct label as example 4, but this one covers an ambiguous case on purpose — a ticket that could sound like a bug but is actually about being charged, which is exactly the kind of edge case a small, deliberate dataset should include.",
-        code: "{ prompt: \"App shows I was charged but my order says pending\", completion: \"billing\" }",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Trace the eval loop below: it runs four test cases through a stub model, prints which one fails, and tallies a final passed/total score.",
+    starterCode:
+      "def model_answer(question):\n    if question == \"capital of France\":\n        return \"Paris\"\n    elif question == \"2 + 2\":\n        return \"4\"\n    elif question == \"largest planet\":\n        return \"Saturn\"\n    elif question == \"opposite of hot\":\n        return \"cold\"\n    else:\n        return \"unknown\"\n\ntest_cases = []\ntest_cases.append({\"input\": \"capital of France\", \"expected\": \"Paris\"})\ntest_cases.append({\"input\": \"2 + 2\", \"expected\": \"4\"})\ntest_cases.append({\"input\": \"largest planet\", \"expected\": \"Jupiter\"})\ntest_cases.append({\"input\": \"opposite of hot\", \"expected\": \"cold\"})\n\ndef run_eval(cases):\n    passed = 0\n    for case in cases:\n        actual = model_answer(case[\"input\"])\n        expected = case[\"expected\"]\n        if actual == expected:\n            passed = passed + 1\n        else:\n            print(f\"FAIL: {case['input']} -> got '{actual}', expected '{expected}'\")\n    return passed\n\npassed_count = run_eval(test_cases)\ntotal = len(test_cases)\nprint(f\"score: {passed_count}/{total} passed\")",
   },
   quizQuestion:
-    "You have two options for your next fine-tuning run: add 5,000 more scraped, unreviewed rows to your existing dataset, or spend a day fixing label errors and format inconsistencies in your current 300 rows. Which improves the model more?",
+    "Team A scores their new prompt against 40 test cases and gets 37 passed. Team B scores their prompt against a completely different set of 20 test cases and gets 19 passed. Why can't you use these two scores to decide whose prompt is better?",
+  quizCode:
+    "team_a_score = 37\nteam_a_total = 40\nteam_b_score = 19\nteam_b_total = 20\nprint(f\"team A: {team_a_score}/{team_a_total}\")\nprint(f\"team B: {team_b_score}/{team_b_total}\")",
   quizOptions: [
     {
       key: "a",
-      label: "Add the 5,000 scraped rows — more data always helps a model generalize better",
-      correct: false,
-    },
-    {
-      key: "b",
-      label: "Fix the label errors and inconsistencies in the existing 300 rows first",
+      label:
+        "An eval score only means something relative to the specific test cases it was measured against, and two different test sets can have wildly different difficulty — so 37/40 and 19/20 aren't measuring the same thing",
       correct: true,
     },
     {
+      key: "b",
+      label: "Eval scores are only valid when the total number of test cases is exactly 40, so Team B's result doesn't count",
+      correct: false,
+    },
+    {
       key: "c",
-      label: "Neither will matter much — fine-tuning results depend only on the base model, not the data",
+      label: "You can compare them fine — 37/40 is 92.5% and 19/20 is 95%, so Team B's prompt is simply better",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Correct — adding more unreviewed rows on top of existing label errors and format drift just teaches the model a bigger, more confident version of the same inconsistency; cleaning the 300 rows first gives it a clear pattern to generalize from.",
+    "Right — an eval score is a percentage against one particular set of test cases, so comparing scores from two different test sets tells you nothing about which prompt actually performs better; you'd need to run both prompts against the identical test cases to make that call.",
   quizFeedbackIncorrect:
-    "Not quite — piling scraped, unreviewed rows onto a dataset that already has contradictory labels and inconsistent formatting reinforces the noise rather than fixing it, and fine-tuning results are highly sensitive to exactly this kind of data quality.",
+    "Not quite — the percentages look comparable, but Team B's 20 test cases could be far easier than Team A's 40, so a higher percentage there doesn't mean a better prompt; the fix is running both prompts against the exact same test cases.",
   takeaway:
-    "A fine-tuning dataset teaches the model exactly what's in it, contradictions included — so a small, consistently formatted, correctly labeled set of examples will outperform a huge pile of messy ones every time.",
-  nextUpLabel: "Agents + Orchestration",
+    "An eval is just a loop that compares actual output to an expected answer for every test case and tallies a passed count — the resulting score is only meaningful when it's measured against the same fixed set of test cases every time you compare two prompts.",
+  nextUpLabel: "Probability + Statistics",
 };
 
 export default content;

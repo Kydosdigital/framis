@@ -91,7 +91,7 @@ export async function fetchLearnerStats(userId: string): Promise<LearnerStats> {
 
     const createdAt = profileRes.data?.created_at;
     const weekNumber = createdAt
-      ? Math.min(48, Math.max(1, Math.ceil((Date.now() - new Date(createdAt).getTime()) / (7 * 86400000)) + 1))
+      ? Math.min(64, Math.max(1, Math.ceil((Date.now() - new Date(createdAt).getTime()) / (7 * 86400000)) + 1))
       : 1;
 
     const lessons = lessonsRes.data ?? [];

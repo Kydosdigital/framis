@@ -4,13 +4,13 @@ import type { LessonData } from "./types";
 
 /** Modules whose Lesson 1 is a bespoke hand-built component (Variables, RAG)
  * rather than data-driven. Their remaining lessons (2-4) are still generic. */
-const BESPOKE_MODULES = [2, 14] as const;
+const BESPOKE_MODULES = [2, 18] as const;
 
 export type LessonRef =
   | { kind: "bespoke"; bespokeKey: "variables" | "rag" }
   | { kind: "generic"; data: LessonData };
 
-function isBespokeModule(num: number): num is 2 | 14 {
+function isBespokeModule(num: number): num is 2 | 18 {
   return (BESPOKE_MODULES as readonly number[]).includes(num);
 }
 

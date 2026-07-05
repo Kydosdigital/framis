@@ -3,82 +3,108 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 15,
   orderIndex: 1,
-  phaseLabel: "STRUCTURED OUTPUTS + TOOL CALLING",
-  title: "The Dispatcher: Turning a Tool Call Into a Function Call",
+  phaseLabel: "SECURITY + AUTH PATTERNS",
+  title: "Never store the password: hashing vs. plaintext",
   minutes: 20,
   concept:
-    "When an LLM \"calls a tool,\" it isn't actually running any code — it's producing structured output: a dict with a fixed shape, usually a \"name\" field and an \"arguments\" field, like {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}}. Your program is the one that turns that dict into a real function call, and the piece of code that does this is called a dispatcher. A dispatcher reads the \"name\" field and uses an if/elif chain to decide which real function to run, then passes along the \"arguments\" dict as the parameters that function actually needs. The last branch should always be an else that raises an error for any name it doesn't recognize — if you let unknown tool names fall through silently, the model can \"call\" a tool that quietly does nothing, and you won't find out until something downstream is missing. This pattern — name plus arguments in, routed by if/elif, unknown names rejected loudly — is the entire mechanism behind every LLM tool-calling feature you've seen.",
+    "When a user signs up, your database should never contain their actual password — not encrypted, not obfuscated, never. Instead you run the password through a one-way hashing function like bcrypt, which turns \"hunter2\" into something like \"$2b$12$KIXQ...\" and cannot be reversed back into the original text. At login you don't \"decrypt\" the stored value and compare strings; you hash the password the user just typed and check whether the two hashes match. This matters because databases get stolen constantly — misconfigured servers, SQL injection, leaked backups — and when that happens, plaintext passwords hand an attacker instant access to every account, while properly hashed passwords hand them a wall of unreadable noise they'd need years of computing time to crack, one password at a time. A good hashing function is also deliberately slow and includes a random \"salt\" per user, so even two people with the identical password \"password123\" end up with completely different stored hashes.",
   conceptSimpler:
-    "A tool call is like a note that says \"go do task #3 with these inputs\" — the dispatcher is the clerk who reads the number, walks to the right filing cabinet, and refuses the note if the number doesn't match anything on file.",
+    "Hashing a password is like shredding a document before throwing it away — even if someone steals the trash bag, all they get is confetti, not the original page.",
   vizStages: [
     {
-      label: "1. A tool call is just a dict",
+      label: "1. User signs up",
       body:
-        "This is what \"the model decided to call a tool\" looks like under the hood — not magic, just a dict with a name and an arguments dict.",
-      code:
-        "tool_call = {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}}\nprint(tool_call[\"name\"])\nprint(tool_call[\"arguments\"][\"city\"])",
+        "The user submits a plaintext password over HTTPS. This is the only moment the raw password ever exists in memory on your server.",
+      code: "const rawPassword = \"hunter2\";",
     },
     {
-      label: "2. Real functions do the actual work",
+      label: "2. Hash it before saving",
       body:
-        "Behind every tool name sits an ordinary function. The model never sees this code — it only ever sees the name string.",
-      code:
-        "def get_weather(city):\n    if city == \"Tokyo\":\n        return \"22C and clear\"\n    else:\n        return \"unknown city\"",
+        "bcrypt.hash mixes in a random salt and runs many rounds of a slow one-way function. The result is what actually gets written to the database — the raw password is discarded immediately after.",
+      code: "const passwordHash = await bcrypt.hash(rawPassword, 12);\n// passwordHash = \"$2b$12$KIXQx7m9s...T5eYh6\"\nawait db.users.create({ email, passwordHash });",
     },
     {
-      label: "3. Dispatch reads the name, routes with if/elif",
+      label: "3. Login compares hashes, not text",
       body:
-        "The dispatcher takes the whole call dict, pulls out name and arguments, and matches name against each tool it knows how to run.",
-      code:
-        "def dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"get_weather\":\n        return get_weather(args[\"city\"])\n    else:\n        raise ValueError(\"unknown tool\")",
+        "When the user logs in later, you hash their typed password again and let bcrypt.compare check it against the stored hash — the plaintext they typed is never looked up or matched directly.",
+      code: "const ok = await bcrypt.compare(typedPassword, user.passwordHash);\nif (ok) { /* log them in */ }",
     },
     {
-      label: "4. Run it end to end",
+      label: "4. A breach reveals the difference",
       body:
-        "Build the call dict, hand it to dispatch, and the right function runs — this is the full loop an LLM tool-calling framework runs every time.",
-      code:
-        "tool_call = {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}}\nresult = dispatch(tool_call)\nprint(result)",
+        "If the users table leaks, an attacker who stored plaintext gets working logins instantly. An attacker who only got hashes has to brute-force each one individually — and bcrypt's slowness makes that expensive at scale.",
+      code: "// leaked plaintext row: { email, password: \"hunter2\" }        -> instant account takeover\n// leaked hashed row:    { email, passwordHash: \"$2b$12$...\" }  -> must crack per-password",
     },
   ],
   realWorldIntro:
-    "When you give an LLM a weather tool and a booking tool, the API response comes back with a tool_calls list where each entry is exactly this shape — a name and an arguments object — and your backend runs a dispatcher like this one to actually fetch the weather or book the flight.",
+    "In 2012, LinkedIn had 6.5 million password hashes leaked, but because they'd used an unsalted, fast SHA-1 hash instead of a slow salted one like bcrypt, attackers cracked the vast majority of them within days — the lesson the industry took away was that hashing alone isn't enough, it has to be slow and salted.",
   realWorldCode:
-    "def dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"get_weather\":\n        return get_weather(args[\"city\"])\n    elif name == \"book_flight\":\n        return book_flight(args[\"origin\"], args[\"destination\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")",
+    "// weak: fast, unsalted hash — crackable at billions of guesses per second\nconst weakHash = sha1(password);\n\n// strong: slow, salted, tunable cost factor\nconst strongHash = await bcrypt.hash(password, 12);",
   sandbox: {
-    kind: "code",
-    challenge:
-      "Write add(a, b) and square(n), then write dispatch(call) that routes to the right one based on call[\"name\"] and raises ValueError for any other name.",
-    starterCode:
-      "def add(a, b):\n    return a + b\n\ndef square(n):\n    return n * n\n\ndef dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"add\":\n        return add(args[\"a\"], args[\"b\"])\n    elif name == \"square\":\n        return square(args[\"n\"])\n    else:\n        raise ValueError(\"unknown tool\")\n\ncall1 = {\"name\": \"add\", \"arguments\": {\"a\": 3, \"b\": 4}}\nprint(dispatch(call1))\n\ncall2 = {\"name\": \"square\", \"arguments\": {\"n\": 5}}\nprint(dispatch(call2))\n\ntry:\n    call3 = {\"name\": \"delete_everything\", \"arguments\": {}}\n    print(dispatch(call3))\nexcept ValueError as e:\n    print(f\"blocked: {e}\")",
+    kind: "explore",
+    instructions:
+      "Click through each stage to compare what an attacker actually gains from a database breach under three different storage strategies.",
+    stages: [
+      {
+        label: "Storing plaintext",
+        body:
+          "The password column holds the exact text the user typed. Anyone with read access to the table — a developer, an attacker, a backup file left on an open S3 bucket — can log in as any user immediately.",
+        code: "{ email: \"amy@example.com\", password: \"Sunshine!22\" }\n// attacker just copies this value and logs in — done",
+      },
+      {
+        label: "Storing a fast, unsalted hash",
+        body:
+          "Better than plaintext, but a fast hash like plain MD5 or SHA-1 can be brute-forced at billions of attempts per second on modern GPUs, and precomputed \"rainbow tables\" already contain hashes for every common password.",
+        code: "{ email: \"amy@example.com\", passwordHash: sha1(\"Sunshine!22\") }\n// = \"d1a5f4c2b8e9...\"\n// attacker looks this hash up in a rainbow table in seconds",
+      },
+      {
+        label: "Storing a slow, salted hash (bcrypt)",
+        body:
+          "bcrypt adds a random salt per user (so identical passwords produce different hashes) and is intentionally slow, so even with the database in hand, an attacker can only test a small number of guesses per second per password.",
+        code: "{ email: \"amy@example.com\", passwordHash: \"$2b$12$Rk9x...Qh2fL\" }\n// salt is embedded in the hash string itself\n// cracking one password could take years of GPU time",
+      },
+      {
+        label: "Two users, same password",
+        body:
+          "Because each hash includes its own random salt, two accounts that both chose \"password123\" end up with completely different stored values — an attacker can't spot repeated passwords just by scanning the table.",
+        code: "// user A: passwordHash = \"$2b$12$aG7f...\"\n// user B: passwordHash = \"$2b$12$Zq1r...\"\n// same input password, unrelated-looking output hashes",
+      },
+      {
+        label: "What login actually checks",
+        body:
+          "Login never reverses the hash back into a password. It hashes the freshly typed attempt (using the salt already stored in the hash) and compares the two hash strings for equality.",
+        code: "const match = await bcrypt.compare(\"password123\", user.passwordHash);\n// true only if hashing the input reproduces the exact stored hash",
+      },
+    ],
   },
   quizQuestion:
-    "This dispatch function has no else branch. What happens when the model asks to call \"cancel_flight\", a name that matches neither if nor elif?",
+    "Your users table is stolen by an attacker. Which storage approach limits the damage the most, and why?",
   quizCode:
-    "def dispatch(call):\n    name = call[\"name\"]\n    if name == \"get_weather\":\n        return get_weather(call[\"arguments\"][\"city\"])\n    elif name == \"get_time\":\n        return get_time(call[\"arguments\"][\"zone\"])\n\ncall = {\"name\": \"cancel_flight\", \"arguments\": {\"flight_id\": 42}}\nresult = dispatch(call)\nprint(result)",
+    "// A: password: \"Sunshine!22\"\n// B: passwordHash: sha1(\"Sunshine!22\")\n// C: passwordHash: bcrypt.hash(\"Sunshine!22\", 12)",
   quizOptions: [
     {
       key: "a",
-      label: "It falls through every branch, returns None, and prints None with no error at all",
-      correct: true,
+      label: "Plaintext, because at least there's no risk of a bug in the hashing library",
+      correct: false,
     },
     {
       key: "b",
-      label: "Python automatically raises an error because no branch matched",
+      label: "A fast unsalted hash like SHA-1, because it's still not the original password",
       correct: false,
     },
     {
       key: "c",
-      label: "It runs the get_weather branch anyway since that's listed first",
-      correct: false,
+      label: "A slow, salted hash like bcrypt, because it's both individually salted and computationally expensive to brute-force at scale",
+      correct: true,
     },
   ],
   quizFeedbackCorrect:
-    "Right — with no matching if/elif and no else, the function body just ends, so dispatch implicitly returns None; the flight never gets canceled and nothing tells you that, which is exactly why a missing else is dangerous.",
+    "Right — bcrypt's per-user salt stops attackers from cracking all matching passwords at once, and its deliberate slowness means even a stolen database only yields a trickle of cracked accounts instead of an instant dump.",
   quizFeedbackIncorrect:
-    "Not quite — Python doesn't raise anything on its own here; without an else branch the function simply finishes without hitting a return, so it silently returns None instead of running any tool or telling you the name was unrecognized.",
+    "Not quite — plaintext hands over every account instantly, and a fast unsalted hash like SHA-1 falls to rainbow tables and GPU brute-forcing in hours; bcrypt's salt and deliberate slowness are what actually blunt a breach.",
   takeaway:
-    "A tool call is nothing more than a dict with a name and arguments field; a dispatcher reads name, routes with if/elif to the real function, and must end in an else that raises loudly — because a silent fallthrough on an unknown tool is a bug you won't discover until it's too late.",
-  nextUpLabel: "Evals + Safety + Guardrails",
+    "Never store a password you can read back — store a slow, salted hash instead, so a stolen database gives an attacker a cracking problem measured in years rather than a login page measured in seconds.",
+  nextUpLabel: "CI/CD + Docker + Deployment",
 };
 
 export default content;

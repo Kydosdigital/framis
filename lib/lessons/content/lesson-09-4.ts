@@ -3,82 +3,81 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 9,
   orderIndex: 4,
-  phaseLabel: "TESTING (UNIT/INTEGRATION/E2E)",
-  title: "The Bug Between Them: Writing an Integration Test",
-  minutes: 22,
+  phaseLabel: "PANDAS + DATA WRANGLING",
+  title: "Transforming data: group-by and aggregation",
+  minutes: 25,
   concept:
-    "A unit test proves one function does the right thing with inputs you made up by hand — but real bugs often hide in the seam between two functions, not inside either one. calculate_total might return a dollar amount and pass its own unit test perfectly, while apply_free_shipping might expect a value in cents and also pass its own unit test perfectly — and yet wiring them together produces a wrong answer, because dollars flowing into a function expecting cents is a mismatch neither function's own test could ever catch. An integration test is built specifically to catch that: instead of making up a fake input for the second function, you take the real output of the first function and feed it in, then check that the combined result is correct. That's the whole difference — a unit test checks a function against inputs you chose, an integration test checks whether two real functions actually agree with each other when chained together for real. Neither replaces the other: unit tests give fast, pinpointed feedback about one function at a time, while integration tests confirm the handoff between functions actually works.",
+    "This is the single most important operation in data wrangling, and you've actually already learned it — just wearing a different outfit. SQL's GROUP BY collapses many rows sharing the same value in a column down into one summary row per group, and pandas' df.groupby(\"city\").sum() does the exact same thing on a DataFrame. Underneath both is one mechanism: loop over every row, look at its group key (the city, the customer, whatever you're grouping by), and keep a running total keyed by that group. The trick that makes this work is a dict used as a lookup table: totals[\"NYC\"] holds the running sum for NYC, totals[\"LA\"] holds a separate running sum for LA, and so on, all accumulated in a single pass over the data. The very first time you see a new group key, you have to initialize its entry (start its total at 0) before you can add to it — skip that step, or run it on every row instead of just the first, and your \"running total\" quietly resets instead of accumulating, which is one of the most common real bugs in hand-rolled aggregation code. Once you have per-group totals and counts, an average per group is just total divided by count — the same COUNT, SUM, and AVG you already used with SQL's GROUP BY, just computed by hand instead of by a query engine.",
   conceptSimpler:
-    "A unit test checks each Lego brick alone for cracks; an integration test snaps two bricks together and checks whether they actually click into place.",
+    "Group-by is sorting a pile of receipts into one stack per customer, then adding up each stack separately — a dict keyed by customer name is how the code keeps each stack's running total apart from every other stack's, all while making just one pass through the receipts.",
   vizStages: [
     {
-      label: "1. Two functions, each unit-tested on its own",
+      label: "1. Without grouping, everything collapses into one number",
       body:
-        "calculate_total figures out an order's dollar total. apply_free_shipping decides whether an order qualifies for free shipping, based on a total in cents.",
+        "A plain running total treats the whole table as a single bucket — useful for \"what's the grand total,\" useless for \"what's the total per city.\"",
       code:
-        "def calculate_total(price, quantity):\n    return price * quantity\n\ndef apply_free_shipping(total_cents):\n    if total_cents >= 5000:\n        return True\n    return False",
+        'rows = []\nrows.append({"city": "NYC", "amount": 40})\nrows.append({"city": "LA", "amount": 15})\nrows.append({"city": "NYC", "amount": 10})\n\ntotal = 0\nfor row in rows:\n    total = total + row["amount"]\nprint(f"total amount across ALL rows: {total}")',
     },
     {
-      label: "2. Each one passes, completely alone",
+      label: "2. A dict turns one bucket into many",
       body:
-        "Tested in isolation with made-up numbers, both functions look flawless — calculate_total does the multiplication correctly, and apply_free_shipping applies its cents threshold correctly.",
+        "Instead of one total variable, use a dict keyed by city: totals[\"NYC\"] and totals[\"LA\"] are two completely separate running sums, both built in the same single loop over the rows. known_keys tracks which cities we've already set up, since the first time we see a new city we must initialize its total to 0 before adding to it.",
       code:
-        'assert calculate_total(25, 3) == 75, "25 * 3 should be 75"\nassert apply_free_shipping(5000) == True, "5000 cents qualifies"\nassert apply_free_shipping(100) == False, "100 cents does not qualify"\nprint("both unit tests passed")',
+        'rows = []\nrows.append({"city": "NYC", "amount": 40})\nrows.append({"city": "LA", "amount": 15})\nrows.append({"city": "NYC", "amount": 10})\n\ntotals = {}\ncounts = {}\nknown_keys = []\nfor row in rows:\n    key = row["city"]\n    already_known = False\n    for k in known_keys:\n        if k == key:\n            already_known = True\n    if already_known == False:\n        known_keys.append(key)\n        totals[key] = 0\n        counts[key] = 0\n    totals[key] = totals[key] + row["amount"]\n    counts[key] = counts[key] + 1\n\nfor key in known_keys:\n    print(f"{key}: total={totals[key]}, count={counts[key]}")',
     },
     {
-      label: "3. But do they actually work together?",
+      label: "3. Average per group: total divided by count",
       body:
-        "calculate_total(25, 3) returns 75 — meaning $75, in dollars. Feed that straight into apply_free_shipping, which is expecting cents, and 75 cents is nowhere near the $50 threshold. A real $75 order gets wrongly denied free shipping.",
+        "Once you're tracking a running total and a running count per group, the average per group falls right out — exactly the relationship between SQL's SUM(amount), COUNT(*), and AVG(amount) in the same GROUP BY query.",
       code:
-        'order_total = calculate_total(25, 3)\nqualifies = apply_free_shipping(order_total)\nassert qualifies == True, "a $75 order should qualify for free shipping"\n# AssertionError: a $75 order should qualify for free shipping\n# (order_total was 75 dollars, but apply_free_shipping expected cents)',
+        'totals = {"NYC": 50, "LA": 15}\ncounts = {"NYC": 2, "LA": 1}\nfor city in ["NYC", "LA"]:\n    avg = totals[city] / counts[city]\n    print(f"{city}: avg={avg}")',
     },
     {
-      label: "4. Neither function is \"wrong\" on its own",
+      label: "4. The bug: forgetting to guard initialization",
       body:
-        "Both unit tests from stage 2 still pass — nothing about either function changed. The bug lives entirely at the seam where they connect: a units mismatch that only shows up once you test them together with real, chained data.",
+        "If you initialize a group's total on every row instead of just the first time you see that key, you erase the running total right before adding the current row — so the \"total\" ends up being just the last row's value, not a real sum at all.",
       code:
-        "# calculate_total: still correct, returns dollars, as designed\n# apply_free_shipping: still correct, expects cents, as designed\n# the integration is what's broken, not either function",
+        'rows = []\nrows.append({"city": "NYC", "amount": 40})\nrows.append({"city": "NYC", "amount": 10})\n\n# BUG: no already_known check, so this resets to 0 every single row\ntotals = {}\nfor row in rows:\n    key = row["city"]\n    totals[key] = 0\n    totals[key] = totals[key] + row["amount"]\nprint(f"NYC total (buggy): {totals[\'NYC\']}")   # should be 50, not 10',
     },
   ],
   realWorldIntro:
-    "In a real CI pipeline, integration tests run after the unit test suite and are slower because they exercise real code paths together instead of stubbed-out inputs — but they're what catches the kind of seam bug (mismatched units, unexpected shapes, wrong assumptions) that two individually-passing unit tests can hide from each other.",
+    "This is exactly the mechanism a database engine runs when you write SQL's GROUP BY, and exactly what df.groupby(\"city\")[\"amount\"].sum() runs in pandas — both loop over every row once, bucket it by its group key, and keep a running aggregate per bucket. pandas can also aggregate several columns and several functions at once (.agg({\"amount\": [\"sum\", \"mean\"], \"order_id\": \"count\"})), but that's the same per-group accumulation repeated for each column and function you ask for, not a different mechanism.",
   realWorldCode:
-    '# tests/test_checkout_integration.py\ndef test_order_total_flows_into_shipping_check():\n    order_total = calculate_total(25, 3)\n    assert apply_free_shipping(order_total * 100) == True\n\n# $ pytest tests/ -v\n# tests/test_shipping.py::test_calculate_total PASSED\n# tests/test_shipping.py::test_apply_free_shipping PASSED\n# tests/test_checkout_integration.py::test_order_total_flows_into_shipping_check PASSED',
+    '# real pandas — same mechanism, one line:\n# city_totals = df.groupby("city")["amount"].sum()\n# city_avgs   = df.groupby("city")["amount"].mean()\n# both_at_once = df.groupby("city")["amount"].agg(["sum", "mean", "count"])\n\n# real SQL — the same operation you already learned:\n# SELECT city, SUM(amount), AVG(amount), COUNT(*) FROM orders GROUP BY city;',
   sandbox: {
     kind: "code",
     challenge:
-      "Fix the integration bug so a $75 order correctly qualifies for free shipping — without breaking either function's own unit tests above.",
+      "Write group_by_sum_count(rows, group_col, value_col) that returns [totals, counts, known_keys] — a dict of running sums, a dict of running counts, and the list of group keys seen, all built in a single pass over rows. Then loop over the keys and print each group's total, count, and average.",
     starterCode:
-      'def calculate_total(price, quantity):\n    return price * quantity\n\ndef apply_free_shipping(total_cents):\n    if total_cents >= 5000:\n        return True\n    return False\n\nassert calculate_total(25, 3) == 75, "unit test: 25 * 3 should be 75"\nassert apply_free_shipping(5000) == True, "unit test: 5000 cents qualifies"\nassert apply_free_shipping(100) == False, "unit test: 100 cents does not qualify"\n\norder_total = calculate_total(25, 3)\nqualifies = apply_free_shipping(order_total)\nassert qualifies == True, "integration test: a $75 order should qualify for free shipping"\n\nprint("All tests passed. Order total:", order_total, "Free shipping:", qualifies)',
+      'def group_by_sum_count(rows, group_col, value_col):\n    totals = {}\n    counts = {}\n    known_keys = []\n    for row in rows:\n        key = row[group_col]\n        already_known = False\n        for k in known_keys:\n            if k == key:\n                already_known = True\n        if already_known == False:\n            known_keys.append(key)\n            totals[key] = 0\n            counts[key] = 0\n        totals[key] = totals[key] + row[value_col]\n        counts[key] = counts[key] + 1\n    result = [totals, counts, known_keys]\n    return result\n\nrows = []\nrows.append({"city": "NYC", "amount": 40})\nrows.append({"city": "LA", "amount": 15})\nrows.append({"city": "NYC", "amount": 10})\nrows.append({"city": "SF", "amount": 100})\nrows.append({"city": "LA", "amount": 25})\nrows.append({"city": "NYC", "amount": 10})\n\nresult = group_by_sum_count(rows, "city", "amount")\ntotals = result[0]\ncounts = result[1]\nkeys = result[2]\n\nfor key in keys:\n    total = totals[key]\n    count = counts[key]\n    avg = total / count\n    print(f"{key}: total={total}, count={count}, avg={avg}")',
   },
   quizQuestion:
-    "calculate_total(25, 3) passes its own unit test (it equals 75), and apply_free_shipping(5000) passes its own unit test (it returns True). But apply_free_shipping(calculate_total(25, 3)) incorrectly returns False for what should be a qualifying $75 order. What does this show?",
+    "This version of the group-by loop resets totals[key] to 0 on every row instead of only the first time a key is seen. What does it print for totals[\"NYC\"]?",
+  quizCode:
+    'rows = []\nrows.append({"city": "NYC", "amount": 40})\nrows.append({"city": "LA", "amount": 15})\nrows.append({"city": "NYC", "amount": 10})\n\ntotals = {}\nfor row in rows:\n    key = row["city"]\n    totals[key] = 0\n    totals[key] = totals[key] + row["amount"]\n\nprint(totals["NYC"])',
   quizOptions: [
     {
       key: "a",
-      label:
-        "Even when each function is individually correct, the two can still disagree about the units or shape of data passed between them — something only an integration test that chains them together for real will catch",
+      label: "10 — the total gets wiped back to 0 right before every add, so only the last NYC row's amount survives",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "One of the two unit tests must actually be wrong, since two genuinely passing unit tests could never coexist with a bug like this",
+      label: "50 — Python is smart enough to add up every row that shares the same city, regardless of the reset",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "This proves unit tests are pointless and every function should only ever be tested through integration tests",
+      label: "It raises a KeyError the second time \"NYC\" is used as a key",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — both functions are correct against their own specs, but calculate_total hands back dollars while apply_free_shipping expects cents; that mismatch only shows up once you test them chained together with real data.",
+    "Right — because totals[key] = 0 runs on every single row with no guard, each NYC row wipes out whatever was accumulated before adding its own amount. The first NYC row (40) sets totals[\"NYC\"] to 0 then adds 40, giving 40 — but the second NYC row (10) resets it to 0 again before adding 10, leaving a final value of 10. The real sum, 50, is lost because nothing protected the running total between rows.",
   quizFeedbackIncorrect:
-    "Not quite — both unit tests are genuinely correct, and unit tests are still valuable for fast, pinpointed feedback. The bug is a units mismatch at the seam between the two functions, which is precisely what an integration test is for.",
+    "Not quite — Python doesn't know these two rows are \"the same group\" unless your code tracks that itself. Here, totals[key] = 0 runs unconditionally on every row, so the second NYC row wipes out the 40 from the first NYC row before adding its own 10 — leaving totals[\"NYC\"] equal to 10, not the true sum of 50.",
   takeaway:
-    "Unit tests prove each function is correct on its own terms, but only an integration test that chains their real inputs and outputs together can catch a mismatch at the seam between them, like dollars flowing into a function expecting cents. Use both: unit tests for fast, precise feedback per function, integration tests to confirm the pieces actually fit.",
+    "Group-by is one loop plus a dict: walk the rows once, and keep a running total (and count) per group key, initializing each new key's entry exactly once, the first time you see it. That single guarded pattern is the real mechanism behind SQL's GROUP BY and pandas' df.groupby(...).sum() alike — everything else (average, min, max, multiple aggregates at once) is a small variation on the same accumulate-per-key idea.",
 };
 
 export default content;

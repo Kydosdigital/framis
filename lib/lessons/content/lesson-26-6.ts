@@ -1,7 +1,7 @@
 import type { LessonData } from "../types";
 
 const content: LessonData = {
-  num: 22,
+  num: 26,
   orderIndex: 6,
   phaseLabel: "HUMAN-IN-THE-LOOP + GUARDRAILS",
   title: "The Last Checkpoint: Validating the Answer, Scoring the Risk",

@@ -3,112 +3,119 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 22,
   orderIndex: 3,
-  phaseLabel: "HUMAN-IN-THE-LOOP + GUARDRAILS",
-  title: "Escalating to 'a Human' Isn't a Plan — It's a Missing Design",
+  phaseLabel: "LINEAR ALGEBRA BASICS",
+  title: "Matrices: a grid of numbers that transforms vectors",
   minutes: 18,
   concept:
-    "'Escalate to a human' sounds like a complete answer, but by itself it's just a to-do list item — it doesn't say which human, with what authority, seeing what context, or under what deadline. A refund request that needs a $50,000 sign-off shouldn't land in the same queue as a $12 shipping question, because the first-shift support agent who can approve the second one usually doesn't have the authority to approve the first, no matter how quickly they pick up the case. Good escalation design routes by two things at once: the domain of the problem (billing versus security versus legal versus a plain product question) and the severity or authority level required (a routine review versus something that needs a manager's sign-off versus something that needs a specialist who's trained to spot fraud patterns). The handoff itself matters as much as the destination — dumping a bare request into someone's queue with no context forces them to reconstruct everything the model already figured out, while a good handoff carries the model's reasoning, the specific evidence it used, and relevant history along with it. Finally, escalation needs a clock: if nobody acts within a set window, the case should automatically move to someone else with the right authority — not sit forever, and not get silently reassigned to whoever's next in line regardless of whether they can actually handle it.",
+    "A matrix is just a grid of numbers — rows and columns — and it does one job: it turns any vector you feed it into a new vector. You compute the new vector one entry at a time, and each entry is nothing new at all — it's a dot product between one row of the matrix and the input vector. Multiply the matrix's first row against the vector, and that sum becomes the first entry of the output; multiply the second row against the same vector, and that becomes the second entry. Because every row can contain different numbers, a matrix can stretch a vector, shrink it, flip it, rotate it, or leave it completely alone, depending entirely on what numbers you put in that grid. This is the exact mechanism inside neural networks: every \"layer\" that reshapes an embedding is really just a matrix, built from numbers the model learned during training, applied to the vector coming out of the layer before it.",
   conceptSimpler:
-    "It's like a hospital triage desk: a sprained ankle and a chest pain patient don't go in the same line just because both need 'a doctor' — they go to different specialists, with different urgency, and the ankle case doesn't get the cardiologist just because she happened to be free first.",
+    "Think of a matrix as a machine on a conveyor belt: a vector goes in one side, the machine applies a fixed, repeatable rule (stretch this way, flip that way), and a transformed vector comes out the other side — feed the same matrix any vector, and it always applies the same rule.",
   vizStages: [
     {
-      label: "One queue for everything",
+      label: "1. A matrix is rows, each one a dot product",
       body:
-        "The naive setup: every escalated case — big or small, billing or security — lands in a single 'needs human review' queue, sorted only by the order it arrived. A $40,000 fraud case waits behind a dozen routine $15 questions simply because they got there first, and whoever happens to be free picks up whatever's on top, regardless of whether they're the right person for it.",
+        "Take the matrix [[1, 0], [0, 1]] — two rows, two numbers each — applied to the vector [5, 3]. Row one, [1, 0], dotted with [5, 3] gives 1×5 + 0×3 = 5. Row two, [0, 1], dotted with [5, 3] gives 0×5 + 1×3 = 3. Nothing changed — this is the \"identity\" matrix, the matrix version of multiplying by 1.",
       code:
-        "review_queue = [{\"ticket\": \"shipping-question\", \"amount\": 12}, {\"ticket\": \"account-takeover\", \"amount\": 40000}, {\"ticket\": \"pricing-typo\", \"amount\": 8}]\n# next reviewer just takes whatever's first in line",
+        "matrix = [[1, 0],\n          [0, 1]]\nvector = [5, 3]\n\nnew_vector = [\n  1*5 + 0*3,\n  0*5 + 1*3\n]\n# new_vector = [5, 3] -- unchanged",
     },
     {
-      label: "Route by domain and by authority level",
+      label: "2. Scaling: stretch every axis",
       body:
-        "A better setup sorts on two axes at once: what kind of problem this is (billing, security, legal, product), and how much authority is required to act on it (routine review vs. manager sign-off vs. specialist judgment). A support agent handles routine billing questions; a fraud analyst — not just any agent — handles anything with account-takeover signals; and only someone with sign-off authority above a dollar ceiling ever sees the largest cases, no matter how confident the model's recommendation is.",
+        "Swap the diagonal 1s for 2s: [[2, 0], [0, 2]]. Now row one gives 2×5 + 0×3 = 10, and row two gives 0×5 + 2×3 = 6. Every entry got doubled — the vector points the same direction but reaches twice as far. This is what \"scaling up\" an embedding by a constant looks like.",
       code:
-        "def route(domain, amount):\n    if domain == \"security\":\n        return \"fraud_specialist_queue\"\n    elif amount > 10000:\n        return \"manager_signoff_queue\"\n    else:\n        return \"l1_support_queue\"",
+        "matrix = [[2, 0],\n          [0, 2]]\nvector = [5, 3]\n\nnew_vector = [\n  2*5 + 0*3,\n  0*5 + 2*3\n]\n# new_vector = [10, 6] -- same direction, doubled length",
     },
     {
-      label: "Hand off context, not just a request",
+      label: "3. Non-uniform scaling: stretch one axis only",
       body:
-        "The escalation package is the difference between a five-minute review and a twenty-minute investigation. Instead of forwarding a bare request, a good handoff attaches the model's recommendation, the specific evidence and account history it based that on, and why it didn't just handle the case itself — so the human starts from the model's work instead of redoing it from scratch.",
+        "Matrices don't have to treat every axis the same. [[3, 0], [0, 1]] triples the first coordinate but leaves the second untouched: row one gives 3×5 + 0×3 = 15, row two gives 0×5 + 1×3 = 3. The vector gets pulled long and thin in one direction, like squishing a circle into an ellipse.",
       code:
-        "escalation = {\"recommended_action\": \"escalate\", \"reason\": \"amount above policy ceiling, no fraud signals\", \"evidence\": [\"order #48213\", \"3 prior refunds, all approved\"], \"model_confidence\": 0.71}",
+        "matrix = [[3, 0],\n          [0, 1]]\nvector = [5, 3]\n\nnew_vector = [\n  3*5 + 0*3,\n  0*5 + 1*3\n]\n# new_vector = [15, 3] -- stretched horizontally, vertical axis untouched",
     },
     {
-      label: "Escalation needs a clock, and re-routing needs the same rules",
+      label: "4. Rotation: same length, new direction",
       body:
-        "If a case sits untouched past its SLA — say 30 minutes for a fraud flag, 4 hours for a routine billing question — it shouldn't just wait indefinitely or get silently reassigned to whoever's next in the general pool. It should re-route using the same domain-and-authority rules that placed it originally, often escalating one level up (a specialist's manager, not a random second agent), so the case never ends up with someone less qualified than the first person it was sent to.",
+        "The matrix [[0, -1], [1, 0]] rotates a vector 90 degrees counterclockwise. On [5, 3]: row one gives 0×5 + (-1)×3 = -3, row two gives 1×5 + 0×3 = 5, so the result is [-3, 5]. Check the magnitude: 5² + 3² = 34, and (-3)² + 5² = 34 too — same length, purely a change of direction.",
       code:
-        "if time_waiting_minutes > sla_minutes:\n    action = \"reroute_to_next_tier\"",
+        "matrix = [[0, -1],\n          [1, 0]]\nvector = [5, 3]\n\nnew_vector = [\n  0*5 + (-1)*3,\n  1*5 + 0*3\n]\n# new_vector = [-3, 5] -- rotated 90 degrees, same length as [5, 3]",
     },
     {
-      label: "Authority has to be real, not assumed",
+      label: "5. Reflection: flip across an axis",
       body:
-        "A queue label like 'manager review' is worthless if the system doesn't actually check that the person picking up the case holds manager-level sign-off — otherwise a case requiring $50,000 authority can get approved by whoever happens to have the right job title in their profile but not the actual permission. Routing logic and permission checks have to agree, or the escalation path is really just theater.",
+        "[[1, 0], [0, -1]] leaves the first coordinate alone and flips the sign of the second: row one gives 1×5 + 0×3 = 5, row two gives 0×5 + (-1)×3 = -3, giving [5, -3]. That's a mirror image of the original vector across the horizontal axis.",
       code:
-        "if reviewer_signoff_limit < ticket_amount:\n    action = \"deny_reviewer_lacks_authority\"",
+        "matrix = [[1, 0],\n          [0, -1]]\nvector = [5, 3]\n\nnew_vector = [\n  1*5 + 0*3,\n  0*5 + (-1)*3\n]\n# new_vector = [5, -3] -- reflected across the x-axis",
     },
   ],
   realWorldIntro:
-    "Payment platforms like Stripe route disputed-charge cases this way in production: a routine chargeback goes to a general risk-ops queue, anything flagged for possible account compromise goes straight to a security-trained specialist, and cases above a dollar ceiling require a reviewer who actually holds sign-off authority at that level — the ticket's domain and size decide the destination, not just whoever's free.",
+    "Every layer of a neural network that reshapes an embedding — including the \"Query,\" \"Key,\" and \"Value\" projections inside attention, which is coming up next in this course — is a matrix multiplication like the ones above, just with far more rows, columns, and numbers learned from data instead of picked by hand.",
+  realWorldCode:
+    "W_query = learned_matrix   # shape depends on the model, but the operation is identical\ntoken_embedding = embed(\"bank\")\nquery_vector = matrix_multiply(W_query, token_embedding)\n# same row-times-vector dot products as above, just at a much larger scale",
   sandbox: {
     kind: "explore",
     instructions:
-      "Click through each escalation scenario and decide who it should actually route to, then read why.",
+      "Step through each matrix below to see how the same input vector gets stretched, rotated, or flipped depending only on the numbers inside the grid.",
     stages: [
       {
-        label: "$30 billing question, no risk signals",
+        label: "Identity: change nothing",
         body:
-          "A customer asks why they were charged twice for the same order. It's a routine billing pattern with a clear paper trail and no fraud indicators. This belongs in the general L1 support queue — no specialist skill or elevated authority is needed, and routing it anywhere heavier just adds delay without adding safety.",
+          "[[1, 0], [0, 1]] is the \"do nothing\" matrix — every row picks out exactly one coordinate and ignores the other, so whatever vector goes in comes out unchanged. It's the matrix equivalent of multiplying a number by 1.",
+        code: "matrix = [[1, 0], [0, 1]]\nvector = [5, 3]\n# result: [5, 3]",
       },
       {
-        label: "Login from a new device, followed by a large withdrawal request",
+        label: "Uniform scaling: grow or shrink evenly",
         body:
-          "The pattern — unfamiliar device, then an immediate request to move money — is a classic account-takeover signature, regardless of the dollar amount involved. This should route to a fraud/security specialist queue, not general support, because a generalist agent isn't trained to recognize the pattern or to take the right containment steps (like freezing the account) while investigating.",
+          "[[2, 0], [0, 2]] doubles both coordinates equally, so the output vector points in the same direction as the input but reaches twice as far from the origin.",
+        code: "matrix = [[2, 0], [0, 2]]\nvector = [5, 3]\n# result: [10, 6] -- same direction, doubled length",
       },
       {
-        label: "$75,000 refund request, textbook policy match",
+        label: "Non-uniform scaling: stretch one axis",
         body:
-          "The policy clearly covers this refund and there's nothing suspicious about the request — but the dollar amount alone puts it above what almost any individual agent is authorized to approve. This should route to whoever holds sign-off authority at that dollar tier, which is a question of permission level, not of how confident the model is or how clean the policy match looks.",
+          "[[3, 0], [0, 1]] only stretches the first coordinate, leaving the second alone. The output vector no longer points in the same direction as the input — it's been pulled toward the horizontal axis.",
+        code: "matrix = [[3, 0], [0, 1]]\nvector = [5, 3]\n# result: [15, 3] -- pulled toward the horizontal axis",
       },
       {
-        label: "A billing case that's waited 6 hours past its SLA",
+        label: "Rotation: same length, new angle",
         body:
-          "The case was correctly routed to L1 support, but nobody has picked it up. Rather than let it sit indefinitely or get quietly dumped into an unrelated agent's queue, the SLA breach should trigger a re-route within the same domain — for example, up to a shift lead in support — so it still lands with someone equipped to handle it, just with more urgency attached.",
+          "[[0, -1], [1, 0]] rotates any vector 90 degrees counterclockwise around the origin. The magnitude (length) of the vector never changes — only the direction it points does.",
+        code: "matrix = [[0, -1], [1, 0]]\nvector = [5, 3]\n# result: [-3, 5] -- same length as [5, 3], rotated 90 degrees",
       },
       {
-        label: "A model recommends 'escalate' but attaches almost no context",
+        label: "Reflection: a mirror image",
         body:
-          "Technically the case reached a human, but the escalation just says 'needs review' with no evidence, no reasoning, and no history attached. Even though the routing (queue and person) might be correct, the handoff itself has failed — the reviewer now has to reconstruct everything from scratch, which defeats much of the point of having the model triage the case in the first place. Good escalation design treats the context package as seriously as the destination.",
+          "[[1, 0], [0, -1]] leaves the horizontal coordinate untouched but flips the sign of the vertical one, producing a mirror image of the vector across the horizontal axis.",
+        code: "matrix = [[1, 0], [0, -1]]\nvector = [5, 3]\n# result: [5, -3] -- mirrored across the x-axis",
       },
     ],
   },
   quizQuestion:
-    "A refund case requiring $80,000 of authority gets auto-routed to 'manager_signoff_queue,' and the first available manager approves it. Later it turns out that manager's actual sign-off limit was only $25,000. What went wrong?",
+    "matrix = [[1, 0], [0, -1]] is applied to vector = [5, 3]. What's the result, and what transformation does this matrix represent?",
+  quizCode:
+    "matrix = [[1, 0], [0, -1]]\nvector = [5, 3]\n# row 0: 1*5 + 0*3\n# row 1: 0*5 + (-1)*3",
   quizOptions: [
     {
       key: "a",
       label:
-        "The routing logic assumed the queue label matched real permissions, but never checked the reviewer's actual authority against the case's dollar amount before letting them act",
+        "[5, -3] — the first row leaves the x-coordinate unchanged, and the second row flips the sign of the y-coordinate, reflecting the vector across the x-axis",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "Nothing went wrong — as long as a case reaches any human in a queue named for the right domain, the escalation design has done its job",
+      label: "[-5, 3] — the matrix flips the x-coordinate instead, reflecting the vector across the y-axis",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "The model's confidence score must have been miscalibrated, since that's the only thing that determines whether an approval is valid",
+      label: "[5, 3] — since one row is mostly zeros, the vector passes through the matrix unchanged",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — a queue name is just a label; the system has to actually check that the person taking the action holds sign-off authority for that specific amount, or the routing design is enforcing nothing real, no matter how correctly the case was categorized on paper.",
+    "Right — row [1, 0] dotted with [5, 3] keeps the x-coordinate exactly as it was, while row [0, -1] dotted with [5, 3] negates the y-coordinate, which is precisely a reflection across the horizontal axis.",
   quizFeedbackIncorrect:
-    "Not quite — this isn't a confidence-calibration issue at all. The case was routed to a queue with the right name, but nothing verified that the specific reviewer who picked it up actually held that level of sign-off authority — routing and permissions have to be checked together.",
+    "Not quite — the first row has no negative sign, so the x-coordinate stays at 5 unchanged; it's the second row's -1 that flips the y-coordinate's sign, which mirrors the vector across the x-axis (not the y-axis), and that lone -1 absolutely still changes the result.",
   takeaway:
-    "Routing a case to 'a human' is not the same as routing it to the right human — domain, authority level, context handoff, and a real permission check all have to line up, or the escalation path is safety theater with an extra step in the middle.",
+    "A matrix is nothing more than one dot product per row — stack a few of those together and you can stretch, shrink, rotate, or flip any vector, which is the entire mechanism neural networks use to reshape embeddings layer by layer.",
 };
 
 export default content;
