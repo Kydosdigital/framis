@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-page: #fafbfc;
+  --color-card: #ffffff;
+  --color-border: #e4e7ee;
+  --color-border-input: #d6dbe3;
+  --color-ink-900: #1f2937;
+  --color-ink-700: #4b5563;
+  --color-ink-500: #6b7280;
+  --color-ink-400: #9aa3af;
+  --color-done-bg: #f7faf9;
+  --color-done-border: #dbeae4;
+  --color-track: #edf0f4;
+}
+
+.dark {
+  --color-page: #111827;
+  --color-card: #17202f;
+  --color-border: #29344a;
+  --color-border-input: #34405a;
+  --color-ink-900: #f3f4f6;
+  --color-ink-700: #c7ccd4;
+  --color-ink-500: #9aa6b2;
+  --color-ink-400: #7c8794;
+  --color-done-bg: rgba(5, 150, 105, 0.1);
+  --color-done-border: #1f3b32;
+  --color-track: #1b2536;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-page);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  cursor: pointer;
+}
+
+textarea:focus,
+input:focus {
+  outline: 2px solid #0066cc;
+  outline-offset: 1px;
+}
+
+/* --- Framis keyframes (used via inline animation shorthands to match the
+   original prototype's staggered delays precisely) --- */
+@keyframes framisPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(75, 158, 143, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(75, 158, 143, 0);
+  }
+}
+@keyframes framisWordIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes framisTicker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes framisCaret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Scroll-reveal (mirrors the prototype's [data-reveal] transitions) */
+[data-reveal] {
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+[data-reveal="off"] {
+  opacity: 0;
+  transform: translateY(32px);
+}
+[data-reveal="off"] [data-stagger] {
+  opacity: 0;
+}
+[data-reveal="on"] [data-stagger] {
+  animation: framisWordIn 0.65s backwards;
+}

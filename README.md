@@ -1,25 +1,65 @@
-# CODING AGENTS: READ THIS FIRST
+# Framis
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+> Engineering forward. Learn to think like an engineer who builds with AI.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+An interactive prototype of the **Framis** learning platform — a motion-first,
+project-based curriculum that takes developers from zero to full-stack AI
+engineer in 12 months. Built from the [Claude Design](https://claude.ai/design)
+handoff (see `chats/` and `project/` for the original brief and prototype).
 
-## What you should do — IMPORTANT
+This is a **hi-fi investor demo**: fully working navigation, state, and a
+runnable sandbox — not a static mockup.
 
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+## Stack
 
-**Read `project/Framis.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+- **Next.js 14** (App Router) + **React 18** + **TypeScript**
+- **Tailwind CSS** for styling (brand tokens in `tailwind.config.ts`)
+- **Framer Motion** available for richer motion; the hero/lesson animations are
+  hand-tuned canvas + CSS to match the prototype exactly
+- **Zustand** for cross-screen app state
+- Fonts: Inter · IBM Plex Sans · Fira Code (via `next/font`)
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+## The five flows
 
-## About the design files
+| Flow | What it shows |
+|------|---------------|
+| **Landing** | Motion-first hero: particle-network canvas, self-typing lesson demo, animated stat counters, concept ticker, scroll-reveal sections, 12-month roadmap |
+| **Onboarding** | 3 steps — account → placement quiz → setup checklist (personalises the start point) |
+| **Dashboard** | Week 18/48 progress, streak, this-week tasks, capstone + peer-review cards, badges |
+| **Lesson (Variables)** | Playable box-metaphor motion viz, runnable mini-Python sandbox, quiz with feedback, "explain simpler" toggle |
+| **Capstone** | Notes App brief, acceptance-criteria checklist, progressive hints, submission flow |
+| **Peer review** | Anonymised code with a planted plain-text-password bug, weighted scorecard, guided feedback |
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+## Run it
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+```bash
+npm install
+npm run dev      # http://localhost:3000
+```
 
-## Bundle contents
+```bash
+npm run build && npm run start   # production build
+```
 
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `AI Engineer Academy Platform` project files (HTML prototypes, assets, components)
+## Project structure
+
+```
+app/                 # Next.js App Router entry, layout, fonts, globals
+components/
+  landing/           # Landing + HeroCanvas, LandingDemo, Ticker, Reveal
+  onboarding/        # 3-step onboarding
+  app/               # AppShell + Sidebar, Dashboard, Lesson, LessonViz,
+                     #   Capstone, PeerReview
+  ui.tsx             # shared Logo / Check primitives
+lib/
+  store.ts           # Zustand store (all screen + form state)
+  python.ts          # tiny Python-ish interpreter for the sandbox
+  data.ts            # static curriculum / quiz / rubric content
+project/             # original Claude Design handoff (reference only)
+chats/               # original design conversation (reference only)
+```
+
+## Design tokens
+
+Navy `#0A1428` · Blue `#0066CC` · Teal `#4B9E8F` · Success `#059669`.
+Full palette in `tailwind.config.ts`.

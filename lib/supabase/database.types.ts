@@ -1,0 +1,641 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
+  public: {
+    Tables: {
+      code_reviews: {
+        Row: {
+          assignment_id: number
+          feedback: Json
+          id: number
+          scores: Json
+          submitted_at: string
+        }
+        Insert: {
+          assignment_id: number
+          feedback?: Json
+          id?: never
+          scores?: Json
+          submitted_at?: string
+        }
+        Update: {
+          assignment_id?: number
+          feedback?: Json
+          id?: never
+          scores?: Json
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_reviews_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "review_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: number
+          lesson_id: number | null
+          project_id: number | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: never
+          lesson_id?: number | null
+          project_id?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: never
+          lesson_id?: number | null
+          project_id?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_posts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_replies: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: number
+          post_id: number
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: never
+          post_id: number
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: never
+          post_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_replies_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lessons: {
+        Row: {
+          content: Json
+          created_at: string
+          description: string | null
+          difficulty: string
+          estimated_minutes: number | null
+          id: number
+          learning_outcomes: string[]
+          module_id: number
+          order_index: number
+          published_at: string | null
+          title: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          estimated_minutes?: number | null
+          id?: never
+          learning_outcomes?: string[]
+          module_id: number
+          order_index: number
+          published_at?: string | null
+          title: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          estimated_minutes?: number | null
+          id?: never
+          learning_outcomes?: string[]
+          module_id?: number
+          order_index?: number
+          published_at?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modules: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          module_number: number
+          phase: number
+          title: string
+          weeks_label: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: never
+          module_number: number
+          phase: number
+          title: string
+          weeks_label?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: never
+          module_number?: number
+          phase?: number
+          title?: string
+          weeks_label?: string | null
+        }
+        Relationships: []
+      }
+      portfolio_testimonials: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: number
+          portfolio_id: number
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: never
+          portfolio_id: number
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: never
+          portfolio_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_testimonials_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolios: {
+        Row: {
+          bio: string | null
+          created_at: string
+          featured_project_ids: number[]
+          id: number
+          is_public: boolean
+          slug: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          featured_project_ids?: number[]
+          id?: never
+          is_public?: boolean
+          slug: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          featured_project_ids?: number[]
+          id?: never
+          is_public?: boolean
+          slug?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          email_frequency: string
+          full_name: string | null
+          id: string
+          location: string | null
+          public_portfolio: boolean
+          theme: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          email_frequency?: string
+          full_name?: string | null
+          id: string
+          location?: string | null
+          public_portfolio?: boolean
+          theme?: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          email_frequency?: string
+          full_name?: string | null
+          id?: string
+          location?: string | null
+          public_portfolio?: boolean
+          theme?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      project_submissions: {
+        Row: {
+          auto_check_results: Json
+          created_at: string
+          demo_video_url: string | null
+          deployed_url: string | null
+          github_url: string | null
+          id: number
+          project_id: number
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_check_results?: Json
+          created_at?: string
+          demo_video_url?: string | null
+          deployed_url?: string | null
+          github_url?: string | null
+          id?: never
+          project_id: number
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_check_results?: Json
+          created_at?: string
+          demo_video_url?: string | null
+          deployed_url?: string | null
+          github_url?: string | null
+          id?: never
+          project_id?: number
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_submissions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          difficulty: string | null
+          duration_label: string | null
+          hints: Json
+          id: number
+          module_id: number | null
+          order_index: number | null
+          requirements: Json
+          rubric: Json
+          slug: string
+          solo_or_pair: string
+          starter_repo_url: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          difficulty?: string | null
+          duration_label?: string | null
+          hints?: Json
+          id?: never
+          module_id?: number | null
+          order_index?: number | null
+          requirements?: Json
+          rubric?: Json
+          slug: string
+          solo_or_pair?: string
+          starter_repo_url?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          difficulty?: string | null
+          duration_label?: string | null
+          hints?: Json
+          id?: never
+          module_id?: number | null
+          order_index?: number | null
+          requirements?: Json
+          rubric?: Json
+          slug?: string
+          solo_or_pair?: string
+          starter_repo_url?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_assignments: {
+        Row: {
+          assigned_at: string
+          due_at: string | null
+          id: number
+          reviewer_id: string
+          status: string
+          submission_id: number
+        }
+        Insert: {
+          assigned_at?: string
+          due_at?: string | null
+          id?: never
+          reviewer_id: string
+          status?: string
+          submission_id: number
+        }
+        Update: {
+          assigned_at?: string
+          due_at?: string | null
+          id?: never
+          reviewer_id?: string
+          status?: string
+          submission_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_assignments_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "project_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_progress: {
+        Row: {
+          completed_at: string | null
+          id: number
+          lesson_id: number
+          quiz_score: number | null
+          started_at: string
+          status: string
+          time_spent_seconds: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: never
+          lesson_id: number
+          quiz_score?: number | null
+          started_at?: string
+          status?: string
+          time_spent_seconds?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: never
+          lesson_id?: number
+          quiz_score?: number | null
+          started_at?: string
+          status?: string
+          time_spent_seconds?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
