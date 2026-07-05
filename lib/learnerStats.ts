@@ -10,6 +10,10 @@ export type LearnerStats = {
   totalCapstones: number;
   shippedCapstones: number;
   capstoneStatus: "not_started" | "submitted" | "under_review" | "passed";
+  /** slugs of every project this learner has a non-draft submission for. */
+  shippedCapstoneSlugs: string[];
+  /** real per-project status, keyed by slug — for capstones with no submission yet, look up "not_started" as the default. */
+  capstoneStatusBySlug: Record<string, "not_started" | "submitted" | "under_review" | "passed">;
   pendingReviews: number;
   currentStreak: number;
   longestStreak: number;
@@ -24,6 +28,8 @@ const EMPTY_STATS: LearnerStats = {
   totalCapstones: 0,
   shippedCapstones: 0,
   capstoneStatus: "not_started",
+  shippedCapstoneSlugs: [],
+  capstoneStatusBySlug: {},
   pendingReviews: 0,
   currentStreak: 0,
   longestStreak: 0,
@@ -71,7 +77,7 @@ export async function fetchLearnerStats(userId: string): Promise<LearnerStats> {
         supabase.from("projects").select("id", { count: "exact", head: true }),
         supabase
           .from("project_submissions")
-          .select("status, submitted_at")
+          .select("status, submitted_at, projects(slug)")
           .eq("user_id", userId)
           .order("submitted_at", { ascending: false }),
         supabase
@@ -104,8 +110,19 @@ export async function fetchLearnerStats(userId: string): Promise<LearnerStats> {
 
     const totalCapstones = projectsRes.count ?? 0;
     const submissions = submissionsRes.data ?? [];
-    const shippedCapstones = submissions.filter((s) => s.status !== "draft").length;
+    const shippedSubmissions = submissions.filter((s) => s.status !== "draft");
+    const shippedCapstones = shippedSubmissions.length;
     const capstoneStatus = (submissions[0]?.status as LearnerStats["capstoneStatus"]) ?? "not_started";
+    const shippedCapstoneSlugs = shippedSubmissions
+      .map((s) => (!Array.isArray(s.projects) ? s.projects?.slug : null))
+      .filter((slug): slug is string => Boolean(slug));
+    const capstoneStatusBySlug: LearnerStats["capstoneStatusBySlug"] = {};
+    for (const sub of submissions) {
+      const slug = !Array.isArray(sub.projects) ? sub.projects?.slug : null;
+      if (slug && !(slug in capstoneStatusBySlug)) {
+        capstoneStatusBySlug[slug] = sub.status as LearnerStats["capstoneStatus"];
+      }
+    }
 
     const activeDates = [
       ...progress.flatMap((p) => [p.started_at, p.completed_at].filter(Boolean) as string[]),
@@ -122,6 +139,8 @@ export async function fetchLearnerStats(userId: string): Promise<LearnerStats> {
       totalCapstones,
       shippedCapstones,
       capstoneStatus,
+      shippedCapstoneSlugs,
+      capstoneStatusBySlug,
       pendingReviews: reviewsRes.count ?? 0,
       currentStreak: current,
       longestStreak: longest,

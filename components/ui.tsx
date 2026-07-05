@@ -16,7 +16,7 @@ export function Logo({
         alt="Framis logo"
         width={size}
         height={size}
-        style={{ height: size, width: "auto" }}
+        style={{ width: size, height: size }}
         priority
       />
       <span

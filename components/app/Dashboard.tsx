@@ -2,13 +2,9 @@
 
 import { useEffect } from "react";
 import { useFramis, useDisplayName, CONFIG } from "@/lib/store";
-import { PHASES } from "@/lib/data";
+import { PHASES, CAPSTONES } from "@/lib/data";
+import { lessonMeta } from "@/lib/lessons";
 import { Check } from "../ui";
-
-const LESSON_META: Record<number, { title: string; key: "variables" | "rag"; minutes: number }> = {
-  2: { title: "Variables — storing information", key: "variables", minutes: 25 },
-  14: { title: "RAG — teaching an LLM to cite its sources", key: "rag", minutes: 25 },
-};
 
 const CAPSTONE_COPY: Record<string, string> = {
   not_started: "You haven't started this yet — open the brief when you're ready.",
@@ -24,6 +20,7 @@ export default function Dashboard() {
   const statsLoading = useFramis((st) => st.statsLoading);
   const loadStats = useFramis((st) => st.loadStats);
   const goToLesson = useFramis((st) => st.goToLesson);
+  const goToCapstone = useFramis((st) => st.goToCapstone);
 
   useEffect(() => {
     if (!stats && !statsLoading) loadStats();
@@ -34,11 +31,15 @@ export default function Dashboard() {
     return <div className="text-[14px] text-ink-500">Loading your progress…</div>;
   }
 
-  const nextLesson = stats.nextLessonModuleNumber != null ? LESSON_META[stats.nextLessonModuleNumber] : null;
+  const nextLesson = stats.nextLessonModuleNumber != null ? lessonMeta(stats.nextLessonModuleNumber) : null;
   const phaseNum = Math.min(6, Math.max(1, Math.ceil((stats.nextLessonModuleNumber ?? 24) / 4)));
   const phase = PHASES[phaseNum - 1];
   const justStarting = stats.completedLessons === 0 && stats.shippedCapstones === 0;
   const lessonPct = stats.totalLessons ? Math.round((stats.completedLessons / stats.totalLessons) * 100) : 0;
+
+  const currentCapstone = CAPSTONES.find((c) => c.phaseIndex === phaseNum - 1) ?? CAPSTONES[0];
+  const currentCapstoneStatus = stats.capstoneStatusBySlug[currentCapstone.slug] ?? "not_started";
+  const currentCapstoneTitle = currentCapstone.title;
 
   const tasks: { label: string; meta: string; done: boolean; go: () => void }[] = [];
   if (nextLesson) {
@@ -46,22 +47,22 @@ export default function Dashboard() {
       label: `Lesson: ${nextLesson.title}`,
       meta: `${nextLesson.minutes} min · Module ${stats.nextLessonModuleNumber}`,
       done: false,
-      go: () => goToLesson(nextLesson.key),
+      go: () => goToLesson(stats.nextLessonModuleNumber as number),
     });
   }
-  if (stats.capstoneStatus === "not_started") {
+  if (currentCapstoneStatus === "not_started") {
     tasks.push({
-      label: "Capstone: submit Notes App",
+      label: `Capstone: submit ${currentCapstoneTitle}`,
       meta: "2–3 wks",
       done: false,
-      go: () => s.goTab("capstone"),
+      go: () => goToCapstone(currentCapstone.slug),
     });
   } else {
     tasks.push({
-      label: "Capstone: Notes App",
-      meta: CAPSTONE_COPY[stats.capstoneStatus],
-      done: stats.capstoneStatus === "passed",
-      go: () => s.goTab("capstone"),
+      label: `Capstone: ${currentCapstoneTitle}`,
+      meta: CAPSTONE_COPY[currentCapstoneStatus],
+      done: currentCapstoneStatus === "passed",
+      go: () => goToCapstone(currentCapstone.slug),
     });
   }
   if (stats.pendingReviews > 0) {
@@ -88,7 +89,7 @@ export default function Dashboard() {
         </div>
         {nextLesson && (
           <button
-            onClick={() => goToLesson(nextLesson.key)}
+            onClick={() => goToLesson(stats.nextLessonModuleNumber as number)}
             className="rounded-lg bg-blue px-[22px] py-3 font-inter text-[14px] font-semibold text-white"
           >
             {justStarting ? "Start" : "Resume"}: {nextLesson.title} →
@@ -177,13 +178,13 @@ export default function Dashboard() {
         <div className="flex flex-col gap-5">
           <div className="rounded-[12px] border border-line bg-card px-6 py-[22px]">
             <div className="mb-3.5 font-inter text-[14px] font-semibold">
-              Capstone: Notes App
+              Capstone: {currentCapstoneTitle}
             </div>
             <p className="mb-3.5 text-[13.5px]/[1.55] text-ink-500">
-              {CAPSTONE_COPY[stats.capstoneStatus]}
+              {CAPSTONE_COPY[currentCapstoneStatus]}
             </p>
             <button
-              onClick={() => s.goTab("capstone")}
+              onClick={() => goToCapstone(currentCapstone.slug)}
               className="rounded-lg border border-[#C9DEF2] bg-[#F0F6FC] px-[18px] py-2.5 font-inter text-[13px] font-semibold text-blue"
             >
               Open project brief
