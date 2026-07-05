@@ -8,6 +8,10 @@ export default function Sidebar() {
   const goTab = useFramis((s) => s.goTab);
   const capstoneSubmitted = useFramis((s) => s.capstoneSubmitted);
   const reviewSent = useFramis((s) => s.reviewSent);
+  const theme = useFramis((s) => s.theme);
+  const setTheme = useFramis((s) => s.setTheme);
+  const signOut = useFramis((s) => s.signOut);
+  const userEmail = useFramis((s) => s.userEmail);
   const displayName = useDisplayName();
 
   const tabs: { id: AppTab; label: string; badge: string }[] = [
@@ -15,6 +19,7 @@ export default function Sidebar() {
     { id: "lesson", label: "Lesson", badge: "wk 18" },
     { id: "capstone", label: "Capstone", badge: capstoneSubmitted ? "sent" : "due 2w" },
     { id: "review", label: "Peer review", badge: reviewSent ? "done" : "1 due" },
+    { id: "portfolio", label: "Portfolio", badge: "" },
   ];
 
   return (
@@ -63,6 +68,23 @@ export default function Sidebar() {
             </div>
           </div>
         )}
+        <div className="flex items-center gap-2 px-2.5 pb-2">
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="rounded-md border border-navy-400 bg-navy-700 px-2.5 py-1.5 font-mono text-[11px] font-medium text-slateink-300"
+            title="Toggle dark mode"
+          >
+            {theme === "dark" ? "☀ Light" : "☾ Dark"}
+          </button>
+          {userEmail && (
+            <button
+              onClick={signOut}
+              className="rounded-md border border-navy-400 bg-navy-700 px-2.5 py-1.5 font-mono text-[11px] font-medium text-slateink-300"
+            >
+              Log out
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2.5 px-2.5 py-1.5">
           <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full bg-teal font-inter text-[13px] font-semibold text-white">
             {displayName.charAt(0).toUpperCase()}

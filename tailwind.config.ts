@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -38,19 +39,22 @@ const config: Config = {
           300: "#8FA0B5",
           400: "#5B6B82",
         },
-        // light surfaces
+        // theme-aware surfaces (see CSS variables in globals.css)
         surface: {
-          DEFAULT: "#FAFBFC",
+          DEFAULT: "var(--color-page)",
+        },
+        card: {
+          DEFAULT: "var(--color-card)",
         },
         ink: {
-          900: "#1F2937",
-          700: "#4B5563",
-          500: "#6B7280",
-          400: "#9AA3AF",
+          900: "var(--color-ink-900)",
+          700: "var(--color-ink-700)",
+          500: "var(--color-ink-500)",
+          400: "var(--color-ink-400)",
         },
         line: {
-          DEFAULT: "#E4E7EE",
-          input: "#D6DBE3",
+          DEFAULT: "var(--color-border)",
+          input: "var(--color-border-input)",
         },
         success: "#059669",
         danger: "#DC2626",

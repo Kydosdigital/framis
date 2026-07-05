@@ -29,7 +29,7 @@ export default function Dashboard() {
       </div>
 
       {/* overall progress */}
-      <div className="mb-5 rounded-[12px] border border-line bg-white px-[26px] py-[22px]">
+      <div className="mb-5 rounded-[12px] border border-line bg-card px-[26px] py-[22px]">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <span className="font-inter text-[14px] font-semibold">
             Overall progress
@@ -38,7 +38,7 @@ export default function Dashboard() {
             Week 18 / 48 · 38%
           </span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-[5px] bg-[#EDF0F4]">
+        <div className="h-2.5 overflow-hidden rounded-[5px] bg-[var(--color-track)]">
           <div className="h-full w-[38%] rounded-[5px] bg-gradient-to-r from-blue to-teal" />
         </div>
         <div className="mt-4 flex flex-wrap gap-[26px]">
@@ -58,7 +58,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5">
         {/* this week */}
-        <div className="rounded-[12px] border border-line bg-white px-6 py-[22px]">
+        <div className="rounded-[12px] border border-line bg-card px-6 py-[22px]">
           <div className="mb-4 font-inter text-[14px] font-semibold">
             This week{" "}
             <span className="text-[12.5px] font-normal text-ink-500">
@@ -74,15 +74,15 @@ export default function Dashboard() {
                   onClick={() => s.goTab(task.tab)}
                   className="flex w-full items-center gap-3 rounded-[9px] px-[14px] py-3 text-left"
                   style={{
-                    background: done ? "#F7FAF9" : "#fff",
-                    border: `1px solid ${done ? "#DBEAE4" : "#E4E7EE"}`,
+                    background: done ? "var(--color-done-bg)" : "var(--color-card)",
+                    border: `1px solid ${done ? "var(--color-done-border)" : "var(--color-border)"}`,
                   }}
                 >
                   <span
                     className="flex h-[19px] w-[19px] flex-none items-center justify-center rounded-md"
                     style={{
                       border: `1.5px solid ${done ? "#059669" : "#C4CBD6"}`,
-                      background: done ? "#059669" : "#fff",
+                      background: done ? "#059669" : "var(--color-card)",
                     }}
                   >
                     <Check size={11} opacity={done ? 1 : 0} />
@@ -109,7 +109,7 @@ export default function Dashboard() {
 
         {/* right column */}
         <div className="flex flex-col gap-5">
-          <div className="rounded-[12px] border border-line bg-white px-6 py-[22px]">
+          <div className="rounded-[12px] border border-line bg-card px-6 py-[22px]">
             <div className="mb-3.5 font-inter text-[14px] font-semibold">
               Capstone in progress
             </div>
@@ -128,7 +128,7 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <div className="rounded-[12px] border border-line bg-white px-6 py-[22px]">
+          <div className="rounded-[12px] border border-line bg-card px-6 py-[22px]">
             <div className="mb-3.5 font-inter text-[14px] font-semibold">
               Peer review queue{" "}
               <span className="ml-1.5 rounded-full bg-[#DC2626] px-2 py-0.5 font-inter text-[11px] font-semibold text-white">
@@ -148,7 +148,7 @@ export default function Dashboard() {
           </div>
 
           {CONFIG.showStreaks && (
-            <div className="rounded-[12px] border border-line bg-white px-6 py-[22px]">
+            <div className="rounded-[12px] border border-line bg-card px-6 py-[22px]">
               <div className="mb-3 font-inter text-[14px] font-semibold">
                 Badges
               </div>

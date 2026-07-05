@@ -1,13 +1,64 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
 import { CRITERIA_LABELS, HINT_TEXTS } from "@/lib/data";
+import { createClient } from "@/lib/supabase/client";
 import { Check } from "../ui";
 
 export default function Capstone() {
   const s = useFramis();
+  const userId = useFramis((st) => st.userId);
+  const [projectId, setProjectId] = useState<number | null>(null);
+  const [requirements, setRequirements] = useState<string[] | null>(null);
+  const [hints, setHints] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("projects")
+      .select("id, requirements, hints")
+      .eq("slug", "notes-app-with-login")
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setProjectId(data.id);
+          if (Array.isArray(data.requirements) && data.requirements.length) {
+            setRequirements(data.requirements as string[]);
+          }
+          if (Array.isArray(data.hints) && data.hints.length) {
+            setHints(data.hints as string[]);
+          }
+        }
+      }, () => {});
+  }, []);
+
+  const criteriaLabels = requirements ?? CRITERIA_LABELS;
+  const hintTexts = hints ?? HINT_TEXTS;
   const critCount = s.criteria.filter(Boolean).length;
-  const capReady = critCount === 7 && s.ghUrl.trim() && s.depUrl.trim();
+  const capReady =
+    critCount === criteriaLabels.length && s.ghUrl.trim() && s.depUrl.trim();
+
+  const submit = () => {
+    s.submitCapstone();
+    if (capReady && userId && projectId) {
+      const supabase = createClient();
+      supabase
+        .from("project_submissions")
+        .upsert(
+          {
+            user_id: userId,
+            project_id: projectId,
+            github_url: s.ghUrl,
+            deployed_url: s.depUrl,
+            status: "submitted",
+            submitted_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,project_id" },
+        )
+        .then(() => {}, () => {});
+    }
+  };
 
   return (
     <div className="max-w-[780px]">
@@ -26,20 +77,20 @@ export default function Capstone() {
       {!s.capstoneSubmitted ? (
         <>
           {/* acceptance criteria */}
-          <div className="mb-[18px] rounded-[12px] border border-line bg-white px-[26px] py-[22px]">
+          <div className="mb-[18px] rounded-[12px] border border-line bg-card px-[26px] py-[22px]">
             <div className="mb-3.5 flex items-baseline justify-between">
               <span className="font-inter text-[14px] font-semibold">
                 Acceptance criteria
               </span>
               <span
                 className="font-mono text-[12.5px] font-medium"
-                style={{ color: critCount === 7 ? "#059669" : "#6B7280" }}
+                style={{ color: critCount === criteriaLabels.length ? "#059669" : "#6B7280" }}
               >
-                {critCount} / 7
+                {critCount} / {criteriaLabels.length}
               </span>
             </div>
             <div className="flex flex-col gap-2.5">
-              {CRITERIA_LABELS.map((label, i) => {
+              {criteriaLabels.map((label, i) => {
                 const on = s.criteria[i];
                 return (
                   <button
@@ -51,7 +102,7 @@ export default function Capstone() {
                       className="flex h-[19px] w-[19px] flex-none items-center justify-center rounded-md"
                       style={{
                         border: `1.5px solid ${on ? "#059669" : "#C4CBD6"}`,
-                        background: on ? "#059669" : "#fff",
+                        background: on ? "#059669" : "var(--color-card)",
                       }}
                     >
                       <Check size={11} opacity={on ? 1 : 0} />
@@ -64,7 +115,7 @@ export default function Capstone() {
           </div>
 
           {/* hints */}
-          <div className="mb-[18px] rounded-[12px] border border-line bg-white px-[26px] py-[22px]">
+          <div className="mb-[18px] rounded-[12px] border border-line bg-card px-[26px] py-[22px]">
             <div className="mb-1.5 font-inter text-[14px] font-semibold">
               Stuck? Reveal hints one at a time
             </div>
@@ -72,11 +123,11 @@ export default function Capstone() {
               Struggling first is how it sticks. Hints don’t affect your score.
             </p>
             <div className="flex flex-col gap-[9px]">
-              {HINT_TEXTS.map((text, i) =>
+              {hintTexts.map((text, i) =>
                 s.hintsOpen[i] ? (
                   <div
                     key={i}
-                    className="rounded-lg bg-[#F4F6F9] px-4 py-3 text-[13.5px]/[1.55] text-ink-900"
+                    className="rounded-lg bg-[#F4F6F9] px-4 py-3 text-[13.5px]/[1.55] text-ink-900 dark:bg-[#1B2536]"
                   >
                     <span className="font-mono text-[12px] font-semibold text-blue">
                       HINT {i + 1} ·{" "}
@@ -87,7 +138,7 @@ export default function Capstone() {
                   <button
                     key={i}
                     onClick={() => s.revealHint(i)}
-                    className="rounded-lg border border-dashed border-[#C4CBD6] bg-white px-4 py-3 text-left font-inter text-[13px] font-semibold text-ink-500"
+                    className="rounded-lg border border-dashed border-[#C4CBD6] bg-card px-4 py-3 text-left font-inter text-[13px] font-semibold text-ink-500"
                   >
                     Reveal hint {i + 1}
                   </button>
@@ -97,7 +148,7 @@ export default function Capstone() {
           </div>
 
           {/* submission */}
-          <div className="rounded-[12px] border border-line bg-white px-[26px] py-[22px]">
+          <div className="rounded-[12px] border border-line bg-card px-[26px] py-[22px]">
             <div className="mb-4 font-inter text-[14px] font-semibold">
               Submit your project
             </div>
@@ -106,13 +157,13 @@ export default function Capstone() {
                 value={s.ghUrl}
                 onChange={(e) => s.setGhUrl(e.target.value)}
                 placeholder="GitHub repo URL (must be public)"
-                className="rounded-lg border border-line-input px-3.5 py-3 font-mono text-[14px]"
+                className="rounded-lg border border-line-input bg-transparent px-3.5 py-3 font-mono text-[14px] text-ink-900"
               />
               <input
                 value={s.depUrl}
                 onChange={(e) => s.setDepUrl(e.target.value)}
                 placeholder="Deployed URL"
-                className="rounded-lg border border-line-input px-3.5 py-3 font-mono text-[14px]"
+                className="rounded-lg border border-line-input bg-transparent px-3.5 py-3 font-mono text-[14px] text-ink-900"
               />
               <div className="text-[12.5px] text-ink-500">
                 On submit we auto-check: repo is public · README exists · no
@@ -120,7 +171,7 @@ export default function Capstone() {
                 days.
               </div>
               <button
-                onClick={s.submitCapstone}
+                onClick={submit}
                 className="rounded-[9px] p-[14px] font-inter text-[15px] font-semibold text-white"
                 style={{ background: capReady ? "#059669" : "#B9C2CE" }}
               >
@@ -130,7 +181,7 @@ export default function Capstone() {
           </div>
         </>
       ) : (
-        <div className="rounded-[12px] border border-[#B7E3D4] bg-white px-8 py-[34px] text-center">
+        <div className="rounded-[12px] border border-[#B7E3D4] bg-card px-8 py-[34px] text-center">
           <div className="mx-auto mb-[18px] flex h-[62px] w-[62px] items-center justify-center rounded-full bg-[#E7F5F1] [animation:framisPulse_1.4s_ease-out_2]">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
               <path
@@ -162,7 +213,7 @@ export default function Capstone() {
             </button>
             <button
               onClick={() => s.goTab("review")}
-              className="rounded-lg border border-[#C9DEF2] bg-white px-[22px] py-3 font-inter text-[14px] font-semibold text-blue"
+              className="rounded-lg border border-[#C9DEF2] bg-card px-[22px] py-3 font-inter text-[14px] font-semibold text-blue"
             >
               Review Jordan’s project now
             </button>

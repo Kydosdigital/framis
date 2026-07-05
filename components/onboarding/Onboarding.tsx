@@ -38,18 +38,22 @@ export default function Onboarding() {
         {s.obStep === 1 && (
           <>
             <h2 className="mb-1.5 font-inter text-[24px] font-bold tracking-[-0.02em]">
-              Create your account
+              {s.obMode === "signup" ? "Create your account" : "Welcome back"}
             </h2>
             <p className="mb-[26px] text-[14.5px]/[1.55] text-ink-500">
-              Free forever for lessons, sandboxes, and peer review.
+              {s.obMode === "signup"
+                ? "Free forever for lessons, sandboxes, and peer review."
+                : "Log in to pick up where you left off."}
             </p>
             <div className="flex flex-col gap-[14px]">
-              <input
-                value={s.obName}
-                onChange={(e) => s.setOb({ obName: e.target.value })}
-                placeholder="First name"
-                className={inputCls}
-              />
+              {s.obMode === "signup" && (
+                <input
+                  value={s.obName}
+                  onChange={(e) => s.setOb({ obName: e.target.value })}
+                  placeholder="First name"
+                  className={inputCls}
+                />
+              )}
               <input
                 value={s.obEmail}
                 onChange={(e) => s.setOb({ obEmail: e.target.value })}
@@ -64,11 +68,30 @@ export default function Onboarding() {
                 type="password"
                 className={inputCls}
               />
+              {s.authNotice && (
+                <p className="text-[13px]/[1.5] text-blue">{s.authNotice}</p>
+              )}
+              {s.authError && (
+                <p className="text-[13px]/[1.5] text-danger">{s.authError}</p>
+              )}
               <button
-                onClick={s.obNext}
-                className="mt-1.5 rounded-lg bg-blue p-[14px] font-inter text-[15px] font-semibold text-white"
+                onClick={s.submitAccount}
+                disabled={s.authBusy}
+                className="mt-1.5 rounded-lg bg-blue p-[14px] font-inter text-[15px] font-semibold text-white disabled:opacity-60"
               >
-                Continue
+                {s.authBusy
+                  ? "Working…"
+                  : s.obMode === "signup"
+                    ? "Continue"
+                    : "Log in"}
+              </button>
+              <button
+                onClick={() => s.setObMode(s.obMode === "signup" ? "login" : "signup")}
+                className="rounded-lg border-none bg-transparent p-1 font-inter text-[13px] font-semibold text-blue"
+              >
+                {s.obMode === "signup"
+                  ? "Already have an account? Log in"
+                  : "New here? Create an account"}
               </button>
             </div>
           </>

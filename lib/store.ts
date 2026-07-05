@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { runPython, STARTER_CODE, type OutputLine } from "./python";
+import { createClient } from "./supabase/client";
+import { withTimeout } from "./timeout";
 
 /** Prototype-level config (was the Claude Design tweak panel). */
 export const CONFIG = {
@@ -7,9 +9,16 @@ export const CONFIG = {
   showStreaks: true,
 };
 
+function applyTheme(theme: "light" | "dark") {
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }
+}
+
 export type Screen = "landing" | "onboarding" | "app";
-export type AppTab = "dashboard" | "lesson" | "capstone" | "review";
+export type AppTab = "dashboard" | "lesson" | "capstone" | "review" | "portfolio";
 export type QuizKey = "a" | "b" | "c";
+export type Theme = "light" | "dark";
 
 type ObAnswers = { q1: string | null; q2: string | null; q3: string | null };
 type Setup = { py: boolean; vsc: boolean; git: boolean };
@@ -26,8 +35,19 @@ type State = {
   screen: Screen;
   appTab: AppTab;
 
+  // auth
+  userId: string | null;
+  userEmail: string | null;
+  profileName: string | null;
+  authLoading: boolean;
+  authBusy: boolean;
+  authError: string | null;
+  authNotice: string | null;
+  theme: Theme;
+
   // onboarding
   obStep: number;
+  obMode: "signup" | "login";
   obName: string;
   obEmail: string;
   obPw: string;
@@ -63,6 +83,12 @@ type Actions = {
   startOnboarding: () => void;
   finishOnboarding: () => void;
 
+  bootstrap: () => Promise<void>;
+  setObMode: (mode: "signup" | "login") => void;
+  submitAccount: () => Promise<void>;
+  signOut: () => Promise<void>;
+  setTheme: (theme: Theme) => void;
+
   setOb: (patch: Partial<Pick<State, "obName" | "obEmail" | "obPw">>) => void;
   answer: (key: keyof ObAnswers, value: string) => void;
   obNext: () => void;
@@ -90,7 +116,17 @@ export const useFramis = create<State & Actions>((set, get) => ({
   screen: "landing",
   appTab: "dashboard",
 
+  userId: null,
+  userEmail: null,
+  profileName: null,
+  authLoading: true,
+  authBusy: false,
+  authError: null,
+  authNotice: null,
+  theme: "light",
+
   obStep: 1,
+  obMode: "signup",
   obName: "",
   obEmail: "",
   obPw: "",
@@ -119,6 +155,141 @@ export const useFramis = create<State & Actions>((set, get) => ({
   goTab: (appTab) => set({ appTab }),
   startOnboarding: () => set({ screen: "onboarding", obStep: 1 }),
   finishOnboarding: () => set({ screen: "app", appTab: "dashboard" }),
+
+  bootstrap: async () => {
+    const supabase = createClient();
+    try {
+      const {
+        data: { session },
+      } = await withTimeout(supabase.auth.getSession(), 8000);
+      if (session?.user) {
+        const { data: profile } = await withTimeout(
+          supabase.from("profiles").select("username, full_name, theme").eq("id", session.user.id).maybeSingle(),
+          8000,
+        );
+        const theme = (profile?.theme as Theme) || "light";
+        applyTheme(theme);
+        set({
+          userId: session.user.id,
+          userEmail: session.user.email ?? null,
+          profileName: profile?.full_name || profile?.username || null,
+          screen: "app",
+          appTab: "dashboard",
+          theme,
+        });
+      }
+    } catch {
+      // Network hiccup during silent session restore — fall through to the
+      // landing page instead of leaving the app stuck on the loading screen.
+    } finally {
+      set({ authLoading: false });
+    }
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        set({ userId: null, userEmail: null, profileName: null, screen: "landing" });
+      }
+    });
+  },
+
+  setObMode: (obMode) => set({ obMode, authError: null, authNotice: null }),
+
+  submitAccount: async () => {
+    const s = get();
+    const email = s.obEmail.trim();
+    const password = s.obPw;
+    if (!email || !password) {
+      set({ authError: "Enter an email and password." });
+      return;
+    }
+    set({ authBusy: true, authError: null, authNotice: null });
+    const supabase = createClient();
+
+    try {
+      if (s.obMode === "signup") {
+        const { data, error } = await withTimeout(
+          supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: s.obName.trim() || undefined } },
+          }),
+          15000,
+        );
+        if (error) {
+          set({ authBusy: false, authError: error.message });
+          return;
+        }
+        if (data.session) {
+          set({
+            userId: data.user?.id ?? null,
+            userEmail: data.user?.email ?? null,
+            profileName: s.obName.trim() || null,
+            authBusy: false,
+            obStep: 2,
+          });
+        } else {
+          set({
+            authBusy: false,
+            authNotice: `Check your inbox at ${email} to confirm your account, then log in below.`,
+            obMode: "login",
+          });
+        }
+        return;
+      }
+
+      const { data, error } = await withTimeout(supabase.auth.signInWithPassword({ email, password }), 15000);
+      if (error || !data.user) {
+        set({ authBusy: false, authError: error?.message ?? "Couldn't log in." });
+        return;
+      }
+      const { data: profile } = await withTimeout(
+        supabase.from("profiles").select("username, full_name, theme").eq("id", data.user.id).maybeSingle(),
+        8000,
+      );
+      const theme = (profile?.theme as Theme) || "light";
+      applyTheme(theme);
+      set({
+        userId: data.user.id,
+        userEmail: data.user.email ?? null,
+        profileName: profile?.full_name || profile?.username || null,
+        authBusy: false,
+        screen: "app",
+        appTab: "dashboard",
+        theme,
+      });
+    } catch {
+      set({ authBusy: false, authError: "Network error — please try again." });
+    }
+  },
+
+  signOut: async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    applyTheme("light");
+    set({
+      userId: null,
+      userEmail: null,
+      profileName: null,
+      screen: "landing",
+      appTab: "dashboard",
+      obStep: 1,
+      obMode: "signup",
+      obName: "",
+      obEmail: "",
+      obPw: "",
+      obAnswers: { q1: null, q2: null, q3: null },
+      theme: "light",
+    });
+  },
+
+  setTheme: (theme) => {
+    applyTheme(theme);
+    set({ theme });
+    const { userId } = get();
+    if (userId) {
+      const supabase = createClient();
+      supabase.from("profiles").update({ theme }).eq("id", userId).then(() => {}, () => {});
+    }
+  },
 
   setOb: (patch) => set(patch),
   answer: (key, value) =>
@@ -174,8 +345,9 @@ export const useFramis = create<State & Actions>((set, get) => ({
   },
 }));
 
-/** First name derived from onboarding input, falling back to config. */
+/** First name: real profile once authenticated, else the onboarding draft, else config. */
 export function useDisplayName() {
+  const profileName = useFramis((s) => s.profileName);
   const obName = useFramis((s) => s.obName);
-  return (obName.trim() || CONFIG.learnerName).split(" ")[0];
+  return (profileName || obName.trim() || CONFIG.learnerName).split(" ")[0];
 }
