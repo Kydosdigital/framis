@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { runPython, STARTER_CODE, type OutputLine } from "./python";
 import { createClient } from "./supabase/client";
 import { withTimeout } from "./timeout";
+import { fetchLearnerStats, type LearnerStats } from "./learnerStats";
 
 /** Prototype-level config (was the Claude Design tweak panel). */
 export const CONFIG = {
@@ -44,6 +45,16 @@ type State = {
   authError: string | null;
   authNotice: string | null;
   theme: Theme;
+
+  // learner stats (real, computed from the DB — never fabricated)
+  stats: LearnerStats | null;
+  statsLoading: boolean;
+
+  // mobile sidebar drawer
+  sidebarOpen: boolean;
+
+  // which lesson is showing on the Lesson tab
+  activeLessonKey: "variables" | "rag";
 
   // onboarding
   obStep: number;
@@ -88,6 +99,11 @@ type Actions = {
   submitAccount: () => Promise<void>;
   signOut: () => Promise<void>;
   setTheme: (theme: Theme) => void;
+  loadStats: () => Promise<void>;
+  toggleSidebar: () => void;
+  closeSidebar: () => void;
+  setActiveLessonKey: (key: "variables" | "rag") => void;
+  goToLesson: (key: "variables" | "rag") => void;
 
   setOb: (patch: Partial<Pick<State, "obName" | "obEmail" | "obPw">>) => void;
   answer: (key: keyof ObAnswers, value: string) => void;
@@ -124,6 +140,12 @@ export const useFramis = create<State & Actions>((set, get) => ({
   authError: null,
   authNotice: null,
   theme: "light",
+
+  stats: null,
+  statsLoading: false,
+
+  sidebarOpen: false,
+  activeLessonKey: "variables",
 
   obStep: 1,
   obMode: "signup",
@@ -177,6 +199,7 @@ export const useFramis = create<State & Actions>((set, get) => ({
           appTab: "dashboard",
           theme,
         });
+        get().loadStats();
       }
     } catch {
       // Network hiccup during silent session restore — fall through to the
@@ -226,6 +249,7 @@ export const useFramis = create<State & Actions>((set, get) => ({
             authBusy: false,
             obStep: 2,
           });
+          get().loadStats();
         } else {
           set({
             authBusy: false,
@@ -256,6 +280,7 @@ export const useFramis = create<State & Actions>((set, get) => ({
         appTab: "dashboard",
         theme,
       });
+      get().loadStats();
     } catch {
       set({ authBusy: false, authError: "Network error — please try again." });
     }
@@ -278,8 +303,22 @@ export const useFramis = create<State & Actions>((set, get) => ({
       obPw: "",
       obAnswers: { q1: null, q2: null, q3: null },
       theme: "light",
+      stats: null,
     });
   },
+
+  loadStats: async () => {
+    const { userId } = get();
+    if (!userId) return;
+    set({ statsLoading: true });
+    const stats = await fetchLearnerStats(userId);
+    set({ stats, statsLoading: false });
+  },
+
+  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  closeSidebar: () => set({ sidebarOpen: false }),
+  setActiveLessonKey: (activeLessonKey) => set({ activeLessonKey }),
+  goToLesson: (key) => set({ activeLessonKey: key, appTab: "lesson", sidebarOpen: false }),
 
   setTheme: (theme) => {
     applyTheme(theme);
