@@ -6,6 +6,7 @@ export type LearnerStats = {
   totalLessons: number;
   completedLessons: number;
   nextLessonModuleNumber: number | null;
+  completedModuleNumbers: number[];
   totalCapstones: number;
   shippedCapstones: number;
   capstoneStatus: "not_started" | "submitted" | "under_review" | "passed";
@@ -19,6 +20,7 @@ const EMPTY_STATS: LearnerStats = {
   totalLessons: 0,
   completedLessons: 0,
   nextLessonModuleNumber: 2,
+  completedModuleNumbers: [],
   totalCapstones: 0,
   shippedCapstones: 0,
   capstoneStatus: "not_started",
@@ -95,6 +97,10 @@ export async function fetchLearnerStats(userId: string): Promise<LearnerStats> {
     const nextLesson = lessons.find((l) => !completedLessonIds.has(l.id));
     const nextModule = nextLesson && !Array.isArray(nextLesson.modules) ? nextLesson.modules : null;
     const nextLessonModuleNumber = nextModule?.module_number ?? null;
+    const completedModuleNumbers = lessons
+      .filter((l) => completedLessonIds.has(l.id))
+      .map((l) => (!Array.isArray(l.modules) ? l.modules?.module_number : null))
+      .filter((n): n is number => n != null);
 
     const totalCapstones = projectsRes.count ?? 0;
     const submissions = submissionsRes.data ?? [];
@@ -112,6 +118,7 @@ export async function fetchLearnerStats(userId: string): Promise<LearnerStats> {
       totalLessons,
       completedLessons,
       nextLessonModuleNumber,
+      completedModuleNumbers,
       totalCapstones,
       shippedCapstones,
       capstoneStatus,

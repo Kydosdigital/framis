@@ -26,6 +26,7 @@ export default function Sidebar() {
 
   const tabs: { id: AppTab; label: string; badge: string }[] = [
     { id: "dashboard", label: "Dashboard", badge: "" },
+    { id: "roadmap", label: "Roadmap", badge: "" },
     { id: "lesson", label: "Lesson", badge: lessonBadge },
     { id: "capstone", label: "Capstone", badge: capstoneBadge },
     { id: "review", label: "Peer review", badge: reviewBadge },

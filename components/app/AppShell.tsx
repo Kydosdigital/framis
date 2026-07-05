@@ -3,6 +3,7 @@
 import { useFramis } from "@/lib/store";
 import Sidebar from "./Sidebar";
 import Dashboard from "./Dashboard";
+import Roadmap from "./Roadmap";
 import Lesson from "./Lesson";
 import Capstone from "./Capstone";
 import PeerReview from "./PeerReview";
@@ -30,6 +31,7 @@ export default function AppShell() {
       <Sidebar />
       <div className="min-w-0 max-w-[1100px] flex-1 px-5 pb-12 pt-6 sm:px-8 md:px-11 md:pb-16 md:pt-9">
         {appTab === "dashboard" && <Dashboard />}
+        {appTab === "roadmap" && <Roadmap />}
         {appTab === "lesson" && <Lesson />}
         {appTab === "capstone" && <Capstone />}
         {appTab === "review" && <PeerReview />}

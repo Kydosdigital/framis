@@ -13,6 +13,33 @@ export const PHASES = [
   { num: "6", delay: 0.35, weeks: "WEEKS 41–48", title: "Production AI systems", desc: "Agents, human-in-the-loop, observability, cost control.", capstone: "Capstone: Production AI system" },
 ];
 
+export const ROADMAP_MODULES: { phase: number; num: number; title: string }[] = [
+  { phase: 1, num: 1, title: "Setup + Terminal + Git" },
+  { phase: 1, num: 2, title: "Python Syntax, Variables, Functions" },
+  { phase: 1, num: 3, title: "Data Structures + Control Flow" },
+  { phase: 1, num: 4, title: "File I/O + Errors + Debugging" },
+  { phase: 2, num: 5, title: "HTML, CSS, JavaScript" },
+  { phase: 2, num: 6, title: "React Basics + Components" },
+  { phase: 2, num: 7, title: "APIs + HTTP + JSON" },
+  { phase: 2, num: 8, title: "Backend: Python + Postgres" },
+  { phase: 3, num: 9, title: "Testing (unit/integration/e2e)" },
+  { phase: 3, num: 10, title: "Debugging + Logging + Monitoring" },
+  { phase: 3, num: 11, title: "Security + Auth Patterns" },
+  { phase: 3, num: 12, title: "CI/CD + Docker + Deployment" },
+  { phase: 4, num: 13, title: "LLM APIs + Tokens + Cost" },
+  { phase: 4, num: 14, title: "Embeddings + RAG + Vector Search" },
+  { phase: 4, num: 15, title: "Structured Outputs + Tool Calling" },
+  { phase: 4, num: 16, title: "Evals + Safety + Guardrails" },
+  { phase: 5, num: 17, title: "Probability + Statistics" },
+  { phase: 5, num: 18, title: "Linear Algebra Basics" },
+  { phase: 5, num: 19, title: "Transformers + Attention" },
+  { phase: 5, num: 20, title: "Fine-tuning + Dataset Quality" },
+  { phase: 6, num: 21, title: "Agents + Orchestration" },
+  { phase: 6, num: 22, title: "Human-in-the-Loop + Guardrails" },
+  { phase: 6, num: 23, title: "Observability + Cost Controls" },
+  { phase: 6, num: 24, title: "AI Product Design + Edge Cases" },
+];
+
 export const OB_QUESTIONS: {
   key: "q1" | "q2" | "q3";
   label: string;
