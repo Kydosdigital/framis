@@ -5,9 +5,9 @@ const content: LessonData = {
   orderIndex: 3,
   phaseLabel: "REACT BASICS + COMPONENTS",
   title: "Lists and keys: rendering many components from an array",
-  minutes: 20,
+  minutes: 22,
   concept:
-    "Real apps rarely render just one of something — a feed has many posts, an inbox has many messages — and React handles this by letting you map an array of data straight into an array of JSX elements using .map(). Each item in the data array gets transformed into one component, so a list of 50 comments becomes 50 <Comment> elements returned side by side inside something like a <ul>. React requires every element produced this way to carry a special key prop, a stable, unique identifier for that item, usually an id from the data rather than the item's position in the array. React uses these keys behind the scenes to match up old elements with new ones across re-renders, so it can tell \"this is the same comment, just moved\" instead of tearing everything down and rebuilding it from scratch. Without good keys, React falls back to guessing based on order, which can scramble input state, animations, and focus when the list is reordered, filtered, or has items inserted in the middle.",
+    "Real apps rarely render just one of something — a feed has many posts, an inbox has many messages — and React handles this by letting you map an array of data straight into an array of JSX elements using .map(). Each item in the data array gets transformed into one component, so a list of 50 comments becomes 50 <Comment> elements returned side by side inside something like a <ul>. React requires every element produced this way to carry a special key prop, a stable, unique identifier for that item, usually an id from the data rather than the item's position in the array. React uses these keys behind the scenes to match up old elements with new ones across re-renders, so it can tell \"this is the same comment, just moved\" instead of tearing everything down and rebuilding it from scratch. The transformation itself — .map() over an array of objects, producing a new array shaped for display, plus .filter() to drop items and another .map() to update just one — is completely ordinary JavaScript with nothing React-specific about it, and that's exactly what this lesson's sandbox has you write and run for real.",
   conceptSimpler:
     "Keys are like name tags at a conference — without them, if people shuffle seats, the room organizer can only guess who's who by chair position; with name tags, they can tell exactly who moved where.",
   vizStages: [
@@ -41,72 +41,43 @@ const content: LessonData = {
   realWorldCode:
     "function Feed({ posts }) {\n  return (\n    <div>\n      {posts.map((post) => (\n        <Post key={post.id} data={post} />\n      ))}\n    </div>\n  );\n}",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each stage to compare rendering a list with stable id keys versus rendering the same list with array-index keys.",
-    stages: [
-      {
-        label: "A simple mapped list",
-        body:
-          "Three fruits become three <li> elements. Each key is the fruit's own id field, something that belongs to the data itself and won't change if the list is reordered.",
-        code: "const fruits = [\n  { id: \"a\", name: \"Apple\" },\n  { id: \"b\", name: \"Banana\" },\n  { id: \"c\", name: \"Cherry\" },\n];\nfruits.map((f) => <li key={f.id}>{f.name}</li>);",
-      },
-      {
-        label: "Using array index as the key instead",
-        body:
-          "This also runs without errors — index is unique per render, so React won't complain. But the index isn't tied to the data; it's just \"where the item happens to sit right now.\"",
-        code: "fruits.map((f, index) => <li key={index}>{f.name}</li>);\n// keys: 0, 1, 2",
-      },
-      {
-        label: "Reordering with id keys: input state follows the item",
-        body:
-          "Suppose each <li> holds a text input the user typed into. If Cherry moves to the front and keys are still the stable ids, React matches key=\"c\" to the same DOM node wherever it lands — the typed text stays with Cherry.",
-        code: "// new order: Cherry, Apple, Banana\n<li key=\"c\">Cherry <input /></li>\n<li key=\"a\">Apple <input /></li>\n<li key=\"b\">Banana <input /></li>",
-      },
-      {
-        label: "Reordering with index keys: input state jumps to the wrong item",
-        body:
-          "With index keys, position 0 is always key=0 no matter what's there now. React thinks the item at position 0 is unchanged, so it reuses that input's DOM node and leftover typed text now appears next to Cherry instead of Apple.",
-        code: "// new order, but keys are still by position:\n<li key={0}>Cherry <input /></li>  // had Apple's leftover text!\n<li key={1}>Apple <input /></li>\n<li key={2}>Banana <input /></li>",
-      },
-      {
-        label: "The fix: always prefer a stable, unique id",
-        body:
-          "Array-index keys are only safe for lists that never reorder, filter, or have items added/removed in the middle. Whenever items are an id from a database or generated once, use that as the key instead.",
-        code: "// safest default:\nitems.map((item) => <Row key={item.id} {...item} />);",
-      },
-    ],
+    kind: "code",
+    language: "javascript",
+    challenge:
+      "Model exactly what a todo list's JSX does structurally, minus the JSX itself: write renderRows to .map() todos into { key, label } rows, toggleTodo to flip one todo's done flag by returning a new array, and removeTodo to drop one todo with .filter(). Run all three and print the rows before and after each change.",
+    starterCode:
+      "const todos = [\n  { id: 1, text: \"Buy milk\", done: false },\n  { id: 2, text: \"Walk dog\", done: true },\n  { id: 3, text: \"Write code\", done: false },\n];\n\n// Models: todos.map(todo => <li key={todo.id}>{todo.text}</li>)\nfunction renderRows(list) {\n  return list.map(function (todo) {\n    const mark = todo.done ? \"[x]\" : \"[ ]\";\n    return { key: todo.id, label: mark + \" \" + todo.text };\n  });\n}\n\nconst rows = renderRows(todos);\nfor (const row of rows) {\n  console.log(row.key, row.label);\n}\n\n// Toggling returns a brand-new array — React re-renders the list from\n// this new array, matching each element up to the old one by key\nfunction toggleTodo(list, id) {\n  return list.map(function (todo) {\n    if (todo.id === id) {\n      return { id: todo.id, text: todo.text, done: !todo.done };\n    }\n    return todo;\n  });\n}\n\nconst afterToggle = toggleTodo(todos, 2);\nconsole.log(\"---after toggling id 2---\");\nfor (const row of renderRows(afterToggle)) {\n  console.log(row.key, row.label);\n}\n\n// Removing a todo is just filtering it out of the array — its key\n// disappears too, which is exactly how React knows to remove that one\n// <li> and leave the others completely untouched\nfunction removeTodo(list, id) {\n  return list.filter(function (todo) {\n    return todo.id !== id;\n  });\n}\n\nconst afterRemove = removeTodo(afterToggle, 1);\nconsole.log(\"---after removing id 1---\");\nfor (const row of renderRows(afterRemove)) {\n  console.log(row.key, row.label);\n}",
   },
   quizQuestion:
-    "A todo list re-renders after the user deletes the second item out of three. Why does React need a key on each <li> to handle this well?",
+    "After removing \"Banana\" from the array, \"Cherry\"'s index-based key changes from 2 to 1. Why is that a real problem for React, even though the app still technically works?",
   quizCode:
-    "todos.map((todo) => <li key={todo.id}>{todo.text}</li>)",
+    "const fruits = [\"Apple\", \"Banana\", \"Cherry\"];\nconst keyed = fruits.map((f, i) => ({ key: i, name: f }));\n// keys: 0, 1, 2\n\nconst afterRemoval = fruits.filter((f) => f !== \"Banana\");\nconst reKeyed = afterRemoval.map((f, i) => ({ key: i, name: f }));\n// keys: 0, 1 -- Cherry is now key 1, not key 2",
   quizOptions: [
     {
       key: "a",
       label:
-        "Keys let React match old elements to new ones by identity, so it only removes the deleted item's DOM node instead of re-rendering the whole list from scratch",
-      correct: true,
+        "It isn't really a problem — keys are just numbers, so which number ends up on which item doesn't affect anything React does",
+      correct: false,
     },
     {
       key: "b",
       label:
-        "Keys are required purely to silence a console warning and have no effect on how React updates the actual DOM",
-      correct: false,
+        "React uses key to match each old rendered element to a new one; if Cherry's key silently shifts from 2 to 1, React can think whatever was at key 1 before (Banana) is still there, and may reuse Banana's old DOM node — and any state or focus it held — for Cherry instead",
+      correct: true,
     },
     {
       key: "c",
       label:
-        "Keys tell the browser which CSS class to apply to each list item",
+        "React throws a runtime error any time two different renders produce different keys for what is conceptually the same list",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Exactly — stable keys let React see \"item 2 disappeared, items 1 and 3 are unchanged,\" so it can make a surgical update instead of tearing down and rebuilding every list item.",
+    "Right — index-based keys are only stable if the list itself never reorders, filters, or has items inserted in the middle. The moment an item is removed, every item after it shifts to a new index/key, and React can't tell that shift apart from those items actually being different data, which is exactly how leftover input state or focus ends up attached to the wrong row.",
   quizFeedbackIncorrect:
-    "Not quite — keys aren't styling and aren't just cosmetic; they're the identity React uses to match elements across renders, which is what makes efficient, correct list updates possible.",
+    "Not quite — the risk isn't a thrown error, it's silent misattribution: React matches elements old-to-new purely by key, so when Cherry's key changes from 2 to 1 just because Banana was removed, React can mistake it for whatever used to be at key 1, potentially carrying over that item's DOM state.",
   takeaway:
-    "Use .map() to turn an array of data into an array of components, and give each one a key that's a stable, unique id from the data itself. Good keys let React track which items actually changed; index-based keys can silently mix up state when a list reorders.",
+    "Use .map() to turn an array of data into an array of components, and give each one a key that's a stable, unique id from the data itself, never its position. Good keys let React track which items actually changed across .map()/.filter() updates; index-based keys can silently mix up state whenever the list reorders, filters, or grows in the middle.",
 };
 
 export default content;

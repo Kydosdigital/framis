@@ -4,67 +4,68 @@ const content: LessonData = {
   num: 7,
   orderIndex: 1,
   phaseLabel: "APIS + HTTP + JSON",
-  title: "The response is just a dict",
+  title: "JSON: the text format everything speaks",
   minutes: 20,
   concept:
-    "When your code asks another system for data — 'give me this user' or 'place this order' — it doesn't get back magic, it gets back a plain response with a predictable shape, usually with a \"status\" field and a \"data\" field. In this lesson we simulate that with a function that returns a dict, so you can see the shape without needing a real network call. \"status\" tells you whether the request succeeded (like \"ok\" or \"error\"), and \"data\" holds the actual payload you asked for — but only when things went well. The critical habit is: always check status before you trust anything inside data, because reaching into data on a failed response is one of the most common bugs in API code. Once you check status, reading a field is just dict indexing, exactly like any dict you've built yourself.",
+    "JSON (JavaScript Object Notation) is plain text — a string — that follows a small set of rules for describing data, and it's the format almost every API sends and receives. It only allows a handful of value types: objects ({...}), arrays ([...]), strings (always double-quoted, never single), numbers, true/false, and null. Every key in a JSON object must be a double-quoted string, and there's no trailing comma allowed after the last item — both are common reasons a \"valid-looking\" blob of JSON actually fails to parse. In JavaScript, two built-in functions cross the bridge between real JS values and JSON text: JSON.stringify(value) turns a JS value into JSON text, and JSON.parse(text) turns JSON text back into a real JS value you can use. Once you internalize that JSON is just text with strict rules — not a JS object itself — reading API code stops feeling like magic.",
   conceptSimpler:
-    "An API response is like a delivery box with a shipping label on the outside — the label (status) tells you if the package arrived intact before you ever open the box (data) to see what's inside.",
+    "JSON is like a shipping form with a fixed set of boxes to check — only certain kinds of items (text, numbers, true/false, nothing, lists, and other forms) are allowed on it, and every box has to be filled out exactly the way the form expects or it gets rejected.",
   vizStages: [
     {
-      label: "1. Call the \"API\"",
+      label: "1. What's actually valid JSON",
       body:
-        "We write a function that pretends to be an API — it takes a user id and returns a dict shaped exactly like a real JSON response would be.",
+        "Only these types exist in JSON: object, array, string (double-quoted), number, boolean, and null. Keys are always double-quoted strings, and a trailing comma after the last item breaks the whole thing.",
       code:
-        "def fetch_user(user_id):\n    if user_id == 1:\n        return {\"status\": \"ok\", \"data\": {\"name\": \"Priya\", \"age\": 29}}\n    return {\"status\": \"error\", \"data\": None}",
+        "{\n  \"name\": \"Priya\",\n  \"age\": 29,\n  \"isActive\": true,\n  \"hobbies\": [\"chess\", \"climbing\"],\n  \"nickname\": null\n}",
     },
     {
-      label: "2. Store the response",
+      label: "2. JS value -> JSON text",
       body:
-        "Calling the function gives back a single dict. Nothing has been \"read\" yet — we just have the raw response sitting in a variable, same as any dict.",
-      code: "response = fetch_user(1)\nprint(response)",
+        "JSON.stringify takes a real JavaScript value — an object, array, whatever — and turns it into a single JSON-formatted string, ready to send over the network.",
+      code:
+        "const user = { name: \"Priya\", age: 29 };\nconst text = JSON.stringify(user);\nconsole.log(text); // '{\"name\":\"Priya\",\"age\":29}'",
     },
     {
-      label: "3. Check status first",
+      label: "3. JSON text -> JS value",
       body:
-        "Before touching data, we check the status field. This is the gate that protects the rest of the code from crashing on missing or broken data.",
+        "JSON.parse does the reverse: feed it a JSON string and you get back a real JavaScript object or array you can index, loop over, and use like anything else you built yourself.",
       code:
-        "if response[\"status\"] == \"ok\":\n    print(\"request succeeded\")\nelse:\n    print(\"request failed\")",
+        "const text = '{\"name\":\"Priya\",\"age\":29}';\nconst user = JSON.parse(text);\nconsole.log(user.name, user.age); // Priya 29",
     },
     {
-      label: "4. Only then read data",
+      label: "4. Not everything survives the trip",
       body:
-        "With status confirmed as \"ok\", it's safe to dig into data and pull out the fields you actually want.",
+        "JSON has no concept of a function, so stringifying one gives you back undefined instead of real JSON. undefined itself isn't a JSON value either — inside an array, it gets quietly rewritten to null rather than staying undefined.",
       code:
-        "if response[\"status\"] == \"ok\":\n    user = response[\"data\"]\n    print(user[\"name\"], user[\"age\"])",
+        "function greet() { return \"hi\"; }\nconsole.log(JSON.stringify(greet)); // undefined\n\nconsole.log(JSON.stringify([1, undefined, 3])); // [1,null,3]",
     },
   ],
   realWorldIntro:
-    "Every JavaScript fetch() call to a real API resolves to JSON that looks exactly like this — a status or ok field plus a data or payload field — and frontend code checks it the same way before rendering anything on screen.",
+    "Every fetch() call to a real API sends and receives JSON text under the hood — request bodies get JSON.stringify'd before they go out over the network, and response bodies get JSON.parse'd (usually via response.json()) before your code ever touches them as real objects.",
   realWorldCode:
-    "response = call_payments_api(order_id)\nif response[\"status\"] == \"ok\":\n    charge = response[\"data\"]\n    print(f\"charged ${charge['amount']}\")\nelse:\n    print(\"payment failed, do not ship order\")",
+    "const body = JSON.stringify({ title: \"New post\", published: true });\n\nfetch(\"/api/posts\", {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: body,\n});",
   sandbox: {
     kind: "code",
     challenge:
-      "Write fetch_order(order_id) that returns {\"status\": \"ok\", \"data\": {...}} for order id 100 and {\"status\": \"error\", \"data\": None} otherwise, then check status before printing the total.",
+      "Build a user object, stringify it to JSON text, parse it back, and confirm two known gotchas: stringifying a function and stringifying an array that contains undefined.",
     starterCode:
-      "def fetch_order(order_id):\n    if order_id == 100:\n        return {\"status\": \"ok\", \"data\": {\"item\": \"keyboard\", \"total\": 79}}\n    return {\"status\": \"error\", \"data\": None}\n\nresponse = fetch_order(100)\nif response[\"status\"] == \"ok\":\n    order = response[\"data\"]\n    print(f\"order: {order['item']} for ${order['total']}\")\nelse:\n    print(\"could not fetch order\")\n\nmissing_response = fetch_order(404)\nif missing_response[\"status\"] == \"ok\":\n    print(missing_response[\"data\"][\"item\"])\nelse:\n    print(\"could not fetch order\")",
+      "const user = {\n  name: \"Priya\",\n  age: 29,\n  isActive: true,\n  hobbies: [\"chess\", \"climbing\"]\n};\n\nconst jsonText = JSON.stringify(user);\nconsole.log(\"as JSON text:\", jsonText);\n\nconst parsedBack = JSON.parse(jsonText);\nconsole.log(\"parsed name:\", parsedBack.name);\nconsole.log(\"parsed hobbies:\", parsedBack.hobbies.join(\", \"));\n\nfunction sayHi() {\n  return \"hi\";\n}\nconsole.log(\"stringifying a function:\", JSON.stringify(sayHi));\n\nconst readings = [72, undefined, 68];\nconsole.log(\"undefined in an array becomes:\", JSON.stringify(readings));",
+    language: "javascript",
   },
   quizQuestion:
-    "response comes back as {\"status\": \"error\", \"data\": None}. What happens if your code skips checking status and immediately runs response[\"data\"][\"name\"]?",
-  quizCode: "response = {\"status\": \"error\", \"data\": None}\nprint(response[\"data\"][\"name\"])",
+    "const data = { count: 3, label: undefined }; console.log(JSON.stringify(data)); — what actually prints?",
+  quizCode: "const data = { count: 3, label: undefined };\nconsole.log(JSON.stringify(data));",
   quizOptions: [
-    { key: "a", label: "It crashes, because you can't index into None with [\"name\"]", correct: true },
-    { key: "b", label: "It prints None, since data is None", correct: false },
-    { key: "c", label: "It prints an empty string as a safe default", correct: false },
+    { key: "a", label: "{\"count\":3} — the label key disappears entirely", correct: false },
+    { key: "b", label: "{\"count\":3,\"label\":null} — the undefined value is rewritten to null", correct: true },
+    { key: "c", label: "It throws an error, because undefined can't be stringified at all", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — data is None on an error response, and None has no fields, so indexing it with [\"name\"] blows up; checking status first is what prevents this crash.",
+    "Right — undefined isn't a valid JSON value, so stringify doesn't leave it as-is; it gets rewritten to null (the same thing happens to undefined entries inside arrays) rather than crashing or vanishing.",
   quizFeedbackIncorrect:
-    "Not quite — data is None here, and None isn't a dict, so trying to index it with [\"name\"] raises an error instead of silently returning something safe.",
+    "Not quite — undefined isn't a valid JSON value, so JSON.stringify doesn't silently drop the key or crash; it rewrites the value to null, the closest valid JSON has to \"nothing here.\"",
   takeaway:
-    "Treat every API response as a dict with a status field and a data field: check status before you ever touch data, because that one habit is what stands between your code and a crash on every failed request.",
-  nextUpLabel: "Backend: Python + Postgres",
+    "JSON is text with strict rules — double-quoted keys and strings, no trailing commas, and only objects/arrays/strings/numbers/booleans/null as values. JSON.stringify and JSON.parse are the two functions that cross the bridge between that text and real JavaScript values, and knowing what doesn't survive the trip (functions, undefined) keeps you from being surprised by a response.",
 };
 
 export default content;

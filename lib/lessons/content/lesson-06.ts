@@ -5,9 +5,9 @@ const content: LessonData = {
   orderIndex: 1,
   phaseLabel: "REACT BASICS + COMPONENTS",
   title: "One click, one re-render: how state updates a component",
-  minutes: 20,
+  minutes: 22,
   concept:
-    "A React component is just a function that returns some JSX describing what the screen should look like right now. State is a special piece of memory a component holds onto between renders, created with useState, and it's the only thing that's allowed to change after the component first shows up. When you call the setter function returned by useState, React doesn't reach into the page and tweak a number — it throws away the old JSX, re-runs your component function from top to bottom with the new state value baked in, and swaps in the new JSX. That's why clicking a button doesn't \"edit\" text on screen; it triggers an entirely fresh render where the count variable simply starts out as a different number. Nothing on the page changes until the component function runs again and returns something different.",
+    "A React component is just a function that returns some JSX describing what the screen should look like right now. State is a special piece of memory a component holds onto between renders, created with useState, and it's the only thing that's allowed to change after the component first shows up. When you call the setter function returned by useState, React doesn't reach into the page and tweak a number — it throws away the old JSX, re-runs your component function from top to bottom with the new state value baked in, and swaps in the new JSX. That's why clicking a button doesn't \"edit\" text on screen; it triggers an entirely fresh render where the count variable simply starts out as a different number. Underneath that setter call is a simple, nameable idea: take the current state and an action describing what happened, and produce the next state. That's exactly what you'll write and run in this lesson's sandbox — a plain JavaScript function, nextState(state, action), that decides what a Counter's state becomes after an increment, a decrement, or a reset. It's real, runnable logic, and it's the same shape real React reducers and setter callbacks use everywhere.",
   conceptSimpler:
     "Think of a component like a photograph being retaken every time something changes — state is the pose, and instead of touching up the old photo, React just takes a brand new one whenever the pose changes.",
   vizStages: [
@@ -41,73 +41,43 @@ const content: LessonData = {
   realWorldCode:
     "function LikeButton() {\n  const [likes, setLikes] = useState(42);\n  return <button onClick={() => setLikes(likes + 1)}>\n    ❤️ {likes}\n  </button>;\n}",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each stage to see how the Counter component's state and rendered output change together, one click at a time.",
-    stages: [
-      {
-        label: "Before any clicks",
-        body:
-          "count starts at 0 because that's the initial value passed to useState(0). The button renders showing that starting number.",
-        code: "// state: count = 0\n<button onClick={...}>Count: 0</button>",
-      },
-      {
-        label: "After 1 click",
-        body:
-          "Clicking called setCount(0 + 1). React re-ran Counter with count now equal to 1, so the button's text updated to match.",
-        code: "// state: count = 1\n<button onClick={...}>Count: 1</button>",
-      },
-      {
-        label: "After 2 clicks",
-        body:
-          "Another click called setCount(1 + 1). Each click always uses whatever count currently is, so the value climbs by one every time.",
-        code: "// state: count = 2\n<button onClick={...}>Count: 2</button>",
-      },
-      {
-        label: "After 5 clicks",
-        body:
-          "The pattern keeps repeating — five clicks means five re-renders, and count has climbed to 5. The button component itself never changed, only the number inside it.",
-        code: "// state: count = 5\n<button onClick={...}>Count: 5</button>",
-      },
-      {
-        label: "Resetting",
-        body:
-          "If a reset button called setCount(0), React would re-render once more with count back at 0 — proof that the UI only ever reflects whatever state currently says.",
-        code: "// state: count = 0\n<button onClick={...}>Count: 0</button>",
-      },
-    ],
+    kind: "code",
+    language: "javascript",
+    challenge:
+      "Implement nextState(state, action) so it models how a Counter component's state changes for three kinds of clicks — increment, decrement, and reset. Then run a sequence of simulated clicks through it and print the state after each one, exactly like React re-rendering after every setCount call.",
+    starterCode:
+      "function nextState(state, action) {\n  if (action.type === \"increment\") {\n    return { count: state.count + 1 };\n  } else if (action.type === \"decrement\") {\n    return { count: state.count - 1 };\n  } else if (action.type === \"reset\") {\n    return { count: 0 };\n  }\n  return state;\n}\n\nlet state = { count: 0 };\nconsole.log(\"start:\", state.count);\n\nconst clicks = [\n  { type: \"increment\" },\n  { type: \"increment\" },\n  { type: \"increment\" },\n  { type: \"decrement\" },\n  { type: \"reset\" },\n  { type: \"increment\" },\n];\n\nfor (const action of clicks) {\n  state = nextState(state, action);\n  console.log(action.type, \"-> count is now\", state.count);\n}",
   },
   quizQuestion:
-    "In the Counter component below, what actually causes the number on screen to change from 0 to 1 after a click?",
+    "nextState is called with an action.type of \"double\", which none of the if/else branches handle. What does state.count end up being, and why?",
   quizCode:
-    "function Counter() {\n  const [count, setCount] = useState(0);\n  return <button onClick={() => setCount(count + 1)}>\n    Count: {count}\n  </button>;\n}",
+    "function nextState(state, action) {\n  if (action.type === \"increment\") {\n    return { count: state.count + 1 };\n  } else if (action.type === \"decrement\") {\n    return { count: state.count - 1 };\n  }\n  return state;\n}\n\nlet state = { count: 5 };\nstate = nextState(state, { type: \"double\" });\nconsole.log(state.count);",
   quizOptions: [
     {
       key: "a",
       label:
-        "React directly edits the text node in the browser to say 1 without re-running any code",
-      correct: false,
+        "5 — the function falls through every condition and hits the final \"return state\", leaving the state completely unchanged, exactly like a reducer ignoring an action type it doesn't recognize",
+      correct: true,
     },
     {
       key: "b",
       label:
-        "Calling setCount triggers React to re-run the Counter function with the new state, producing new JSX that replaces the old",
-      correct: true,
+        "undefined — because state.count doesn't exist until a matching action has run at least once",
+      correct: false,
     },
     {
       key: "c",
       label:
-        "The button element keeps its own internal counter that increments automatically on every click",
+        "10 — because an unrecognized action type is treated as a request to double the current count",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Exactly — setCount tells React the state changed, so React re-runs the whole component function and uses the fresh JSX it returns to update the screen.",
+    "Right — with no matching branch, execution falls all the way through to \"return state\", so the state object comes back exactly as it went in. Unhandled actions are silent no-ops, the same way a well-written real reducer ignores action types it wasn't built to handle.",
   quizFeedbackIncorrect:
-    "Not quite — React doesn't hand-edit the page or let elements track their own data; it re-runs the component function with the new state and generates new JSX to display.",
+    "Not quite — trace the if/else chain: \"double\" doesn't match \"increment\" or \"decrement\", so neither branch runs, and the function reaches the final \"return state\" untouched. The count stays 5.",
   takeaway:
-    "State is memory a component owns between renders, and calling its setter never edits the page directly — it makes React re-run the component and render fresh JSX from the new value. Every UI update you see is really just a function running again with different inputs.",
-  nextUpLabel: "APIs + HTTP + JSON",
+    "State is memory a component owns between renders, and calling its setter never edits the page directly — it makes React re-run the component and render fresh JSX from the new value. The logic that decides what the next state should be is just a plain function of the current state and what happened, which is exactly what nextState(state, action) makes real and runnable here.",
 };
 
 export default content;

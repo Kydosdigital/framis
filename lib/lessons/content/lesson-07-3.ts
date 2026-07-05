@@ -4,105 +4,75 @@ const content: LessonData = {
   num: 7,
   orderIndex: 3,
   phaseLabel: "APIS + HTTP + JSON",
-  title: "Three digits, three stories: reading status codes",
-  minutes: 18,
+  title: "When the request fails: try, catch, throw",
+  minutes: 20,
   concept:
-    "Every HTTP response starts with a three-digit status code, and the first digit alone tells you which of three stories you're in. Codes starting with 2 mean success — the request was understood and the server did what you asked. Codes starting with 4 mean the client made a mistake — you asked for something that doesn't exist, sent bad data, or weren't allowed to do it, and the fix is on your end. Codes starting with 5 mean the server broke while trying to handle a perfectly reasonable request, so the fix is on their end and retrying the exact same request usually won't help. Knowing just the first digit — even before reading the specific number or the response body — already tells you who needs to act and roughly what happened.",
+    "A network call can fail in ways a normal function call can't — the resource doesn't exist, the server rejects your input, the connection just breaks — and code that assumes every fetch succeeds will eventually crash in production. The real tool for this is try/catch: you wrap risky code in a try block, and if anything inside it throws, execution jumps straight to catch instead of continuing line by line or crashing the whole program. You can trigger that jump yourself with throw new Error(\"message\") — this is exactly how you signal \"this API call failed\" from inside a function, and the caller's catch (e) block can read e.message to find out what went wrong. Because there's no real network in this sandbox, fetch() itself never fails on its own — a real failure has to come from your own code checking something (a status field, a lookup that came back empty) and explicitly throwing when it should. That's not a workaround, either — it's exactly what real code does too, since a fetch that technically succeeds can still carry a failure status like 404 inside its response.",
   conceptSimpler:
-    "A status code is like a waiter coming back from the kitchen: \"2xx\" means your food's on the way, \"4xx\" means you ordered something not on the menu, and \"5xx\" means the kitchen caught fire and it's not your fault.",
+    "try/catch is like a safety net under a tightrope walker: the walk (try) is the risky part, and if a foot ever slips (throw), the net (catch) is what stops the fall from becoming a total collapse — the show goes on instead of ending right there.",
   vizStages: [
     {
-      label: "1. Read the first digit first",
+      label: "1. try wraps the risky code",
       body:
-        "Before worrying about the exact number, glance at the leading digit — it instantly sorts every possible response into one of three buckets.",
-      code:
-        "2xx -> success\n4xx -> you (the client) made a mistake\n5xx -> the server made a mistake",
+        "Anything that might fail — a lookup that might come back empty, a call that might reject — goes inside try. If it all succeeds, catch never runs at all.",
+      code: "try {\n  // risky code goes here\n} catch (e) {\n  // only runs if something above threw\n}",
     },
     {
-      label: "2. 2xx: it worked",
+      label: "2. throw new Error(...) signals failure on purpose",
       body:
-        "200 means a plain success — here's your data. 201 means success and something new was created. Either way, the body can be trusted.",
-      code:
-        "200 OK      -> GET succeeded, here's the data\n201 Created -> POST succeeded, here's the new thing",
+        "throw is how you hand control straight to the nearest catch. new Error(\"message\") builds an object with a .message field, which is exactly what shows up in the catch block.",
+      code: "if (!order) {\n  throw new Error(\"order not found\");\n}",
     },
     {
-      label: "3. 4xx: check your request",
+      label: "3. catch reads e.message and recovers",
       body:
-        "404 means the thing you asked for doesn't exist at that address. 400 means the data you sent was malformed or invalid. Neither gets fixed by retrying the exact same request — the request itself needs to change.",
+        "Once caught, you decide what \"recovering\" looks like — log something useful, show a fallback, or just move on — instead of letting one bad request take down everything after it.",
       code:
-        "400 Bad Request -> your request body or params were invalid\n404 Not Found    -> that resource doesn't exist",
+        "try {\n  throw new Error(\"order not found\");\n} catch (e) {\n  console.log(\"could not load order:\", e.message);\n}",
     },
     {
-      label: "4. 5xx: not your fault, but still your problem",
+      label: "4. real failures live inside the response, not the mock",
       body:
-        "500 means the server hit an unexpected error while handling your perfectly valid request. Your job here is usually to show the user a generic error and maybe retry later, not to \"fix\" your request — there's nothing wrong with it.",
-      code: "500 Internal Server Error -> server crashed handling a valid request",
+        "This sandbox's fetch always technically succeeds, so a simulated failure has to come from data you check yourself — a status field in the payload, or a lookup you run before ever calling fetch — and then throw explicitly when it looks bad.",
+      code:
+        "const body = { status: 404, data: null };\nif (body.status !== 200) {\n  throw new Error(\"request failed with status \" + body.status);\n}",
     },
   ],
   realWorldIntro:
-    "Browsers surface this constantly: a broken link renders the classic \"404 Page Not Found\", while a site that's down entirely — misconfigured or crashed — often serves a \"500 Internal Server Error\" page instead.",
+    "Real production code wraps almost every fetch in exactly this pattern — try/catch around the await, checking response.ok or response.status, and throwing (or handling) explicitly on failure — because an unhandled rejected request is one of the most common ways a real app crashes or shows a blank screen.",
   realWorldCode:
-    "fetch(\"/api/profile\")\n  .then(res => {\n    if (res.status === 404) return showNotFoundPage();\n    if (res.status >= 500) return showServerErrorPage();\n    return res.json();\n  });",
+    "async function loadOrder(id) {\n  try {\n    const response = await fetch(`/api/orders/${id}`);\n    if (!response.ok) {\n      throw new Error(`order request failed with status ${response.status}`);\n    }\n    return await response.json();\n  } catch (e) {\n    console.error(\"could not load order:\", e.message);\n    return null;\n  }\n}",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each status code below to see what it means and what a response carrying it typically looks like.",
-    stages: [
-      {
-        label: "200 OK",
-        body:
-          "The most common success code. It means the request was understood, processed, and here's the data you asked for — nothing more needs to happen.",
-        code:
-          "GET /users/42\n\nresponse:\n{\"status\": 200, \"data\": {\"id\": 42, \"name\": \"Priya\"}}",
-      },
-      {
-        label: "201 Created",
-        body:
-          "A success code specific to creation. It tells you not just \"it worked\" but \"a new resource now exists,\" and the body usually includes that new resource's id.",
-        code:
-          "POST /users\nbody: {\"name\": \"Sam\"}\n\nresponse:\n{\"status\": 201, \"data\": {\"id\": 43, \"name\": \"Sam\"}}",
-      },
-      {
-        label: "400 Bad Request",
-        body:
-          "The server understood you were making a request, but the data you sent doesn't make sense — missing a required field, wrong type, invalid format. Fix the request; don't just resend it as-is.",
-        code:
-          "POST /users\nbody: {\"name\": \"\"}\n\nresponse:\n{\"status\": 400, \"data\": None, \"error\": \"name is required\"}",
-      },
-      {
-        label: "404 Not Found",
-        body:
-          "Nothing was wrong with how the request was formed — the specific thing you asked for simply isn't there, whether it was deleted, never existed, or you mistyped the id.",
-        code:
-          "GET /users/9999\n\nresponse:\n{\"status\": 404, \"data\": None, \"error\": \"user not found\"}",
-      },
-      {
-        label: "500 Internal Server Error",
-        body:
-          "Something broke on the server's side while trying to handle a request that looked completely fine. The client did nothing wrong; there's a bug or outage on the other end.",
-        code:
-          "GET /users/42\n\nresponse:\n{\"status\": 500, \"data\": None, \"error\": \"unexpected server error\"}",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Write an async fetchWeather(city) that mocks a 404 for unknown cities by putting a status field in the payload, throws when that status isn't 200, and a printWeather(city) that calls it inside try/catch so a failure never crashes the program.",
+    starterCode:
+      "async function fetchWeather(city) {\n  const knownCities = [\"Austin\", \"Denver\"];\n  const isKnown = knownCities.includes(city);\n\n  const mockPayload = isKnown\n    ? { status: 200, data: { city: city, tempF: 72 } }\n    : { status: 404, data: null };\n\n  const response = await fetch(\"/api/weather?city=\" + city, mockPayload);\n  const body = await response.json();\n\n  if (body.status !== 200) {\n    throw new Error(\"weather lookup failed with status \" + body.status);\n  }\n  return body.data;\n}\n\nasync function printWeather(city) {\n  try {\n    const weather = await fetchWeather(city);\n    console.log(weather.city + \": \" + weather.tempF + \"F\");\n  } catch (e) {\n    console.log(\"error:\", e.message);\n  }\n}\n\nprintWeather(\"Austin\");\nprintWeather(\"Nowhere\");",
+    language: "javascript",
   },
   quizQuestion:
-    "Your code sends a perfectly well-formed request and gets back status 500. What should you conclude?",
-  quizCode: "response = call_api(\"/orders/17\")\nprint(response[\"status\"])  # 500",
+    "fetchWeather(\"Nowhere\") throws new Error(\"weather lookup failed with status 404\") from inside the try block below. What happens next?",
+  quizCode:
+    "async function fetchWeather(city) {\n  const isKnown = city === \"Austin\";\n  const body = isKnown ? { status: 200, data: { city } } : { status: 404, data: null };\n  if (body.status !== 200) {\n    throw new Error(\"weather lookup failed with status \" + body.status);\n  }\n  return body.data;\n}\n\ntry {\n  const weather = await fetchWeather(\"Nowhere\");\n  console.log(weather.city);\n} catch (e) {\n  console.log(\"error:\", e.message);\n}",
   quizOptions: [
-    { key: "a", label: "The request was malformed and needs to be fixed before retrying", correct: false },
+    {
+      key: "a",
+      label: "The program crashes immediately, because throw always stops execution completely",
+      correct: false,
+    },
     {
       key: "b",
-      label: "The server itself failed while handling the request — it isn't something wrong with your request",
+      label: "console.log(weather.city) is skipped, and control jumps straight to the catch block, printing the error message",
       correct: true,
     },
-    { key: "c", label: "The resource you asked for doesn't exist", correct: false },
+    { key: "c", label: "weather.city runs anyway with weather set to null", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — a 5xx code means the failure happened on the server's side; a well-formed request can still get a 500 if the server hits a bug, so retrying the same request won't necessarily fix anything.",
+    "Right — throwing inside a try block immediately abandons the rest of that block (weather.city never gets a chance to run) and jumps straight to catch, where e.message holds the thrown Error's message.",
   quizFeedbackIncorrect:
-    "Not quite — 500 is a server-side error, meaning the problem isn't with how the request was made; that's what separates it from 400 (bad request) or 404 (not found), which both point back at the client.",
+    "Not quite — a throw inside try doesn't crash the whole program by itself, and it doesn't let later lines in that same try block run either; it jumps straight to catch, skipping everything left in try.",
   takeaway:
-    "Status codes group into three stories by their first digit: 2xx it worked, 4xx you need to fix something about the request, 5xx the server broke on its own. Reading that one digit first tells you who owns the next move before you even look at the data.",
+    "try/catch is how you handle a request that fails on purpose instead of by accident: wrap the risky call in try, throw new Error(...) explicitly when your own check says something's wrong, and catch (e) gives you e.message to recover gracefully instead of crashing.",
 };
 
 export default content;

@@ -4,68 +4,69 @@ const content: LessonData = {
   num: 8,
   orderIndex: 4,
   phaseLabel: "BACKEND: PYTHON + POSTGRES",
-  title: "INSERT is append, UPDATE is find-and-modify",
+  title: "ORDER BY + LIMIT: putting it all together",
   minutes: 22,
   concept:
-    "Writing data to a table only ever takes two basic shapes. INSERT adds a brand-new row to the table — mechanically, that's just appending a new dict to the list, with nothing existing being touched. UPDATE instead finds one or more rows that already exist, using a condition, and changes some of their fields in place — the row count stays the same, only the values inside change. The moment you need more than one write to happen together — like moving money by decreasing one account's balance and increasing another's — you need a transaction: a wrapper that says these writes either all take effect, or none of them do. Without that guarantee, a crash or error between the two writes could leave one account debited and the other never credited, silently corrupting the data; a transaction makes that half-finished state impossible.",
+    "Two clauses control what shape a result comes back in, independent of what rows are in it. ORDER BY sorts the result by a column — ascending by default, or descending with ORDER BY column DESC — and it's the only thing that guarantees an order at all; without it, a database is free to hand rows back in whatever order happens to be convenient. LIMIT n then keeps only the first n rows of whatever order the result is already in, which is why LIMIT almost always follows an ORDER BY — LIMIT on its own just chops off however many rows happened to come out, but LIMIT after an ORDER BY reliably gets you \"the top n\" or \"the bottom n\" by whatever you sorted on. Put every clause you've learned together — JOIN to link tables, WHERE to filter rows, GROUP BY to bucket them, an aggregate to summarize each bucket, ORDER BY to rank the buckets, and LIMIT to cut it down to a top-N list — and you get one of the most common real queries a backend ever runs: \"who are our top 3 customers by total spend?\"",
   conceptSimpler:
-    "INSERT is like adding a brand-new index card to a box; UPDATE is like pulling an existing card out, crossing out one line, and writing a new value in its place — and a transaction is stapling two card-edits together so either both happen or neither does, no half-finished pile.",
+    "ORDER BY is like sorting a stack of graded tests from highest score to lowest; LIMIT 3 is then just paperclipping only the top three off that sorted stack — sort first, then cut, and you reliably get \"the top 3\" instead of whichever three happened to be on top already.",
   vizStages: [
     {
-      label: "1. INSERT is just append",
+      label: "1. ORDER BY sorts the result",
       body:
-        "Adding a new row means creating a new dict with every column filled in and appending it to the table's list. The rest of the table is completely untouched.",
+        "By default ORDER BY sorts ascending (smallest or earliest first). Adding DESC flips it to descending — here, the priciest product comes first instead of last.",
       code:
-        "accounts = [{\"id\": 1, \"name\": \"Ava\", \"balance\": 100}]\naccounts.append({\"id\": 2, \"name\": \"Ben\", \"balance\": 50})\nprint(len(accounts), \"accounts now\")",
+        "CREATE TABLE products (id, name, price);\nINSERT INTO products VALUES (1, 'Keyboard', 42);\nINSERT INTO products VALUES (2, 'Monitor', 199);\nINSERT INTO products VALUES (3, 'Mouse', 15);\nINSERT INTO products VALUES (4, 'Desk', 250);\n\nSELECT name, price FROM products ORDER BY price DESC;\n\n-- name     | price\n-- Desk     | 250\n-- Monitor  | 199\n-- Keyboard | 42\n-- Mouse    | 15",
     },
     {
-      label: "2. UPDATE is find, then modify",
+      label: "2. LIMIT cuts the result down",
       body:
-        "Updating means looping until you find the row matching a condition, then reassigning one of its fields directly — no new row is created, and every other row is left alone.",
+        "LIMIT 2 keeps only the first two rows of whatever order the result is already in — combined with ORDER BY price DESC, that reliably means \"the 2 most expensive products,\" not just any two rows.",
       code:
-        "for account in accounts:\n    if account[\"id\"] == 1:\n        account[\"balance\"] = account[\"balance\"] - 20",
+        "SELECT name, price FROM products ORDER BY price DESC LIMIT 2;\n\n-- name    | price\n-- Desk    | 250\n-- Monitor | 199",
     },
     {
-      label: "3. Two writes, one all-or-nothing unit",
+      label: "3. Order matters: sort, then cut",
       body:
-        "Moving money is really two UPDATEs — subtract from one account, add to another. If only the first one ran and the program crashed before the second, the money would just vanish. A transaction groups both writes so the database guarantees they succeed or fail together.",
+        "LIMIT always applies to whatever order the rows are already in when it runs. That's why ORDER BY has to come before LIMIT in the query — sort first, so the first n rows LIMIT keeps are actually the top n by whatever you sorted on.",
       code:
-        "# conceptually, inside one transaction:\n# UPDATE accounts SET balance = balance - 20 WHERE id = 1;\n# UPDATE accounts SET balance = balance + 20 WHERE id = 2;\n# both happen, or neither does",
+        "-- correct: sorts, THEN keeps the top 2\nSELECT name, price FROM products ORDER BY price DESC LIMIT 2;\n\n-- if you only ever wrote LIMIT with no ORDER BY,\n-- you'd get whichever 2 rows came out first — not necessarily the biggest",
     },
     {
-      label: "4. Commit or rollback",
+      label: "4. Every clause, together: top customers by spend",
       body:
-        "A transaction ends one of two ways: COMMIT locks in every write inside it permanently, or ROLLBACK discards every write inside it as if none of them had ever happened — there's no in-between state where only some of the writes stuck.",
+        "JOIN links orders to their customers, GROUP BY buckets the joined rows by customer, SUM adds up each bucket, ORDER BY ranks the buckets biggest-first, and LIMIT keeps only the top 3 — six lessons' worth of ideas, one query.",
       code:
-        "BEGIN;\nUPDATE accounts SET balance = balance - 20 WHERE id = 1;\nUPDATE accounts SET balance = balance + 20 WHERE id = 2;\nCOMMIT;",
+        "SELECT name, SUM(amount) AS total_spent\nFROM users\nJOIN orders ON users.id = orders.user_id\nGROUP BY name\nORDER BY total_spent DESC\nLIMIT 3;",
     },
   ],
   realWorldIntro:
-    "In Postgres, INSERT INTO adds rows and UPDATE ... WHERE modifies existing ones, and wrapping several statements in BEGIN ... COMMIT — or letting a framework's ORM do it for you, like Django's atomic() or a SQLAlchemy session — is exactly how real apps protect multi-step writes like money transfers or checkout flows from ending up half-done.",
+    "Everything you've written across these four lessons is real, runnable Postgres SQL — the only thing missing from this sandbox is the plumbing that gets a Python backend talking to an actual Postgres server. A real app wires up a library like psycopg2 (or an ORM like SQLAlchemy on top of it) to open a connection to Postgres, sends this exact query as a string, and gets real rows back as Python data — then a web framework like FastAPI or Flask wraps that in a route so a browser or mobile app can request it over HTTP.",
   realWorldCode:
-    "BEGIN;\nUPDATE accounts SET balance = balance - 20 WHERE id = 1;\nUPDATE accounts SET balance = balance + 20 WHERE id = 2;\nCOMMIT;",
+    "# a FastAPI route running this exact query against a real Postgres database:\nfrom fastapi import FastAPI\nimport psycopg2\n\napp = FastAPI()\n\n@app.get(\"/top-customers\")\ndef top_customers():\n    conn = psycopg2.connect(\"dbname=shop user=app\")\n    cur = conn.cursor()\n    cur.execute(\"\"\"\n        SELECT name, SUM(amount) AS total_spent\n        FROM users\n        JOIN orders ON users.id = orders.user_id\n        GROUP BY name\n        ORDER BY total_spent DESC\n        LIMIT 3;\n    \"\"\")\n    rows = cur.fetchall()\n    return [{\"name\": r[0], \"total_spent\": r[1]} for r in rows]",
   sandbox: {
     kind: "code",
     challenge:
-      "Simulate an INSERT (a new account) and two UPDATEs (moving a balance between two existing accounts) on a list-of-dicts table.",
+      "Create users and orders tables, insert the rows shown, then write one query — JOIN, GROUP BY, ORDER BY, and LIMIT together — that finds the top 3 customers by total amount spent.",
     starterCode:
-      "accounts = [{\"id\": 1, \"name\": \"Ava\", \"balance\": 100}, {\"id\": 2, \"name\": \"Ben\", \"balance\": 50}]\n\ndef insert_account(accounts, new_account):\n    accounts.append(new_account)\n    return accounts\n\ndef update_balance(accounts, account_id, amount):\n    for account in accounts:\n        if account[\"id\"] == account_id:\n            account[\"balance\"] = account[\"balance\"] + amount\n    return accounts\n\naccounts = insert_account(accounts, {\"id\": 3, \"name\": \"Cy\", \"balance\": 0})\naccounts = update_balance(accounts, 1, -20)\naccounts = update_balance(accounts, 3, 20)\n\nfor account in accounts:\n    print(account[\"name\"], account[\"balance\"])",
+      "CREATE TABLE users (id, name);\nCREATE TABLE orders (id, user_id, amount);\n\nINSERT INTO users VALUES (1, 'Ava');\nINSERT INTO users VALUES (2, 'Ben');\nINSERT INTO users VALUES (3, 'Cy');\nINSERT INTO users VALUES (4, 'Dee');\n\nINSERT INTO orders VALUES (101, 1, 42);\nINSERT INTO orders VALUES (102, 1, 33);\nINSERT INTO orders VALUES (103, 2, 8);\nINSERT INTO orders VALUES (104, 3, 250);\nINSERT INTO orders VALUES (105, 3, 60);\nINSERT INTO orders VALUES (106, 4, 15);\nINSERT INTO orders VALUES (107, 2, 62);\n\nSELECT name, SUM(amount) AS total_spent\nFROM users\nJOIN orders ON users.id = orders.user_id\nGROUP BY name\nORDER BY total_spent DESC\nLIMIT 3;",
+    language: "sql",
   },
   quizQuestion:
-    "Two UPDATEs move money between accounts — subtract 20 from one, add 20 to the other. Why would a real backend wrap both in a single transaction?",
+    "Running the query below, which customer's row appears first in the result, and why?",
   quizCode:
-    "BEGIN;\nUPDATE accounts SET balance = balance - 20 WHERE id = 1;\nUPDATE accounts SET balance = balance + 20 WHERE id = 2;\nCOMMIT;",
+    "CREATE TABLE users (id, name);\nCREATE TABLE orders (id, user_id, amount);\n\nINSERT INTO users VALUES (1, 'Ava');\nINSERT INTO users VALUES (2, 'Ben');\nINSERT INTO users VALUES (3, 'Cy');\nINSERT INTO users VALUES (4, 'Dee');\n\nINSERT INTO orders VALUES (101, 1, 42);\nINSERT INTO orders VALUES (102, 1, 33);\nINSERT INTO orders VALUES (103, 2, 8);\nINSERT INTO orders VALUES (104, 3, 250);\nINSERT INTO orders VALUES (105, 3, 60);\nINSERT INTO orders VALUES (106, 4, 15);\nINSERT INTO orders VALUES (107, 2, 62);\n\nSELECT name, SUM(amount) AS total_spent\nFROM users\nJOIN orders ON users.id = orders.user_id\nGROUP BY name\nORDER BY total_spent DESC\nLIMIT 3;",
   quizOptions: [
-    { key: "a", label: "So both UPDATEs run faster than they would separately", correct: false },
-    { key: "b", label: "So either both UPDATEs take effect or neither does, even if something fails in between", correct: true },
-    { key: "c", label: "So Postgres skips checking permissions on the second UPDATE", correct: false },
+    { key: "a", label: "Cy — because ORDER BY total_spent DESC sorts the highest total first, and Cy's 250 + 60 = 310 is the biggest", correct: true },
+    { key: "b", label: "Cy — because Cy's rows happened to be inserted before Ava's and Ben's totals were computed", correct: false },
+    { key: "c", label: "Ava — because GROUP BY always lists groups in the order users were inserted", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — that's the whole point of a transaction: if the process crashes or errors out after the first UPDATE but before the second, the transaction gets rolled back and the first UPDATE is undone too, so the money is never stuck half-moved.",
+    "Right — GROUP BY itself doesn't guarantee any particular order; it's ORDER BY total_spent DESC that ranks the groups by their summed total, and Cy's orders add up to 310, the highest of any customer, so Cy's row comes first. Also notice Dee (15 total) doesn't appear at all — LIMIT 3 cuts the sorted list down to just the top three.",
   quizFeedbackIncorrect:
-    "Not quite — transactions aren't about speed or permissions; they exist so that a group of writes either all succeed together or all get rolled back, which is exactly what prevents money from being deducted in one account without ever landing in the other.",
+    "Not quite — insertion order and GROUP BY have no bearing on the result's order at all; only ORDER BY total_spent DESC decides the ranking. Cy's orders sum to 250 + 60 = 310, higher than any other customer's total, which is why Cy's row is ranked first.",
   takeaway:
-    "INSERT appends a new row, UPDATE finds and modifies an existing one, and neither operation knows or cares what else is happening around it — that's precisely why transactions exist, to bundle related writes into one all-or-nothing unit instead of leaving data half-changed.",
+    "ORDER BY decides the ranking and LIMIT cuts the list down to size — put after GROUP BY and an aggregate, that's exactly how a \"top N\" report gets built. You now have every core piece of real SQL: CREATE TABLE and INSERT to build data, SELECT and WHERE to read it back, JOIN to link tables, GROUP BY and aggregates to summarize it, and ORDER BY plus LIMIT to rank and trim it — the same statements a real Python backend sends straight to a real Postgres database.",
 };
 
 export default content;

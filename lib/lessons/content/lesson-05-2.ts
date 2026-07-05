@@ -4,93 +4,65 @@ const content: LessonData = {
   num: 5,
   orderIndex: 2,
   phaseLabel: "HTML, CSS, JAVASCRIPT",
-  title: "The DOM: your page as a living tree",
-  minutes: 20,
+  title: "Control Flow, Arrays, and Objects in Real JavaScript",
+  minutes: 22,
   concept:
-    `When your browser downloads an HTML file, it doesn't just show you the text — it builds a live, in-memory model of every tag as a nested object, called the Document Object Model, or DOM. Each element becomes a node in a tree: a "div" node can contain "button" and "p" nodes, which can contain text nodes, and so on, mirroring the nesting of your HTML tags. JavaScript never edits the original HTML file on the server; instead it reaches into this tree with methods like "document.querySelector" and reads or changes nodes directly. When JavaScript changes a node — its text, its style, whether it exists at all — the browser instantly repaints the screen to match, with no reload and no new file being downloaded. This is why a page can feel alive: everything you see update after a click, a timer, or new data arriving is really just JavaScript rearranging this tree.`,
+    "With variables, types, and functions in hand, the next piece is deciding what runs and how many times. \"if / else if / else\" branches on a condition exactly like you'd expect, and JavaScript gives you two shapes of loop: a classic \"for (let i = 0; i < n; i++)\" when you need the index itself, and \"for (const item of array)\" when you just want each item, one at a time, without touching an index at all. Arrays come with built-in methods that replace a lot of hand-written loops: \".filter(fn)\" keeps only the items where fn returns true, \".map(fn)\" transforms every item into something new and returns a same-length array of the results, and \".forEach(fn)\" just runs fn once per item for its side effects, without collecting anything. These chain naturally — \"array.filter(...).map(...)\" reads left to right as \"first keep these, then transform them.\" The other shape you'll use constantly is the object literal: \"{ name: \\\"Ava\\\", score: 88 }\" bundles related values under named keys instead of juggling separate variables, and you read or change one with dot notation, like \"student.score = 91\". Arrays of objects — a list of records, each with its own named fields — are how almost all real data gets modeled and processed.",
   conceptSimpler:
-    "The DOM is like a stage set built from the script (your HTML) — actors (JavaScript) can move the furniture, swap props, or add new ones mid-show without anyone rewriting the original script.",
+    "if/else is a fork in a hallway. A for loop is walking a hallway a fixed number of times; for-of is walking through a line of people and greeting each one without needing to know their position in line. filter is a bouncer letting some people through and not others; map sends everyone who gets through into a costume-change booth. An object is an index card with labeled fields instead of one bare fact.",
   vizStages: [
     {
-      label: "1. HTML becomes a tree",
+      label: "1. if / else if / else",
       body:
-        "The browser reads your tags and builds a nested structure in memory. A list with three items becomes a 'ul' node holding three 'li' nodes, each holding a text node.",
-      code: `<ul id="todos">\n  <li>Buy milk</li>\n  <li>Walk dog</li>\n</ul>`,
+        "Conditions are checked top to bottom, and the first one that's true wins — the rest are skipped entirely. Here 95 matches the first branch, 82 falls through to the second, and 60 falls all the way to else.",
+      code: "function letterGrade(score) {\n  if (score >= 90) {\n    return \"A\";\n  } else if (score >= 80) {\n    return \"B\";\n  } else {\n    return \"C or below\";\n  }\n}\nconsole.log(letterGrade(95), letterGrade(82), letterGrade(60));",
     },
     {
-      label: "2. JavaScript finds a node",
+      label: "2. for vs. for-of",
       body:
-        "querySelector searches the tree for something matching a CSS-style selector and hands back that exact node as a JavaScript object you can inspect or change.",
-      code: `const list = document.querySelector("#todos");\nconsole.log(list.children.length); // 2`,
+        "The classic for loop gives you the index i, which is useful when you need to know position or count up manually. for-of skips the index bookkeeping entirely and just hands you each item directly, one at a time — cleaner whenever you don't actually need i.",
+      code: "const scores = [95, 82, 60, 71];\n\nfor (let i = 0; i < scores.length; i++) {\n  console.log(`index ${i}: ${scores[i]}`);\n}\n\nfor (const s of scores) {\n  console.log(\"score:\", s);\n}",
     },
     {
-      label: "3. Changing the node changes the screen",
+      label: "3. filter and map",
       body:
-        "Setting a property on the node — like its text content — updates the tree in memory, and the browser repaints instantly. No file was edited, no page reloaded.",
-      code: `const first = document.querySelector("li");\nfirst.textContent = "Buy oat milk";`,
+        "filter walks the array and keeps only the items where the function returns true — passing is 3 numbers long, the original 4-item array untouched. map walks every item and transforms it into something new, always returning the same number of items it started with.",
+      code: "const scores = [95, 82, 60, 71];\nconst passing = scores.filter(s => s >= 70);\nconst grades = scores.map(s => s >= 90 ? \"A\" : \"not A\");\nconsole.log(passing);\nconsole.log(grades);",
     },
     {
-      label: "4. The source file never moved",
+      label: "4. Object literals",
       body:
-        "If you view the page's original source, it still says 'Buy milk' — that's the file as downloaded. Inspecting the live element shows 'Buy oat milk' — that's the DOM, after JavaScript ran.",
-      code: `// View Source: <li>Buy milk</li>\n// Inspect Element: <li>Buy oat milk</li>`,
+        "An object bundles related values under named keys instead of scattering them across separate variables. Dot notation reads a property (student.name) and also writes one — reassigning student.score changes it on the same object.",
+      code: "const student = { name: \"Priya\", score: 88, passed: true };\nconsole.log(student.name, student.score);\nstudent.score = 91;\nconsole.log(student.score);",
     },
   ],
   realWorldIntro:
-    "When you like a post and the counter jumps from \"104\" to \"105\" without the page flashing or reloading, the app didn't rewrite any HTML file — a script found that one number's DOM node and changed its text.",
+    "Any dashboard that shows \"2 of 3 students passed\" is running exactly this pattern under the hood: an array of record objects gets filtered down by a condition, and the resulting array's .length is the number that actually gets displayed.",
   realWorldCode:
-    `const counter = document.querySelector(".like-count");\ncounter.textContent = Number(counter.textContent) + 1;`,
+    "const students = [\n  { name: \"Ava\", score: 92 },\n  { name: \"Lee\", score: 58 },\n  { name: \"Kim\", score: 74 },\n];\n\nconst passing = students.filter(s => s.score >= 60);\nconsole.log(`${passing.length} of ${students.length} students passed`);",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each stage to see the different ways JavaScript can reach into and reshape the DOM.",
-    stages: [
-      {
-        label: "Selecting an element",
-        body:
-          "querySelector takes any CSS selector — a tag, class, or id — and returns the first matching node from the live tree, or null if nothing matches.",
-        code: `const title = document.querySelector("h1.page-title");`,
-      },
-      {
-        label: "Reading vs. writing text",
-        body:
-          "textContent both reads and writes the plain text inside a node. Reading it gets you a string; assigning to it replaces everything inside, instantly, on screen.",
-        code: `console.log(title.textContent); // "Welcome"\ntitle.textContent = "Welcome back!";`,
-      },
-      {
-        label: "innerHTML vs. textContent",
-        body:
-          "innerHTML parses the string as HTML, so it can insert new tags — but that also makes it risky with untrusted input. textContent always treats the string as plain text, safely.",
-        code: `card.innerHTML = "<strong>Featured</strong>";\n// vs.\ncard.textContent = "<strong>Featured</strong>"; // shows the literal tags as text`,
-      },
-      {
-        label: "Creating a brand-new node",
-        body:
-          "createElement builds a node that exists only in memory until you attach it somewhere with appendChild. Nothing appears on screen until that second step.",
-        code: `const li = document.createElement("li");\nli.textContent = "Read a book";\ndocument.querySelector("#todos").appendChild(li);`,
-      },
-      {
-        label: "Removing a node",
-        body:
-          "remove() deletes a node from the tree entirely. The browser repaints immediately, and the element is gone from the DOM — though the string that built it is still sitting in the original HTML file, untouched.",
-        code: `document.querySelector("li").remove();`,
-      },
-    ],
+    kind: "code",
+    challenge:
+      "This prints only the orders over $20. Add code below the loop that uses .map() to turn bigOrders into an array of description strings shaped like \"Headphones — $45\", then compute and log the combined total price of just the big orders (a for-of loop with a running total, or .reduce(), both work).",
+    starterCode:
+      "const orders = [\n  { item: \"Notebook\", price: 4 },\n  { item: \"Headphones\", price: 45 },\n  { item: \"Desk Lamp\", price: 22 },\n  { item: \"Sticky Notes\", price: 3 },\n];\n\nconst bigOrders = orders.filter(order => order.price > 20);\n\nfor (const order of bigOrders) {\n  console.log(`${order.item}: $${order.price}`);\n}",
+    language: "javascript",
   },
   quizQuestion:
-    "A script runs `document.querySelector(\"h1\").textContent = \"Hello!\";`. You then use the browser's 'View Page Source' feature. What does it show for that h1?",
-  quizCode: `<h1>Original Title</h1>\n\n<script>\n  document.querySelector("h1").textContent = "Hello!";\n</script>`,
+    "What does this code print?",
+  quizCode:
+    "const nums = [3, 8, 12, 5, 20];\nconst result = nums.filter(n => n > 6).map(n => n * 2);\nconsole.log(result);",
   quizOptions: [
-    { key: "a", label: "\"Hello!\" — View Source always reflects the latest DOM state", correct: false },
-    { key: "b", label: "\"Original Title\" — View Source shows the file as downloaded, not the live DOM", correct: true },
-    { key: "c", label: "An error, because the HTML file can't be viewed once JavaScript has run", correct: false },
+    { key: "a", label: "[ 16, 24, 40 ]", correct: true },
+    { key: "b", label: "[ 6, 16, 24, 10, 40 ]", correct: false },
+    { key: "c", label: "[ 3, 8, 12, 5, 20 ]", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — View Source (and the original HTML file on the server) never change; only the in-memory DOM does, which is why you need 'Inspect Element' to see live changes JavaScript made.",
+    "Right — filter first keeps only 8, 12, and 20 (the values greater than 6), then map doubles each of those survivors, giving [16, 24, 40]; 3 and 5 never make it past filter, so they're never doubled at all.",
   quizFeedbackIncorrect:
-    "Not quite — View Source always shows the raw file exactly as it was downloaded; JavaScript only ever edits the separate, in-memory DOM, which you'd need 'Inspect Element' to see.",
+    "Not quite — walk it in order: filter runs first and throws out 3 and 5 (not greater than 6), keeping only [8, 12, 20]; map then doubles just those three survivors, giving [16, 24, 40] — filter and map both apply, but filter narrows the array before map ever touches it.",
   takeaway:
-    "The DOM is the live, editable copy of your page that JavaScript works with — changing it updates the screen instantly, but the original HTML file it was built from never gets touched.",
+    "if/else picks a path, for and for-of repeat work a controlled number of times, filter and map turn hand-written loops into one-line transformations, and object literals let you bundle related fields into one value instead of tracking them as separate variables. Arrays of objects — records with named fields — are how most real data actually gets modeled.",
 };
 
 export default content;

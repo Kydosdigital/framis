@@ -4,68 +4,69 @@ const content: LessonData = {
   num: 8,
   orderIndex: 3,
   phaseLabel: "BACKEND: PYTHON + POSTGRES",
-  title: "A join is just two loops looking for a match",
+  title: "GROUP BY: summarizing rows instead of listing them",
   minutes: 20,
   concept:
-    "A join combines rows from two tables based on a shared value — almost always a foreign key on one side matching a primary key on the other. Mechanically, that's exactly what a nested loop does: for every row in the outer table, loop through every row in the inner table and check whether the key columns are equal. When they match, you build a combined result that carries fields from both original rows — an order's total sitting right next to the customer's name, even though that name never lived in the orders table. Nothing about a join is magic: it's a comparison of two values, repeated for every possible pairing of rows, keeping only the pairs where the shared key lines up.",
+    "So far every query has returned one output row per input row. GROUP BY changes that: it collapses many rows sharing the same value in a column down into a single summary row per group — GROUP BY customer takes every order row and buckets them by who placed them, one bucket per distinct customer. On its own, GROUP BY isn't useful yet; it needs an aggregate function in the SELECT list to say what to compute across each bucket. COUNT(*) counts how many rows landed in the group, SUM(amount) adds up a column across the group, AVG(amount) averages it, and MIN/MAX(amount) find the smallest and largest value in the group. One subtlety trips people up constantly: COUNT(*) counts every row in the group regardless of what's in it, but COUNT(some_column) only counts rows where that column isn't NULL — so COUNT(*) and COUNT(coupon_code) can return different numbers from the exact same rows, if some orders have no coupon at all.",
   conceptSimpler:
-    "Imagine two stacks of paper — invoices and customer folders — and for every invoice, you flip through the customer folders until you find the one whose customer number matches; that's a join, just done by hand.",
+    "Imagine dumping every receipt from the year onto a table and then sorting them into one pile per customer — GROUP BY is the sorting into piles, and COUNT/SUM/AVG/MIN/MAX are what you do to each pile afterward: count the receipts in it, add up the totals, or find the smallest and biggest.",
   vizStages: [
     {
-      label: "1. Two separate tables",
+      label: "1. COUNT(*) with no GROUP BY: one number for everything",
       body:
-        "A join starts with two tables that live independently, connected only by a shared key value — here, user_id on orders matches id on users.",
+        "Without a GROUP BY, an aggregate treats the entire table as a single group — COUNT(*) here just answers \"how many orders exist in total,\" collapsing every row into one summary row.",
       code:
-        "users  = [{\"id\": 1, \"name\": \"Ava\"}, {\"id\": 2, \"name\": \"Ben\"}]\norders = [{\"order_id\": 101, \"user_id\": 1, \"total\": 42}, {\"order_id\": 102, \"user_id\": 2, \"total\": 15}]",
+        "CREATE TABLE orders (id, customer, amount);\nINSERT INTO orders VALUES (1, 'Ava', 42);\nINSERT INTO orders VALUES (2, 'Ava', 15);\nINSERT INTO orders VALUES (3, 'Ben', 8);\n\nSELECT COUNT(*) FROM orders;\n\n-- count(*)\n-- 3",
     },
     {
-      label: "2. Outer loop: one order at a time",
+      label: "2. GROUP BY splits that one bucket into many",
       body:
-        "The outer for-loop picks one order. For that single order, we now need to find whichever user it belongs to.",
+        "Adding GROUP BY customer changes the question to \"how many orders per customer\" — now there's one output row per distinct customer value instead of one row for the whole table.",
       code:
-        "for order in orders:\n    # order is one order dict, e.g. {\"order_id\": 101, \"user_id\": 1, \"total\": 42}\n    print(order[\"order_id\"])",
+        "SELECT customer, COUNT(*) AS num_orders\nFROM orders\nGROUP BY customer;\n\n-- customer | num_orders\n-- Ava      | 2\n-- Ben      | 1",
     },
     {
-      label: "3. Inner loop: search for the matching row",
+      label: "3. SUM and AVG summarize a column per group",
       body:
-        "Inside that, a second for-loop scans every user, testing each one against the order's user_id. This nested loop — one inside the other — is the entire mechanism of a join.",
+        "Any aggregate can ride along in the same query — SUM(amount) adds up every order's amount within each customer's group, and AVG(amount) divides that sum by how many orders were in the group.",
       code:
-        "for order in orders:\n    for user in users:\n        if order[\"user_id\"] == user[\"id\"]:\n            print(order[\"order_id\"], \"belongs to\", user[\"name\"])",
+        "SELECT customer, SUM(amount) AS total_spent, AVG(amount) AS avg_order\nFROM orders\nGROUP BY customer;\n\n-- customer | total_spent | avg_order\n-- Ava      | 57          | 28.5\n-- Ben      | 8           | 8",
     },
     {
-      label: "4. Combine the matched fields",
+      label: "4. COUNT(*) vs COUNT(column): NULLs are skipped",
       body:
-        "Once a match is found, build one combined dict pulling whichever fields you want from both sides — this merged row is what a JOIN query actually hands back to your application.",
+        "COUNT(*) counts rows no matter what. COUNT(coupon) only counts rows where coupon isn't NULL — two orders here have no coupon at all, so COUNT(coupon) comes back much smaller than COUNT(*), even scanning the exact same three rows.",
       code:
-        "joined = []\nfor order in orders:\n    for user in users:\n        if order[\"user_id\"] == user[\"id\"]:\n            joined.append({\"order_id\": order[\"order_id\"], \"customer\": user[\"name\"], \"total\": order[\"total\"]})\nprint(len(joined), \"orders joined to their customers\")",
+        "CREATE TABLE orders (id, customer, amount, coupon);\nINSERT INTO orders VALUES (1, 'Ava', 42, 'SAVE10');\nINSERT INTO orders VALUES (2, 'Ben', 15, null);\nINSERT INTO orders VALUES (3, 'Cy', 8, null);\n\nSELECT COUNT(*) AS all_rows, COUNT(coupon) AS rows_with_coupon FROM orders;\n\n-- all_rows | rows_with_coupon\n-- 3        | 1",
     },
   ],
   realWorldIntro:
-    "Postgres runs this same nested comparison under the hood for a JOIN, though its query planner usually replaces the brute-force nested loop with a faster strategy — like a hash join or a merge join — once an index exists on the key columns.",
+    "This is exactly how a real analytics dashboard is built — \"orders per day,\" \"average order value per region,\" \"signups per plan\" are all just GROUP BY plus an aggregate, run directly against Postgres by a backend endpoint. Real SQL also has a HAVING clause, which filters groups after aggregating (e.g. only customers with more than 5 orders) the way WHERE filters rows before aggregating — a good thing to know exists, even though this sandbox's SQL engine doesn't support it.",
   realWorldCode:
-    "SELECT orders.order_id, users.name AS customer, orders.total\nFROM orders\nJOIN users ON orders.user_id = users.id;",
+    "-- HAVING filters *groups*, the way WHERE filters *rows* — real Postgres only:\nSELECT customer, SUM(amount) AS total_spent\nFROM orders\nGROUP BY customer\nHAVING SUM(amount) > 100;",
   sandbox: {
     kind: "code",
     challenge:
-      "Write nested loops that join the orders table to the users table on user_id, then print each order's id, its customer's name, and its total.",
+      "Insert the six orders shown, then write a single GROUP BY query that reports each customer's number of orders, total spent, and average order size.",
     starterCode:
-      "users = [{\"id\": 1, \"name\": \"Ava\"}, {\"id\": 2, \"name\": \"Ben\"}, {\"id\": 3, \"name\": \"Cy\"}]\norders = [{\"order_id\": 101, \"user_id\": 1, \"total\": 42}, {\"order_id\": 102, \"user_id\": 2, \"total\": 15}, {\"order_id\": 103, \"user_id\": 1, \"total\": 8}]\n\ndef join_orders_to_users(orders, users):\n    joined = []\n    for order in orders:\n        for user in users:\n            if order[\"user_id\"] == user[\"id\"]:\n                row = {\"order_id\": order[\"order_id\"], \"customer\": user[\"name\"], \"total\": order[\"total\"]}\n                joined.append(row)\n    return joined\n\nresult = join_orders_to_users(orders, users)\nfor row in result:\n    print(row[\"order_id\"], row[\"customer\"], row[\"total\"])\nprint(\"total joined rows:\", len(result))",
+      "CREATE TABLE orders (id, customer, amount);\n\nINSERT INTO orders VALUES (1, 'Ava', 42);\nINSERT INTO orders VALUES (2, 'Ava', 15);\nINSERT INTO orders VALUES (3, 'Ben', 8);\nINSERT INTO orders VALUES (4, 'Cy', 250);\nINSERT INTO orders VALUES (5, 'Ava', 33);\nINSERT INTO orders VALUES (6, 'Ben', 62);\n\nSELECT customer, COUNT(*) AS num_orders, SUM(amount) AS total_spent, AVG(amount) AS avg_order\nFROM orders\nGROUP BY customer;",
+    language: "sql",
   },
   quizQuestion:
-    "In the nested loop below, what actually decides whether an order and a user get joined together?",
+    "In the query below, COUNT(*) returns 3 but COUNT(coupon) returns 1 for the exact same three rows. Why?",
   quizCode:
-    "for order in orders:\n    for user in users:\n        if order[\"user_id\"] == user[\"id\"]:\n            print(order[\"order_id\"], user[\"name\"])",
+    "CREATE TABLE orders (id, customer, amount, coupon);\nINSERT INTO orders VALUES (1, 'Ava', 42, 'SAVE10');\nINSERT INTO orders VALUES (2, 'Ben', 15, null);\nINSERT INTO orders VALUES (3, 'Cy', 8, null);\n\nSELECT COUNT(*) AS all_rows, COUNT(coupon) AS rows_with_coupon FROM orders;",
   quizOptions: [
-    { key: "a", label: "Whether they appear at the same index position in their lists", correct: false },
-    { key: "b", label: "Whether order[\"user_id\"] equals user[\"id\"]", correct: true },
-    { key: "c", label: "Whether the inner loop happens to run before the outer loop finishes", correct: false },
+    { key: "a", label: "COUNT(*) counts every row; COUNT(coupon) only counts rows where coupon is not NULL", correct: true },
+    { key: "b", label: "COUNT(coupon) only counts distinct coupon codes, and two of them happen to repeat", correct: false },
+    { key: "c", label: "COUNT(*) is a rough estimate and COUNT(column) is the exact, correct count", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — the if-check comparing order[\"user_id\"] to user[\"id\"] is the entire join condition; position in the list and loop order don't matter at all, only that one equality test.",
+    "Right — COUNT(*) counts rows unconditionally, so all 3 orders count. COUNT(coupon) skips any row where that column is NULL, and 2 of the 3 orders have no coupon at all, leaving just 1 row counted.",
   quizFeedbackIncorrect:
-    "Not quite — list position and loop order have nothing to do with it; the only thing that decides a match is the if-check comparing order[\"user_id\"] to user[\"id\"].",
+    "Not quite — neither COUNT is an estimate, and this has nothing to do with distinct values. COUNT(*) counts every row no matter what; COUNT(coupon) only counts rows where coupon isn't NULL, and 2 of the 3 rows here have a NULL coupon.",
   takeaway:
-    "A join is a nested loop plus an equality test on a shared key — for every row on one side, scan the other side for a row whose key matches, and combine the two when it does. Real databases speed this up with indexes and smarter algorithms, but that nested comparison is the logical operation every join performs.",
+    "GROUP BY collapses rows that share a column's value into one summary row per group, and an aggregate — COUNT, SUM, AVG, MIN, or MAX — decides what that summary row reports. Watch NULLs closely: COUNT(*) counts rows regardless of content, while COUNT(some_column) silently skips any row where that column is empty.",
 };
 
 export default content;

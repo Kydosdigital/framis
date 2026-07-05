@@ -4,93 +4,65 @@ const content: LessonData = {
   num: 5,
   orderIndex: 4,
   phaseLabel: "HTML, CSS, JAVASCRIPT",
-  title: "Events: teaching your page to listen",
+  title: "One Button, Three Real Languages",
   minutes: 20,
   concept:
-    `Browsers constantly fire "events" as the user interacts with a page — a click, typing a character, submitting a form, pressing a key — and JavaScript can attach a listener to any element with "addEventListener" to run code the instant one of those events happens. Every listener receives an "event" object describing exactly what happened: which element was involved ("event.target"), what was typed ("event.target.value"), or which key was pressed ("event.key"). Some events have a default browser action baked in — clicking a submit button reloads the page, clicking a link navigates away — and calling "event.preventDefault()" inside your handler is how you cancel that default so your own JavaScript can take over instead. This combination — listen, inspect, sometimes prevent — is the entire mechanism behind every interactive page: nothing "just happens" without an event firing and a listener responding to it.`,
+    "A single button on a webpage is built from three separate layers, each written in a different language. HTML gives it structure — it says \"there is a button here\" and nothing more. CSS gives it style — colors, size, spacing, rounded corners, how children are arranged with tools like display: flex. JavaScript gives it behavior, and after the last three lessons you know that \"behavior\" isn't magic glue — it's real code: variables, functions, arrays and objects, if/else, all wired to the page through addEventListener. These three layers stay separate on purpose: you can restyle a button without touching what it does, and you can change what it does without touching how it looks. What makes JavaScript different from the other two is that it's a full programming language underneath the DOM plumbing — the same functions you write and test with plain console.log calls are exactly what a click handler calls when a real user clicks a real button.",
   conceptSimpler:
-    "An event listener is like a doorbell — it waits silently and does nothing until someone presses it, and only then does your code (the person answering the door) spring into action.",
+    "HTML is the skeleton, CSS is the skin and clothes, and JavaScript is the muscles and the brain — and you've now learned enough of that \"brain\" language (variables, functions, arrays, objects, control flow) to write real logic, not just watch it happen.",
   vizStages: [
     {
-      label: "1. A click event",
+      label: "1. HTML — structure only",
       body:
-        "addEventListener attaches a function to a button that only runs when a 'click' event fires on it — the function sits idle the rest of the time.",
-      code: `button.addEventListener("click", () => {\n  console.log("Clicked!");\n});`,
+        "A button element with a label. Plain gray, default font, no reaction to clicks. It exists, that's all — no CSS or JS have touched it yet.",
+      code: "<button>Add to Cart</button>",
     },
     {
-      label: "2. An input event, firing on every keystroke",
+      label: "2. CSS — now it has a look",
       body:
-        "The 'input' event fires every single time the text inside a field changes, letting you react live as someone types rather than waiting for them to finish.",
-      code: `input.addEventListener("input", (event) => {\n  console.log(event.target.value);\n});`,
+        "A style rule gives it color, padding, and rounded corners. If this button lived inside a row of controls, display: flex on its container is what would line them all up evenly — CSS handles look and layout, but clicking still does nothing.",
+      code: "button {\n  background: #2563eb;\n  color: white;\n  padding: 10px 18px;\n  border-radius: 8px;\n  border: none;\n}\n\n.toolbar {\n  display: flex;\n  justify-content: space-between;\n}",
     },
     {
-      label: "3. A form's default action",
+      label: "3. JavaScript — real logic, not just glue",
       body:
-        "Without any JavaScript, clicking submit on a form does one built-in thing: it sends the data and reloads (or navigates) the page — this happens whether or not you've written a listener.",
-      code: `<form>\n  <input name="email" />\n  <button type="submit">Sign up</button>\n</form>`,
+        "cartTotal is an ordinary function — no DOM in it at all — that adds up prices. You could call it and console.log the result with no button anywhere. The click handler below just calls that same function at the right moment.",
+      code: "function cartTotal(items) {\n  let total = 0;\n  for (const item of items) {\n    total += item.price;\n  }\n  return total;\n}\n\nbutton.addEventListener(\"click\", () => {\n  cart.push({ name: \"Mug\", price: 9 });\n  totalDisplay.textContent = cartTotal(cart);\n});",
     },
     {
-      label: "4. Overriding it with preventDefault",
+      label: "4. All three, together",
       body:
-        "Calling event.preventDefault() inside the submit handler cancels that built-in reload, so your own code — validating the email, sending it with fetch — is fully in charge of what happens next.",
-      code: `form.addEventListener("submit", (event) => {\n  event.preventDefault();\n  console.log("Handling this ourselves.");\n});`,
+        "The final button is the sum of all three files acting on the same element: HTML defines it, CSS decorates it, and JavaScript — a real function plus an event listener — decides what happens when it's clicked. Remove any one layer and the others still exist, just missing that piece.",
+      code: "<!-- HTML -->\n<button id=\"add-btn\">Add to Cart</button>\n<span id=\"total\">$0</span>\n\n/* CSS */\n#add-btn { background: #2563eb; color: white; border-radius: 8px; }\n\n// JavaScript\nfunction cartTotal(items) {\n  let total = 0;\n  for (const item of items) total += item.price;\n  return total;\n}\n\nlet cart = [];\ndocument.getElementById(\"add-btn\").addEventListener(\"click\", () => {\n  cart.push({ name: \"Mug\", price: 9 });\n  document.getElementById(\"total\").textContent = `$${cartTotal(cart)}`;\n});",
     },
   ],
   realWorldIntro:
-    "The instant search suggestions that pop up under Amazon or Google's search box as you type are built on the 'input' event — a listener fires on every keystroke and fetches fresh results before you've even finished the word.",
+    "Every \"Add to Cart\" button on an online store works this way: HTML places it, CSS makes it stand out, and JavaScript runs real functions — computing a total, formatting a price — that you could write and test on their own, with no button in sight, exactly like the sandbox challenge below.",
   realWorldCode:
-    `searchBox.addEventListener("input", (event) => {\n  fetchSuggestions(event.target.value);\n});`,
+    "function addToCart(cart, item) {\n  cart.push(item);\n  return cart;\n}\n\nlet cart = [\"Notebook\"];\ncart = addToCart(cart, \"Pen Set\");\nconsole.log(cart);",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each stage to compare how different events fire and what handling them looks like.",
-    stages: [
-      {
-        label: "Click: a simple counter",
-        body:
-          "Each click fires the 'click' event once, and the handler increments a number and writes it back into the page — a click is a single, discrete moment in time.",
-        code: `let count = 0;\nbutton.addEventListener("click", () => {\n  count++;\n  display.textContent = count;\n});`,
-      },
-      {
-        label: "Input: a live character count",
-        body:
-          "The 'input' event fires continuously as someone types or deletes, so a character counter can update in real time instead of only checking once at the end.",
-        code: `textarea.addEventListener("input", (event) => {\n  charCount.textContent = event.target.value.length;\n});`,
-      },
-      {
-        label: "Submit without preventDefault",
-        body:
-          "This handler logs a message, but because preventDefault was never called, the browser still performs its default action right after — the page navigates or reloads, wiping out that console log.",
-        code: `form.addEventListener("submit", () => {\n  console.log("about to lose this page...");\n});`,
-      },
-      {
-        label: "Submit with preventDefault and validation",
-        body:
-          "Here the default reload is cancelled first, so the code can check the input, show an error message if it's empty, and only move on when the data actually looks valid — all without leaving the page.",
-        code: `form.addEventListener("submit", (event) => {\n  event.preventDefault();\n  if (email.value === "") {\n    errorText.textContent = "Email is required";\n    return;\n  }\n  submitToServer(email.value);\n});`,
-      },
-      {
-        label: "Keydown: reacting to a specific key",
-        body:
-          "The 'keydown' event fires for every key press and includes which key it was, letting you trigger an action — like submitting a search — only when Enter specifically was pressed.",
-        code: `input.addEventListener("keydown", (event) => {\n  if (event.key === "Enter") {\n    runSearch(input.value);\n  }\n});`,
-      },
-    ],
+    kind: "code",
+    challenge:
+      "This is the real logic behind an \"Add to Cart\" button — the same functions a click handler would call, testable with zero DOM required. Add a function formatCartLine(item) that returns a template-literal string shaped like \"Notebook — $4\", use .map() to build an array of those lines from cart after the new item is added, and console.log the result.",
+    starterCode:
+      "const cart = [\n  { name: \"Notebook\", price: 4 },\n  { name: \"Pen Set\", price: 6 },\n];\n\nfunction cartTotal(items) {\n  let total = 0;\n  for (const item of items) {\n    total += item.price;\n  }\n  return total;\n}\n\nfunction addItem(items, newItem) {\n  items.push(newItem);\n  return items;\n}\n\nconsole.log(`Cart total: $${cartTotal(cart)}`);\n\naddItem(cart, { name: \"Sticky Notes\", price: 3 });\nconsole.log(`After adding an item, cart total: $${cartTotal(cart)}`);",
+    language: "javascript",
   },
   quizQuestion:
-    "A form has this submit handler, and it never calls event.preventDefault(). What happens when the user clicks the submit button?",
-  quizCode: `form.addEventListener("submit", (event) => {\n  console.log("Form submitted, saving locally...");\n  saveDraft(event.target);\n});`,
+    "Only one of these three blocks actually runs any logic and produces console output. What does it print?",
+  quizCode:
+    "<button class=\"add-btn\">Add to Cart</button>\n\n.add-btn { background: orange; }\n\nfunction cartTotal(items) {\n  let total = 0;\n  for (const item of items) {\n    total += item.price;\n  }\n  return total;\n}\n\nconst cart = [{ name: \"Mug\", price: 9 }, { name: \"Sticker\", price: 2 }];\nconsole.log(`Total: $${cartTotal(cart)}`);",
   quizOptions: [
-    { key: "a", label: "The handler runs, and then the browser still performs its default action of reloading or navigating the page", correct: true },
-    { key: "b", label: "The form submission is automatically cancelled because JavaScript is handling the event", correct: false },
-    { key: "c", label: "Nothing happens at all, because the handler is missing preventDefault", correct: false },
+    { key: "a", label: "The HTML and CSS blocks together produce \"Total: $0\", since the button starts empty", correct: false },
+    { key: "b", label: "Total: $11 — produced entirely by the JavaScript block; HTML and CSS never run logic or log anything on their own", correct: true },
+    { key: "c", label: "Nothing prints, because a <button> and a JS function can't exist in the same file", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — attaching a listener doesn't cancel the browser's built-in behavior on its own; the handler runs first, but the page still reloads or navigates afterward unless preventDefault() is called.",
+    "Right — HTML only describes structure and CSS only describes style; neither one runs code or produces console output. Only the JavaScript executes, and cartTotal adds 9 + 2 to log \"Total: $11\".",
   quizFeedbackIncorrect:
-    "Not quite — the handler does run, but simply having a listener doesn't stop the browser's default submit behavior; only calling event.preventDefault() inside it cancels the reload or navigation.",
+    "Not quite — HTML and CSS are never executed as logic; they just describe structure and appearance. The JavaScript block is what actually runs, and cartTotal(cart) adds 9 + 2, so the real output is \"Total: $11\".",
   takeaway:
-    "Events are how JavaScript finds out what a user just did, and preventDefault is how you take over from the browser's built-in reaction — together they're what makes clicks, typing, and form submissions feel instant instead of triggering a page reload.",
+    "Every interactive element on the web is three layers stacked together: HTML for structure, CSS for style, and JavaScript for behavior. What's changed now is that you know JavaScript is a real, full language — the same variables, functions, arrays, objects, and control flow you practiced in this module are exactly what run inside every event handler on every page you'll ever build.",
 };
 
 export default content;

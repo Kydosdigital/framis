@@ -4,64 +4,66 @@ const content: LessonData = {
   num: 8,
   orderIndex: 1,
   phaseLabel: "BACKEND: PYTHON + POSTGRES",
-  title: "The WHERE clause is just a loop and an if",
+  title: "CREATE, INSERT, SELECT: your first real table",
   minutes: 20,
   concept:
-    "When your app asks a database for \"users where plan equals pro,\" something very unglamorous is happening underneath: the database walks through rows one at a time and keeps only the ones that pass a test. You can simulate that exact process yourself with plain code, before you ever touch real SQL. Represent a table as a list of dictionaries, where each dictionary is one row and each key is a column — a \"users\" table becomes a list of {\"id\": ..., \"name\": ..., \"plan\": ...} objects. To run a query, loop over that list with a for-loop, and inside the loop, test the condition you care about with an if-statement. Every row that passes the if-check gets appended to a brand-new list, and that new list is your query result — same shape as what a real database would hand back. There's no magic \"database\" behavior involved: it's a list, a loop, and a condition, and that's the mental model underneath every WHERE clause you'll ever write.",
+    "Every relational database — Postgres included — starts from the same three moves. First, CREATE TABLE declares the shape of your data once: a name for the table and a name for every column it will ever have. Nothing is stored yet, only the promise of what a row will look like. Second, INSERT INTO adds one row at a time, supplying a value for each column in the exact order the table declared them — that's the entire mechanism for getting data into a database, no matter how large the table eventually grows. Third, SELECT reads rows back out: SELECT * FROM table asks for every column of every row, and adding WHERE narrows that down to only the rows matching a condition — the database checks that condition against each row and keeps only the ones that pass. Those three statements, in that order, are how data is born, and how you ask for it again.",
   conceptSimpler:
-    "Think of a bouncer flipping through a stack of ID cards one at a time and only pulling the ones where the birthdate matches the rule they were given — the WHERE clause is just the bouncer's rule for which cards get pulled aside.",
+    "CREATE TABLE is drawing the blank form; INSERT INTO is filling out one copy of that form per person; SELECT ... WHERE is asking a filing clerk to hand you only the forms that match a rule you give them.",
   vizStages: [
     {
-      label: "1. The \"table\" is a list of dicts",
+      label: "1. CREATE TABLE declares the shape",
       body:
-        "Before any querying happens, the data has to exist somewhere. Here it's a plain Python list, and each row is a dictionary — the keys are column names, the values are that row's data for each column.",
-      code: "users = [\n    {\"id\": 1, \"name\": \"Ava\", \"plan\": \"pro\"},\n    {\"id\": 2, \"name\": \"Ben\", \"plan\": \"free\"},\n    {\"id\": 3, \"name\": \"Cy\", \"plan\": \"pro\"},\n]",
+        "Before any data exists, you name the table and list its columns. No rows are stored by this statement alone — it just fixes what every future row will have to look like.",
+      code: "CREATE TABLE users (id, name, plan, age);",
     },
     {
-      label: "2. Looping is the table scan",
+      label: "2. INSERT INTO adds one row",
       body:
-        "A for-loop visits every single row in order, one at a time, with nothing skipped. This is exactly what a database does when it can't use an index — it's called a \"sequential scan,\" and it's the brute-force way to check every row.",
-      code: "for row in users:\n    # row is now one dict at a time:\n    # {\"id\": 1, \"name\": \"Ava\", \"plan\": \"pro\"}\n    print(row[\"name\"])",
+        "Each INSERT supplies a value for every column, in the same order the table declared them — the first value fills id, the second fills name, and so on. Run it once per row you want to add.",
+      code:
+        "INSERT INTO users VALUES (1, 'Ava', 'pro', 29);\nINSERT INTO users VALUES (2, 'Ben', 'free', 34);\nINSERT INTO users VALUES (3, 'Cy', 'pro', 22);",
     },
     {
-      label: "3. The if-check is the WHERE clause",
+      label: "3. SELECT * reads every column back",
       body:
-        "Inside the loop, an if-statement tests one row against a condition. This single line is the entire WHERE clause — everything else in the function is just plumbing to get here and to collect what passes.",
-      code: "for row in users:\n    if row[\"plan\"] == \"pro\":\n        # this row matches the WHERE clause\n        print(row[\"name\"], \"is a match\")",
+        "SELECT * FROM users asks for all columns of every row that's been inserted so far — this is the plainest possible query, with nothing filtered out yet.",
+      code: "SELECT * FROM users;\n\n-- id | name | plan | age\n-- 1  | Ava  | pro  | 29\n-- 2  | Ben  | free | 34\n-- 3  | Cy   | pro  | 22",
     },
     {
-      label: "4. Appending builds the result set",
+      label: "4. WHERE keeps only the rows that pass",
       body:
-        "Every row that passes the if-check gets appended to a fresh, empty list. When the loop finishes, that list holds exactly the rows a database would return — this is the SELECT result.",
-      code: "matches = []\nfor row in users:\n    if row[\"plan\"] == \"pro\":\n        matches.append(row)\n\nprint(len(matches), \"rows matched\")",
+        "Adding WHERE tests every row against a condition and keeps only the ones that match — the database checks plan = 'pro' against each row in turn, the same way you'd flip through index cards pulling out only the ones that fit a rule.",
+      code: "SELECT name, age FROM users WHERE plan = 'pro';\n\n-- name | age\n-- Ava  | 29\n-- Cy   | 22",
     },
   ],
   realWorldIntro:
-    "In a real backend, calling something like User.objects.filter(plan=\"pro\") in an ORM, or sending raw SQL straight to Postgres, triggers this same scan-and-check logic inside the database engine — the difference is Postgres can use an index to skip most of the scanning instead of checking every single row.",
-  realWorldCode: "SELECT * FROM users WHERE plan = 'pro';",
+    "The CREATE TABLE, INSERT INTO, and SELECT statements you just wrote are not a simulation of SQL — they're real SQL, and Postgres accepts this exact syntax. A production table adds two things this sandbox skips: column types (id is an INTEGER, name is TEXT) and a persistent disk file, so the data survives after the program exits instead of resetting every time you hit run.",
+  realWorldCode:
+    "-- what the same table looks like in real Postgres,\n-- with types and a primary key:\nCREATE TABLE users (\n    id SERIAL PRIMARY KEY,\n    name TEXT NOT NULL,\n    plan TEXT NOT NULL,\n    age INTEGER\n);",
   sandbox: {
     kind: "code",
     challenge:
-      "Write a function that scans a list of user rows and returns only the ones on the \"pro\" plan, mimicking a SQL WHERE clause — then print how many matched and each of their names.",
+      "Create a users table with columns id, name, plan, and age. Insert the five rows shown, then write a SELECT that returns just the name and age of every user on the \"pro\" plan.",
     starterCode:
-      "users = [{\"id\": 1, \"name\": \"Ava\", \"plan\": \"pro\"}, {\"id\": 2, \"name\": \"Ben\", \"plan\": \"free\"}, {\"id\": 3, \"name\": \"Cy\", \"plan\": \"pro\"}, {\"id\": 4, \"name\": \"Dee\", \"plan\": \"free\"}]\n\ndef find_by_plan(rows, plan):\n    matches = []\n    for row in rows:\n        if row[\"plan\"] == plan:\n            matches.append(row)\n    return matches\n\npro_users = find_by_plan(users, \"pro\")\nprint(\"pro users found:\", len(pro_users))\nfor row in pro_users:\n    print(row[\"name\"])",
+      "CREATE TABLE users (id, name, plan, age);\n\nINSERT INTO users VALUES (1, 'Ava', 'pro', 29);\nINSERT INTO users VALUES (2, 'Ben', 'free', 34);\nINSERT INTO users VALUES (3, 'Cy', 'pro', 22);\nINSERT INTO users VALUES (4, 'Dee', 'free', 41);\nINSERT INTO users VALUES (5, 'Eli', 'pro', 31);\n\nSELECT name, age FROM users WHERE plan = 'pro';",
+    language: "sql",
   },
   quizQuestion:
-    "In the function below, which line is doing the actual filtering — the direct equivalent of a SQL WHERE clause?",
+    "Given the same users table, how many rows does this query return?",
   quizCode:
-    "def find_active_admins(rows):\n    matches = []\n    for row in rows:\n        if row[\"role\"] == \"admin\" and row[\"active\"] == True:\n            matches.append(row)\n    return matches\n\nrows = [{\"name\": \"Ava\", \"role\": \"admin\", \"active\": True}, {\"name\": \"Ben\", \"role\": \"admin\", \"active\": False}]\nresult = find_active_admins(rows)\nprint(len(result))",
+    "CREATE TABLE users (id, name, plan, age);\n\nINSERT INTO users VALUES (1, 'Ava', 'pro', 29);\nINSERT INTO users VALUES (2, 'Ben', 'free', 34);\nINSERT INTO users VALUES (3, 'Cy', 'pro', 22);\nINSERT INTO users VALUES (4, 'Dee', 'free', 41);\nINSERT INTO users VALUES (5, 'Eli', 'pro', 31);\n\nSELECT name FROM users WHERE plan = 'pro' AND age > 25;",
   quizOptions: [
-    { key: "a", label: "for row in rows: — it's what visits every row in the table", correct: false },
-    { key: "b", label: "if row[\"role\"] == \"admin\" and row[\"active\"] == True: — it's the condition each row must pass", correct: true },
-    { key: "c", label: "matches.append(row) — it's what builds the returned result set", correct: false },
+    { key: "a", label: "3 rows — every user on the pro plan", correct: false },
+    { key: "b", label: "2 rows — only pro-plan users older than 25 (Ava and Eli; Cy is 22, too young)", correct: true },
+    { key: "c", label: "0 rows — AND can't combine two different columns in one WHERE", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — the for-loop just walks every row (like scanning the whole table) and append just collects whatever survives, but the if-statement is the one place that decides pass or fail, which is exactly what a WHERE clause does.",
+    "Right — AND requires both conditions to hold for the same row. Ava (pro, 29) and Eli (pro, 31) both pass; Cy is on the pro plan but is only 22, so the age check fails and that row is dropped.",
   quizFeedbackIncorrect:
-    "Not quite — the for-loop only visits rows and append only saves rows that already passed, neither one decides anything; the if-statement is the single line making the pass-or-fail decision, which is what a WHERE clause actually is.",
+    "Not quite — AND means both conditions must be true for a row to survive. Cy is pro but only 22, so age > 25 fails for that row; only Ava (29) and Eli (31) pass both checks, which makes it 2 rows.",
   takeaway:
-    "Any WHERE clause, at its core, is a scan plus a condition: visit every row, test it, keep the ones that pass. Real databases add indexes and query planners to skip work, but the logical shape never changes — a loop and an if is the whole idea.",
-  nextUpLabel: "Testing (unit/integration/e2e)",
+    "CREATE TABLE fixes a table's columns once, INSERT INTO appends one row at a time in that column order, and SELECT ... WHERE reads rows back out, keeping only the ones that pass a condition. That loop — declare the shape, add rows, query them back — is the foundation everything else in SQL builds on.",
 };
 
 export default content;

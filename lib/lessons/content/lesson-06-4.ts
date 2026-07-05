@@ -4,109 +4,80 @@ const content: LessonData = {
   num: 6,
   orderIndex: 4,
   phaseLabel: "REACT BASICS + COMPONENTS",
-  title: "useEffect: running code when things change",
-  minutes: 22,
+  title: "Controlled inputs: keeping value and onChange in sync",
+  minutes: 20,
   concept:
-    "A component function's job is to return JSX describing the UI — it's not supposed to also fetch data, start a timer, or talk to a browser API while it's busy rendering. useEffect is React's way of saying \"run this code, but only after the render has finished and the screen is updated,\" which is exactly where side effects like data fetching, subscriptions, and manual DOM work belong. useEffect takes a function to run and a dependency array that controls when it reruns: an empty array [] means \"only run once, right after the first render\"; a list like [userId] means \"rerun whenever userId changes between renders\"; and leaving the array off entirely means \"rerun after every single render.\" If the effect sets something up that needs to be undone — like a timer or a subscription — the function can return a cleanup function, which React calls right before the effect runs again or before the component disappears from the screen entirely, so nothing keeps running after it's no longer needed.",
+    "An <input> becomes a controlled input the moment its value comes from state instead of the DOM managing it independently: you set value={text} so the input always shows whatever state currently holds, and you set onChange={handleChange} so every keystroke reads event.target.value and feeds it back into the setter. That closes a loop — state drives what's on screen, typing drives what state becomes, and the next render shows the result — which is exactly the state-update pattern from earlier in this module, just triggered by a browser input event instead of a button click. The part worth noticing is that event.target.value is always the input's FULL current text, not just the character that was typed, so handling it is really just \"take whatever came through this event, and make that the new state.\" For a form with several fields, the same idea extends naturally: state becomes an object with one property per field, and a single onChange handler updates just the one field that changed, leaving the others exactly as they were. Without value+onChange wired together like this — an \"uncontrolled\" input — the DOM quietly manages the text on its own, and React has no way to know what's currently typed until it explicitly reads the DOM node.",
   conceptSimpler:
-    "Think of rendering as writing a letter and useEffect as the errand you run right after you seal the envelope — the errand happens after the main task is done, and the dependency array is your note for how often to repeat that errand.",
+    "A controlled input is like a whiteboard where you're only allowed to write what's on your notepad — every time you touch the whiteboard, you first update the notepad, then copy the notepad onto the board. The board (the input) never has anything on it that isn't also written down (in state) first.",
   vizStages: [
     {
-      label: "1. Component renders first",
+      label: "1. Wiring value and onChange together",
       body:
-        "React runs the component function and puts the returned JSX on screen. At this point, useEffect's callback has not run yet — rendering always finishes first.",
-      code: "function Profile({ userId }) {\n  const [user, setUser] = useState(null);\n  // render happens here, user is still null\n  return <p>{user ? user.name : \"Loading...\"}</p>;\n}",
+        "The input's value attribute is bound to a piece of state, and its onChange is a handler that will update that same state. Right now, on the very first render, text is an empty string, so the input starts out blank.",
+      code: "function NameField() {\n  const [text, setText] = useState(\"\");\n  return (\n    <input\n      value={text}\n      onChange={(e) => setText(e.target.value)}\n    />\n  );\n}",
     },
     {
-      label: "2. After paint, the effect runs",
+      label: "2. The user types a character",
       body:
-        "Once the screen reflects the initial render, React calls the effect function. This is the safe place to kick off a fetch, since it happens outside of rendering.",
-      code: "useEffect(() => {\n  fetchUser(userId).then(setUser);\n}, [userId]);",
+        "Typing fires the onChange handler. The event object's target.value is the input's entire current text, not just the new character — so if the box already said \"A\" and the user types \"n\", event.target.value comes through as \"An\".",
+      code: "onChange={(e) => setText(e.target.value)}\n// user had \"A\", types \"n\" -> e.target.value is \"An\"\n// this calls setText(\"An\")",
     },
     {
-      label: "3. The dependency array decides what triggers a rerun",
+      label: "3. React re-renders with the new state",
       body:
-        "React compares each dependency to its value from the previous render. Because userId is in the array, the effect only reruns when userId itself actually changes — not on every unrelated re-render.",
-      code: "// userId changes from 1 to 2 -> effect reruns\n// some other state changes -> effect is skipped",
+        "Just like any other state update, calling setText schedules a re-render. NameField runs again, useState now returns \"An\", and the JSX it returns sets value={\"An\"} on the input.",
+      code: "function NameField() {\n  const [text, setText] = useState(\"\"); // returns \"An\" this time\n  return <input value={text} onChange={...} />;\n}",
     },
     {
-      label: "4. Cleanup runs before the next effect or unmount",
+      label: "4. Many fields, one state object",
       body:
-        "If the effect returns a function, React calls that cleanup right before running the effect again, and one final time when the component is removed from the page — closing sockets, clearing timers, canceling subscriptions.",
-      code: "useEffect(() => {\n  const id = setInterval(tick, 1000);\n  return () => clearInterval(id); // cleanup\n}, []);",
+        "A form with several inputs usually keeps one state object, updating a single field at a time while leaving the rest exactly as they were — the same computed-key pattern from working with objects generally, just triggered by typing.",
+      code: "const [form, setForm] = useState({ name: \"\", email: \"\" });\n\nfunction handleChange(field, value) {\n  setForm((prev) => {\n    const next = { name: prev.name, email: prev.email };\n    next[field] = value;\n    return next;\n  });\n}\n\n<input value={form.name} onChange={(e) => handleChange(\"name\", e.target.value)} />\n<input value={form.email} onChange={(e) => handleChange(\"email\", e.target.value)} />",
     },
   ],
   realWorldIntro:
-    "A live stock price widget uses useEffect to open a connection when it mounts, tying the subscription's lifetime to the component's — and to clean up that connection the moment the widget leaves the screen so the app doesn't keep listening for prices nobody is looking at.",
+    "A signup form validates as you type using exactly this pattern — every keystroke in the email field updates state with the latest text, and the component re-renders to show a live \"looks valid\" or \"missing @\" message without ever needing to explicitly ask the DOM what's currently typed.",
   realWorldCode:
-    "useEffect(() => {\n  const socket = connectToPrices(ticker);\n  socket.on(\"update\", setPrice);\n  return () => socket.disconnect();\n}, [ticker]);",
+    "function SignupEmail() {\n  const [email, setEmail] = useState(\"\");\n  const looksValid = email.includes(\"@\");\n  return (\n    <>\n      <input value={email} onChange={(e) => setEmail(e.target.value)} />\n      {email.length > 0 && (looksValid ? <p>Looks good</p> : <p>Missing @</p>)}\n    </>\n  );\n}",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each stage to see how the same useEffect call behaves differently depending on what's in its dependency array.",
-    stages: [
-      {
-        label: "No dependency array: runs after every render",
-        body:
-          "Leaving off the array entirely means the effect has no condition to check, so React just reruns it after every single render — including ones caused by unrelated state changes. This is rarely what you want.",
-        code: "useEffect(() => {\n  console.log(\"ran again\");\n}); // no array: logs after every render",
-      },
-      {
-        label: "Empty array: runs once, on mount only",
-        body:
-          "An empty array [] has nothing that can ever change, so React treats the effect as having no dependencies to react to — it fires exactly once, right after the component first appears.",
-        code: "useEffect(() => {\n  console.log(\"mounted\");\n}, []); // logs once, ever",
-      },
-      {
-        label: "Array with a value: runs on mount, then again only when it changes",
-        body:
-          "With [userId] in the array, the effect fires once on mount, then compares userId on every later render — only rerunning fetchUser when that specific value is different from last time.",
-        code: "useEffect(() => {\n  fetchUser(userId).then(setUser);\n}, [userId]);\n// userId: 1 -> 1 -> 2\n// effect runs: yes -> no -> yes",
-      },
-      {
-        label: "Missing a dependency: a subtle bug",
-        body:
-          "If the effect uses query but query isn't listed in the array, the effect will keep using the stale value of query from whenever it last ran, instead of picking up the newest one.",
-        code: "useEffect(() => {\n  search(query); // uses query...\n}, []); // ...but query isn't tracked, so it's always the first query",
-      },
-      {
-        label: "Cleanup preventing a leak",
-        body:
-          "Without the returned cleanup function, every remount of this timer component would start a new interval that never stops, even after the component is gone — quietly piling up background work.",
-        code: "useEffect(() => {\n  const id = setInterval(() => setCount(c => c + 1), 1000);\n  return () => clearInterval(id);\n}, []);",
-      },
-    ],
+    kind: "code",
+    language: "javascript",
+    challenge:
+      "Implement nextFormState(state, field, value), which models a single onChange handler shared across a two-field form (name and email): it should update only the field that changed and leave the other exactly as it was. Then simulate the user typing into each field, one onChange event at a time, printing the form state after every keystroke.",
+    starterCode:
+      "function nextFormState(state, field, value) {\n  const name = field === \"name\" ? value : state.name;\n  const email = field === \"email\" ? value : state.email;\n  return { name: name, email: email };\n}\n\n// Models the onChange handler: the DOM fires an event object whose\n// target.value is the input's FULL current text, not just the new key\nfunction handleChange(state, field, event) {\n  return nextFormState(state, field, event.target.value);\n}\n\nlet formState = { name: \"\", email: \"\" };\nconsole.log(\"initial:\", JSON.stringify(formState));\n\n// Typing \"Ana\" into the name input fires onChange once per keystroke;\n// each time, event.target.value is everything typed in that field so far\nconst nameKeystrokes = [\"A\", \"An\", \"Ana\"];\nfor (const typedSoFar of nameKeystrokes) {\n  const event = { target: { value: typedSoFar } };\n  formState = handleChange(formState, \"name\", event);\n  console.log(\"after typing '\" + typedSoFar + \"':\", JSON.stringify(formState));\n}\n\n// Now the user tabs to the email input and types there instead\nconst emailKeystrokes = [\"a\", \"an\", \"ana@x.com\"];\nfor (const typedSoFar of emailKeystrokes) {\n  const event = { target: { value: typedSoFar } };\n  formState = handleChange(formState, \"email\", event);\n  console.log(\"after typing '\" + typedSoFar + \"':\", JSON.stringify(formState));\n}\n\nconsole.log(\"final form state:\", JSON.stringify(formState));",
   },
   quizQuestion:
-    "A component has this effect. What happens each time the userId prop changes to a new value?",
+    "An input is written as <input value={text} /> with no onChange at all. What actually happens when the user tries to type into it?",
   quizCode:
-    "useEffect(() => {\n  const subscription = subscribeToUser(userId);\n  return () => subscription.unsubscribe();\n}, [userId]);",
+    "function BrokenField() {\n  const [text, setText] = useState(\"\");\n  return <input value={text} />; // no onChange!\n}",
   quizOptions: [
     {
       key: "a",
       label:
-        "Nothing — once the effect runs the first time, it's locked in and ignores any later changes to userId",
+        "Typing works exactly as normal — the browser manages the text in the box regardless of what React does",
       correct: false,
     },
     {
       key: "b",
       label:
-        "React calls the cleanup function to unsubscribe from the old userId, then runs the effect again to subscribe to the new one",
+        "The input effectively freezes: React keeps re-rendering it with value={text}, and since nothing ever calls setText, text never changes, so every keystroke gets immediately overwritten back to the old value",
       correct: true,
     },
     {
       key: "c",
       label:
-        "React runs the effect again for the new userId but keeps the old subscription open in the background too",
+        "React automatically generates a default onChange behind the scenes that stores whatever is typed, even though the component never defined one",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — because userId is in the dependency array, React tears down the previous effect by calling its cleanup, then runs the effect fresh with the new userId, so there's always exactly one active subscription.",
+    "Right — once value is controlled by state, React enforces that value on every render no matter what the user just typed. Without an onChange to call setText, state never updates, so the input keeps snapping back to its old value and effectively refuses to accept new input.",
   quizFeedbackIncorrect:
-    "Not quite — a dependency array with userId in it means the effect reruns whenever userId changes, and React always calls the previous cleanup first so old subscriptions don't pile up.",
+    "Not quite — setting value from state hands control of the input's contents to React, not the browser. Without an onChange handler to update that state, there's nothing to make text change, so the input keeps re-rendering with its old value and appears frozen to anyone typing into it.",
   takeaway:
-    "useEffect runs side effects after rendering finishes, and its dependency array controls exactly when it reruns — empty for once-on-mount, listing values to rerun when they change, or omitted entirely to run every time. A returned cleanup function keeps things tidy by undoing the effect before it runs again or the component disappears.",
+    "A controlled input keeps the DOM's value permanently in sync with state: value shows what state currently says, and onChange feeds whatever the user just typed back into that same state via a setter. The handler itself is just a state-update function — take the current state, the field that changed, and the new value, and return the next state — the same shape as every other state update in this module, just triggered by a browser event instead of a click.",
 };
 
 export default content;

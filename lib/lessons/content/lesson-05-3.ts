@@ -4,93 +4,93 @@ const content: LessonData = {
   num: 5,
   orderIndex: 3,
   phaseLabel: "HTML, CSS, JAVASCRIPT",
-  title: "Boxes all the way down: the box model and flexbox",
-  minutes: 20,
+  title: "The DOM and Events: Making a Page Listen",
+  minutes: 22,
   concept:
-    `Every single element on a webpage — a button, a paragraph, an image — is rendered as a rectangular box, and CSS controls that box with four nested layers: content in the middle, padding around it as breathing room, a border around the padding, and margin as empty space outside the border separating it from other boxes. By default a box's declared width only measures its content, so adding padding or a border makes the box grow larger than the number you typed — a common source of "why is my layout broken" bugs, usually fixed with "box-sizing: border-box" so width includes padding and border. Once you understand every element as one of these boxes, layout becomes a question of "how do I arrange these boxes," and that's exactly what flexbox answers: setting "display: flex" on a container turns its direct children into a flexible row (or column) that you can space out, align, and reorder with a handful of properties like "justify-content" and "align-items", instead of fighting with manual positioning.`,
+    `When a browser downloads an HTML file, it doesn't just display the text — it builds a live, in-memory model of every tag as a nested object called the Document Object Model, or DOM. JavaScript reaches into this tree with "document.querySelector(selector)", which returns the first matching node as a real object you can read from or write to — setting its "textContent" changes what's on screen instantly, with no reload and no file ever touched on disk. To react to what a user does, you attach a listener: "element.addEventListener(\\"click\\", handler)" tells the browser to run handler the instant a click happens on that element, and the browser hands the handler an "event" object describing exactly what occurred — event.target is the element involved, event.target.value is what's typed in a field, event.key is which key was pressed. The function you pass to addEventListener is not a special DOM-only thing — it's an ordinary JavaScript function, and everything inside its body (counting, comparing, building a string) is the exact same JS from the last two lessons; only the outer plumbing (querySelector, addEventListener) is new. One more piece: some events carry a built-in default action — a form's submit reloads or navigates the page whether or not you've written a handler — and calling "event.preventDefault()" inside your handler is how you cancel that so your own code takes over instead.`,
   conceptSimpler:
-    "The box model is a picture frame: the photo is your content, the mat around it is padding, the wood is the border, and the gap to the next frame on the wall is margin. Flexbox is the shelf that automatically arranges all those frames in a neat row for you.",
+    "The DOM is a stage set built from your HTML — JavaScript can walk on stage and move a prop (querySelector, textContent) without anyone rewriting the script. An event listener is a doorbell: it waits silently until pressed, and only then does the function behind it — plain JS you already know how to write — spring into action.",
   vizStages: [
     {
-      label: "1. Content only",
+      label: "1. HTML becomes a tree",
       body:
-        "A box with just a width and background color. The blue area is exactly 200px wide — nothing else is added yet.",
-      code: `.box {\n  width: 200px;\n  background: #2563eb;\n}`,
+        "The browser reads your tags and builds a nested structure in memory the instant the page loads. A list with two items becomes a 'ul' node holding two 'li' nodes, each holding its own text.",
+      code: `<ul id="todos">\n  <li>Buy milk</li>\n  <li>Walk dog</li>\n</ul>`,
     },
     {
-      label: "2. Add padding and border",
+      label: "2. querySelector finds a node, textContent changes it",
       body:
-        "With default box-sizing, padding and border are added on top of the 200px, so this box now actually renders 250px wide (200 content + 20px padding on each side + 5px border on each side).",
-      code: `.box {\n  width: 200px;\n  padding: 20px;\n  border: 5px solid #1e3a8a;\n}`,
+        "querySelector searches the live tree for something matching a CSS-style selector and hands back that exact node. Reading textContent gets you a string; assigning to it replaces what's on screen immediately — no reload.",
+      code: `const first = document.querySelector("li");\nconsole.log(first.textContent); // "Buy milk"\nfirst.textContent = "Buy oat milk";`,
     },
     {
-      label: "3. box-sizing: border-box fixes the math",
+      label: "3. addEventListener and the event object",
       body:
-        "Switching to border-box makes width mean the total rendered size — padding and border now shrink the content area to fit inside 200px, instead of growing the box past it.",
-      code: `.box {\n  box-sizing: border-box;\n  width: 200px;\n  padding: 20px;\n  border: 5px solid #1e3a8a;\n}`,
+        "The function passed to addEventListener sits completely idle until a real click happens on this button — then it runs, and the event object it receives tells you exactly which element was clicked via event.target.",
+      code: `button.addEventListener("click", (event) => {\n  console.log("clicked:", event.target.textContent);\n});`,
     },
     {
-      label: "4. flexbox arranges the boxes",
+      label: "4. Some events have a default action — preventDefault cancels it",
       body:
-        "display: flex turns three stacked boxes into a row, and justify-content: space-between spreads them evenly across the container's full width — no manual margins required.",
-      code: `.row {\n  display: flex;\n  justify-content: space-between;\n}`,
+        "Without any JavaScript, clicking submit on a form reloads or navigates the page — that happens whether or not a listener exists. Calling event.preventDefault() inside the handler cancels only that built-in behavior, so your own code decides what happens next.",
+      code: `form.addEventListener("submit", (event) => {\n  event.preventDefault();\n  console.log("Handling this ourselves, no reload.");\n});`,
     },
   ],
   realWorldIntro:
-    "That header bar you see on almost every site — logo on the left, nav links on the right, all lined up on one row no matter the screen width — is almost always just one flex container with \"justify-content: space-between\".",
+    "When you like a post and the counter jumps from \"104\" to \"105\" with no flash or reload, a click listener fired, ran a plain JS function to compute the new number, and wrote that number into one DOM node's textContent — the same increment logic you'd write and test with no DOM involved at all.",
   realWorldCode:
-    `<header class="nav">\n  <span class="logo">Framis</span>\n  <nav><a href="#">Docs</a><a href="#">Pricing</a></nav>\n</header>\n\n.nav {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n}`,
+    `function incrementLikes(current) {\n  return current + 1;\n}\n\nconst counter = document.querySelector(".like-count");\ncounter.addEventListener("click", () => {\n  const next = incrementLikes(Number(counter.textContent));\n  counter.textContent = next;\n});`,
   sandbox: {
     kind: "explore",
     instructions:
-      "Click through each stage to compare how boxes behave with different box-model and flexbox settings.",
+      "Click through each stage to see how JavaScript finds elements, listens for events, and sometimes overrides the browser's default behavior. In each one, notice which part is new DOM plumbing (querySelector, addEventListener) and which part is just plain JS logic you already practiced in Lesson 5.2.",
     stages: [
       {
-        label: "Default stacking (no flexbox)",
+        label: "Selecting an element",
         body:
-          "Block-level elements like div stack vertically by default, each taking its own full-width row, one below the other — this is the browser's built-in layout before you touch flexbox at all.",
-        code: `<div class="item">One</div>\n<div class="item">Two</div>\n<div class="item">Three</div>`,
+          "querySelector takes any CSS selector — a tag, class, or id — and returns the first matching node from the live tree, or null if nothing matches. Nothing on screen changes yet; this step only finds the node.",
+        code: `const title = document.querySelector("h1.page-title");`,
       },
       {
-        label: "display: flex turns them into a row",
+        label: "Click: a counter, powered by a plain function",
         body:
-          "Adding display: flex to their shared parent is enough on its own — no other changes — to lay all three children out side by side in a single horizontal row.",
-        code: `.container {\n  display: flex;\n}`,
+          "Every click fires the handler once. The line that actually decides the new number — current + 1 — is ordinary JS with zero DOM in it; only display.textContent = count is the DOM part, writing that number to the screen.",
+        code: `let count = 0;\nfunction incrementLikes(current) {\n  return current + 1;\n}\n\nbutton.addEventListener("click", () => {\n  count = incrementLikes(count);\n  display.textContent = count;\n});`,
       },
       {
-        label: "justify-content controls horizontal spacing",
+        label: "Input: a live character count",
         body:
-          "With extra room in the row, justify-content decides what happens to it: 'center' bunches items in the middle, 'space-between' pushes the first and last to the edges and splits the rest evenly, 'flex-end' pushes everything right.",
-        code: `.container {\n  display: flex;\n  justify-content: center; /* or space-between, flex-end, space-around */\n}`,
+          "The 'input' event fires on every keystroke, handing back event.target.value — a plain string. Getting its length (value.length) is exactly the same string method you'd use anywhere else; here it just happens to feed a DOM update.",
+        code: `function charCount(text) {\n  return text.length;\n}\n\ntextarea.addEventListener("input", (event) => {\n  charCountLabel.textContent = charCount(event.target.value);\n});`,
       },
       {
-        label: "align-items controls vertical alignment",
+        label: "Submit without preventDefault",
         body:
-          "When items are different heights, align-items: center vertically centers each one within the row instead of leaving them lined up along the top edge, which is the default.",
-        code: `.container {\n  display: flex;\n  align-items: center;\n  height: 100px;\n}`,
+          "This handler logs a message, but because preventDefault was never called, the browser still performs its default action right after — the page navigates or reloads, and that console log is gone before you could read it.",
+        code: `form.addEventListener("submit", () => {\n  console.log("about to lose this page...");\n});`,
       },
       {
-        label: "flex-direction: column",
+        label: "Submit with preventDefault and real validation logic",
         body:
-          "Flexbox isn't only for rows — flex-direction: column keeps all the same alignment tools (justify-content, align-items) but stacks children vertically instead of horizontally.",
-        code: `.sidebar {\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n}`,
+          "preventDefault cancels the reload first. What runs after it — checking whether email is an empty string, choosing an error message — is the same if/else logic from Lesson 5.2, just triggered by a submit event instead of running top to bottom on its own.",
+        code: `function validateEmail(value) {\n  if (value === "") {\n    return "Email is required";\n  }\n  return "";\n}\n\nform.addEventListener("submit", (event) => {\n  event.preventDefault();\n  const error = validateEmail(emailInput.value);\n  if (error !== "") {\n    errorText.textContent = error;\n    return;\n  }\n  submitToServer(emailInput.value);\n});`,
       },
     ],
   },
   quizQuestion:
-    "With the CSS below, using the default box-sizing (content-box), how wide is the rendered box from its outer left edge to its outer right edge, not counting margin?",
-  quizCode: `.card {\n  width: 200px;\n  padding: 20px;\n  border: 5px solid #333;\n  box-sizing: content-box;\n}`,
+    "A form has this submit handler, and it never calls event.preventDefault(). What happens when the user clicks the submit button?",
+  quizCode: `form.addEventListener("submit", (event) => {\n  console.log("Form submitted, saving locally...");\n  saveDraft(event.target);\n});`,
   quizOptions: [
-    { key: "a", label: "200px, because that's the width that was declared", correct: false },
-    { key: "b", label: "250px, because padding and border are added on top of the declared width on each side", correct: true },
-    { key: "c", label: "225px, because only the border adds to the width", correct: false },
+    { key: "a", label: "The handler runs, and then the browser still performs its default action of reloading or navigating the page", correct: true },
+    { key: "b", label: "The form submission is automatically cancelled because JavaScript is handling the event", correct: false },
+    { key: "c", label: "Nothing happens at all, because the handler is missing preventDefault", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — with content-box, the 200px only measures the content; the browser adds 20px of padding and 5px of border on both the left and right (2 x 20 + 2 x 5 = 50), giving a total of 250px.",
+    "Right — attaching a listener doesn't cancel the browser's built-in behavior on its own; the handler runs first, but the page still reloads or navigates afterward unless preventDefault() is called.",
   quizFeedbackIncorrect:
-    "Not quite — with content-box, width only measures the content itself, so both the padding (20px x 2 sides) and the border (5px x 2 sides) get added on top, bringing the total to 250px.",
+    "Not quite — the handler does run, but simply having a listener doesn't stop the browser's default submit behavior; only calling event.preventDefault() inside it cancels the reload or navigation.",
   takeaway:
-    "Every element is a box made of content, padding, border, and margin, and flexbox is how you arrange a group of those boxes into rows or columns without hand-calculating positions.",
+    "The DOM is the live, in-memory copy of your page that querySelector and textContent read and write — changing it updates the screen instantly, with no file ever touched. addEventListener is how a page notices what a user did, and preventDefault is how you take over from the browser's built-in reaction — but the logic inside any handler is still just the plain JavaScript you already know how to write and test.",
 };
 
 export default content;

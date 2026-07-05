@@ -4,100 +4,69 @@ const content: LessonData = {
   num: 8,
   orderIndex: 2,
   phaseLabel: "BACKEND: PYTHON + POSTGRES",
-  title: "A table is just rows that all have the same shape",
+  title: "JOIN: pulling two tables together",
   minutes: 20,
   concept:
-    "A relational database like Postgres stores everything in tables, and a table is really just a spreadsheet with rules. Every column is declared up front with a name and a type — id is always a number, email is always text — and every single row must have a value in every one of those columns, even if it's empty or null. A row represents exactly one instance of the thing the table is about: one user, one order, one product, never a mix. Almost every table also has a primary key, a column (often called id) whose value is unique across every row and never changes once it's set, so any other part of the database can reliably point at that exact row using just that one value. That combination — fixed columns, one row per thing, and a stable unique key — is what lets a database index, search, and cross-reference millions of rows without ever getting confused about which row is which.",
+    "Real data almost never lives in one table. A users table holds accounts, an orders table holds purchases, and the two are linked by a shared value — a user_id column on orders that points back at a user's id. A JOIN is how you ask a database to stitch those two tables together in a single query: FROM orders JOIN users ON orders.user_id = users.id walks every row of orders, finds the one row in users whose id matches, and glues the two rows into one combined row so you can select columns from either side — an order's amount sitting right next to that customer's name. When a column name could mean either table (or just for clarity), qualify it as table.column, like users.name or orders.amount — or give the table a short alias with FROM users u, and write u.name instead. If an order's user_id doesn't match any row in users, that order is simply left out of the result — a JOIN only returns pairs that actually matched on both sides.",
   conceptSimpler:
-    "Think of a table as one labeled folder in a filing cabinet — every sheet of paper inside follows the same form with the same blanks to fill in, and every sheet gets a unique file number stapled to the corner so you can always find that exact sheet again.",
+    "Picture two card catalogs — one of customers, one of receipts — and JOIN is asking a clerk to walk through every receipt, find the matching customer card by account number, and staple the two together before handing you the stack; any receipt with no matching customer card just doesn't make it into the stack.",
   vizStages: [
     {
-      label: "1. Columns are decided up front",
+      label: "1. Two tables, linked by an id",
       body:
-        "Before any data goes in, a table's columns are fixed: their names and what kind of value they hold. This is the table's schema, and every row that ever gets added has to fit it.",
+        "users has one row per account. orders has one row per purchase, and its user_id column stores the id of whichever user placed that order — that shared value is the only thing connecting the two tables.",
       code:
-        "# the \"users\" table's shape, as columns:\n# id     -> number, unique\n# name   -> text\n# email  -> text\n# plan   -> text (\"free\" or \"pro\")",
+        "CREATE TABLE users (id, name);\nCREATE TABLE orders (id, user_id, item, amount);\n\nINSERT INTO users VALUES (1, 'Ava');\nINSERT INTO users VALUES (2, 'Ben');\n\nINSERT INTO orders VALUES (101, 1, 'Keyboard', 42);\nINSERT INTO orders VALUES (102, 2, 'Mouse', 15);",
     },
     {
-      label: "2. A row is one instance of the thing",
+      label: "2. JOIN ... ON names the matching columns",
       body:
-        "Each row fills in a value for every column, and represents exactly one user — never two users squeezed into one row, and never a user's data split across rows.",
+        "The ON clause spells out exactly which two columns have to be equal for a users row and an orders row to be paired together — here, orders.user_id has to equal users.id.",
       code:
-        "users = [\n    {\"id\": 1, \"name\": \"Ava\", \"email\": \"ava@example.com\", \"plan\": \"pro\"},\n    {\"id\": 2, \"name\": \"Ben\", \"email\": \"ben@example.com\", \"plan\": \"free\"},\n]",
+        "SELECT users.name, orders.item\nFROM users\nJOIN orders ON users.id = orders.user_id;",
     },
     {
-      label: "3. The primary key makes a row findable",
+      label: "3. Aliases shorten the qualified names",
       body:
-        "The id column is the primary key: its value is unique across every row in the table and never changes, even if the user renames their account or changes their email. Anywhere else in the database that needs to reference \"this exact user\" stores that id, not the name.",
+        "Writing users.name and orders.item everywhere gets verbose fast. Giving each table a short alias right after its name lets you write u.name and o.item instead — same query, less typing.",
       code:
-        "# Ava changes her name, but her id stays 1 forever:\nusers[0][\"name\"] = \"Ava R.\"\nprint(users[0][\"id\"])",
+        "SELECT u.name, o.item, o.amount\nFROM users u\nJOIN orders o ON u.id = o.user_id;",
     },
     {
-      label: "4. Same shape, many rows",
+      label: "4. Unmatched rows disappear",
       body:
-        "A real users table might hold millions of rows, but every single one has the exact same columns as the first. That uniformity is what makes it possible to ask a question like \"give me every row where plan is pro\" and get a reliable answer instantly, instead of having to guess what shape each row might be in.",
-      code: "for row in users:\n    print(row[\"id\"], row[\"name\"], row[\"plan\"])",
+        "If an order's user_id doesn't match any row in users — say the user was deleted, or the id is just wrong — that order has no partner to pair with, so it's dropped from the result entirely. A JOIN only ever returns pairs that matched.",
+      code:
+        "-- orders has a row with user_id 9, but no user has id 9\nINSERT INTO orders VALUES (103, 9, 'Ghost Order', 500);\n\nSELECT u.name, o.item FROM users u JOIN orders o ON u.id = o.user_id;\n-- the Ghost Order row never shows up — nothing in users matches user_id 9",
     },
   ],
   realWorldIntro:
-    "In Postgres, you lock in that shape with a CREATE TABLE statement — the columns and their types are declared once, and the PRIMARY KEY constraint is what makes the database itself refuse to ever store two rows with the same id.",
+    "This is exactly the SQL Postgres runs for a JOIN — the difference in production is speed, not syntax: with an index on users.id and orders.user_id, Postgres can find each match almost instantly instead of scanning every row. ORMs like Django's or SQLAlchemy's generate this same JOIN under the hood when you write something like user.orders or a relationship lookup in Python — the ORM is just a translator, not a different mechanism.",
   realWorldCode:
-    "CREATE TABLE users (\n    id SERIAL PRIMARY KEY,\n    name TEXT NOT NULL,\n    email TEXT NOT NULL,\n    plan TEXT NOT NULL\n);",
+    "# Python + an ORM, generating the same JOIN behind the scenes:\n# orders = session.query(Order).join(User).filter(User.id == order.user_id)\n#\n# ...compiles down to essentially:\n# SELECT orders.*, users.name FROM orders JOIN users ON orders.user_id = users.id;",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each idea below to see how a table's structure — its columns, its rows, and its keys — actually holds together.",
-    stages: [
-      {
-        label: "The schema is a promise",
-        body:
-          "Every row in a table promises to have the same columns as every other row. A users table can't have one row with a phone column and another without it — the schema is decided once, for the whole table.",
-        code:
-          "# valid: every row has id, name, plan\n{\"id\": 1, \"name\": \"Ava\", \"plan\": \"pro\"}\n{\"id\": 2, \"name\": \"Ben\", \"plan\": \"free\"}",
-      },
-      {
-        label: "One row = one real-world thing",
-        body:
-          "A row in an orders table is one order — not a customer, not a product, just that single order and the facts about it. If you find yourself wanting to cram two different kinds of things into one row, you probably need two tables instead.",
-        code: "{\"order_id\": 501, \"user_id\": 1, \"total\": 42.50, \"status\": \"shipped\"}",
-      },
-      {
-        label: "The primary key never means anything on its own",
-        body:
-          "A primary key like id 7 isn't a meaningful number — it's not a rank or a count of anything. Its only job is to be different from every other row's id, forever, so it can act as a permanent handle for that row.",
-        code:
-          "# these ids carry no meaning on their own — they just have to be unique\n{\"id\": 7, \"name\": \"Cy\"}\n{\"id\": 8, \"name\": \"Dee\"}",
-      },
-      {
-        label: "Foreign keys point at another table's key",
-        body:
-          "A column can hold another table's primary key as its value — that's called a foreign key. An orders row's user_id of 1 doesn't repeat that user's whole name and email, it just stores the id, pointing back at the one row in users that has it.",
-        code:
-          "users  = [{\"id\": 1, \"name\": \"Ava\"}]\norders = [{\"order_id\": 501, \"user_id\": 1, \"total\": 42.50}]\n# order 501's user_id (1) points at the users row with id 1",
-      },
-      {
-        label: "Why not just one big table?",
-        body:
-          "You could try to stuff every order's user info directly into the orders table, but then Ava's name is copied onto every order she's ever placed — rename her once and you'd have to fix it in hundreds of rows. Splitting into users and orders, linked by id, means her name lives in exactly one place.",
-        code:
-          "# repeated and fragile:\n{\"order_id\": 501, \"user_name\": \"Ava\", \"user_email\": \"ava@example.com\", \"total\": 42.50}\n\n# linked and solid:\n{\"order_id\": 501, \"user_id\": 1, \"total\": 42.50}",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Create a users table and an orders table linked by user_id, insert the rows shown, then JOIN them to list each order's item and amount next to the customer's name — but only for orders over $40.",
+    starterCode:
+      "CREATE TABLE users (id, name);\nCREATE TABLE orders (id, user_id, item, amount);\n\nINSERT INTO users VALUES (1, 'Ava');\nINSERT INTO users VALUES (2, 'Ben');\nINSERT INTO users VALUES (3, 'Cy');\n\nINSERT INTO orders VALUES (101, 1, 'Keyboard', 42);\nINSERT INTO orders VALUES (102, 2, 'Mouse', 15);\nINSERT INTO orders VALUES (103, 1, 'Monitor', 199);\nINSERT INTO orders VALUES (104, 3, 'Desk', 250);\n\nSELECT u.name, o.item, o.amount\nFROM users u\nJOIN orders o ON u.id = o.user_id\nWHERE o.amount > 40;",
+    language: "sql",
   },
   quizQuestion:
-    "In the orders row below, which column is a foreign key — a value that points at a row in a different table?",
-  quizCode: "{\"order_id\": 501, \"user_id\": 1, \"total\": 42.50, \"status\": \"shipped\"}",
+    "The orders table below has a row with user_id 9, but no user in the users table has id 9. What happens when you run this JOIN?",
+  quizCode:
+    "CREATE TABLE users (id, name);\nCREATE TABLE orders (id, user_id, item, amount);\n\nINSERT INTO users VALUES (1, 'Ava');\nINSERT INTO users VALUES (2, 'Ben');\n\nINSERT INTO orders VALUES (101, 1, 'Keyboard', 42);\nINSERT INTO orders VALUES (102, 2, 'Mouse', 15);\nINSERT INTO orders VALUES (103, 9, 'Ghost Order', 500);\n\nSELECT u.name, o.item\nFROM users u\nJOIN orders o ON u.id = o.user_id;",
   quizOptions: [
-    { key: "a", label: "order_id — it uniquely identifies this row", correct: false },
-    { key: "b", label: "user_id — it references a row in the users table", correct: true },
-    { key: "c", label: "total — it's the dollar amount for the order", correct: false },
+    { key: "a", label: "The Ghost Order row appears with name set to NULL", correct: false },
+    { key: "b", label: "The query errors out because every order must have a matching user", correct: false },
+    { key: "c", label: "The Ghost Order row is silently left out — only orders 101 and 102 appear, 2 rows total", correct: true },
   ],
   quizFeedbackCorrect:
-    "Right — order_id is this row's own primary key, and total/status are just data about the order, but user_id holds someone else's primary key value, which is exactly what makes it a foreign key.",
+    "Right — a JOIN only returns rows that matched on both sides. Order 103's user_id of 9 matches nothing in users, so that pairing never forms and the row just doesn't appear in the result — no error, no NULL placeholder, it's simply excluded.",
   quizFeedbackIncorrect:
-    "Not quite — order_id and total both describe this row itself; user_id is the one column whose value is actually another table's primary key, which is what makes it a foreign key.",
+    "Not quite — a JOIN doesn't error and doesn't fill in NULLs for unmatched rows; it only returns pairs that actually matched. Since no user has id 9, order 103 has no partner and is left out entirely, leaving just the 2 rows for Ava and Ben.",
   takeaway:
-    "A table is nothing more than rows that all share the same columns, each row standing for one real thing, with a primary key giving every row a permanent, unique handle — and foreign keys are how one row points at another table's row instead of copying its data. That structure is exactly what makes joins possible, which is next.",
+    "A JOIN combines two tables on a shared key — usually a foreign key on one side matching a primary key on the other — gluing matching rows into one combined row so you can select columns from both. Only pairs that actually match make it into the result; qualify column names with the table (or a short alias) whenever both sides could have a column of the same name.",
 };
 
 export default content;

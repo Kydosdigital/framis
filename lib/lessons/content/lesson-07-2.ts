@@ -4,96 +4,72 @@ const content: LessonData = {
   num: 7,
   orderIndex: 2,
   phaseLabel: "APIS + HTTP + JSON",
-  title: "Four verbs, one address: GET, POST, PUT, DELETE",
-  minutes: 18,
+  title: "fetch, await, and the real shape of a network call",
+  minutes: 22,
   concept:
-    "Every HTTP request has two parts that matter most: the URL you're pointing at, and the verb that says what you want to do to it. The same URL, like /orders/17, can mean four completely different things depending on the verb attached — GET fetches it, POST creates something new, PUT replaces it entirely, and DELETE removes it. This is a convention, not a law the internet enforces automatically — a server's own code decides what each verb actually does, but every well-built API follows it so client code can be predictable. GET is special: it's meant to be safe and repeatable, meaning calling it a hundred times never changes anything on the server, while POST, PUT, and DELETE are all expected to change something. Once you know the verb, you already know the shape of the response to expect before you've read a single line of the body.",
+    "fetch(url) is the real, built-in JavaScript function for making an HTTP request, and it returns a Promise — a placeholder for a value that isn't ready yet. Rather than chaining .then() everywhere, modern JS lets you write async/await: mark a function async, and inside it you can write await someCall() to pause that line until the promise resolves, with the code underneath running only once it does. fetch's promise resolves to a Response object, which has an ok flag, a status number, and its own async method, .json(), that parses the response body and returns another promise — so a full real fetch is two awaits: one for the response, one for its parsed body. In this sandbox there's no real network, so fetch(url, mockData) is a stand-in you control directly: pass whatever JSON-able payload you want as the second argument, and it resolves instantly to a response whose .json() resolves to that exact data — same shape, same await pattern, just no waiting.",
   conceptSimpler:
-    "Think of the verb like the difference between reading a shared document, adding a new page, replacing a page, and tearing a page out — same document, four very different actions.",
+    "await is like ordering at a counter and stepping aside until your number is called — the rest of your code just waits at that line, then keeps going the moment the value you asked for is actually ready.",
   vizStages: [
     {
-      label: "1. One address, many meanings",
+      label: "1. async marks a function as awaitable",
       body:
-        "The endpoint /orders/17 doesn't do anything by itself — it's just a name. What actually happens depends entirely on which verb rides along with the request.",
-      code:
-        "GET    /orders/17   -> fetch order 17\nPOST   /orders      -> create a brand-new order\nPUT    /orders/17   -> replace order 17 entirely\nDELETE /orders/17   -> remove order 17",
+        "Putting async in front of a function lets you use await anywhere inside it. Without async, await isn't allowed in that function at all.",
+      code: "async function loadUser() {\n  // await is only legal in here\n}",
     },
     {
-      label: "2. GET: read, never write",
+      label: "2. await pauses for the response",
       body:
-        "GET asks for data and is not supposed to change anything on the server. Refresh a GET a hundred times and the server's state stays exactly the same — that's what makes it safe to retry without worrying.",
+        "fetch(url) returns a promise immediately. await unwraps it into the actual Response object — that's where ok and status live, before you've even looked at the data.",
       code:
-        "GET /orders/17\n\nresponse:\n{\"status\": 200, \"data\": {\"id\": 17, \"item\": \"desk lamp\", \"total\": 42}}",
+        "const response = await fetch(\"/api/users/1\");\nconsole.log(response.ok);     // true\nconsole.log(response.status); // 200",
     },
     {
-      label: "3. POST: create something new",
+      label: "3. .json() is itself async",
       body:
-        "POST hands the server a body of data and asks it to create a new thing from it. Because it's creating something, POST usually targets the collection (/orders), not one specific item — the server decides the new id.",
+        "The response body isn't parsed yet after the first await — calling .json() kicks off its own promise, so it needs a second await before you have real, usable data.",
       code:
-        "POST /orders\nbody: {\"item\": \"desk lamp\", \"total\": 42}\n\nresponse:\n{\"status\": 201, \"data\": {\"id\": 18, \"item\": \"desk lamp\", \"total\": 42}}",
+        "const data = await response.json();\nconsole.log(data.name); // now it's a real value",
     },
     {
-      label: "4. PUT replaces, DELETE removes",
+      label: "4. In this sandbox, you control the mock",
       body:
-        "PUT targets one specific resource and replaces its entire contents with the new body you send. DELETE targets that same kind of specific resource but needs no body at all — it just tells the server to make that resource gone.",
+        "There's no real server here, so fetch's second argument is the mock payload you supply — whatever you pass becomes exactly what .json() resolves to, letting you rehearse the real await/await pattern against data you chose.",
       code:
-        "PUT /orders/17\nbody: {\"item\": \"desk lamp\", \"total\": 39}\n\nDELETE /orders/17\n(no body needed)",
+        "const response = await fetch(\"/api/users/1\", { id: 1, name: \"Priya\" });\nconst data = await response.json();\nconsole.log(data.name); // Priya",
     },
   ],
   realWorldIntro:
-    "A social app uses exactly this pattern for a single post: GET /posts/9 loads it for viewing, POST /posts creates a new one when you hit \"post\", PUT /posts/9 saves an edit, and DELETE /posts/9 runs when you tap the trash icon.",
+    "This exact two-await shape is what every real frontend uses to talk to a backend — a React component calling your own API, a script hitting a public API, all of it starts with await fetch(url) and ends with await response.json() before the data is usable.",
   realWorldCode:
-    "// same resource, four different verbs\nGET /posts/9\nPOST /posts     body: { text: \"hello world\" }\nPUT /posts/9    body: { text: \"hello world (edited)\" }\nDELETE /posts/9",
+    "async function loadProfile(id) {\n  const response = await fetch(`/api/users/${id}`);\n  if (!response.ok) throw new Error(\"failed to load profile\");\n  const profile = await response.json();\n  return profile;\n}",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each verb below to see what it does to the same /orders/17 resource and what its response looks like.",
-    stages: [
-      {
-        label: "GET — fetch it",
-        body:
-          "GET /orders/17 asks the server to hand back the current state of order 17 without changing anything. If it exists you get a 200 and the order's data; call it again right after and you'll get the identical response.",
-        code:
-          "GET /orders/17\n\nresponse:\n{\"status\": 200, \"data\": {\"id\": 17, \"item\": \"desk lamp\", \"total\": 42}}",
-      },
-      {
-        label: "POST — create a new one",
-        body:
-          "POST /orders sends a request body describing a brand-new order. The server assigns it a fresh id and returns 201 Created along with the new resource, including the id you didn't get to choose.",
-        code:
-          "POST /orders\nbody: {\"item\": \"keyboard\", \"total\": 79}\n\nresponse:\n{\"status\": 201, \"data\": {\"id\": 18, \"item\": \"keyboard\", \"total\": 79}}",
-      },
-      {
-        label: "PUT — replace it entirely",
-        body:
-          "PUT /orders/17 sends a full replacement body for that exact order. Whatever fields you leave out are gone in most implementations, because PUT means \"this is now the whole resource,\" not \"merge these changes in.\"",
-        code:
-          "PUT /orders/17\nbody: {\"item\": \"desk lamp\", \"total\": 39}\n\nresponse:\n{\"status\": 200, \"data\": {\"id\": 17, \"item\": \"desk lamp\", \"total\": 39}}",
-      },
-      {
-        label: "DELETE — remove it",
-        body:
-          "DELETE /orders/17 asks the server to get rid of that resource. There's no body to send, and a second DELETE on the same id typically comes back 404, because by then there's nothing left to delete.",
-        code:
-          "DELETE /orders/17\n(no body)\n\nresponse:\n{\"status\": 204, \"data\": None}",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Write an async function that awaits fetch() with a mock user payload, awaits .json() to unwrap the data, and logs response.ok, response.status, and a couple of the parsed fields. Then call it.",
+    starterCode:
+      "async function getUser() {\n  const response = await fetch(\"/api/users/1\", { id: 1, name: \"Priya\", age: 29 });\n\n  console.log(\"ok:\", response.ok);\n  console.log(\"status:\", response.status);\n\n  const data = await response.json();\n  console.log(\"name:\", data.name);\n  console.log(\"age:\", data.age);\n}\n\ngetUser();",
+    language: "javascript",
   },
   quizQuestion:
-    "You need to update the shipping address on order 500 by sending its complete new data. Which HTTP verb matches what you're doing?",
+    "You write: const data = await fetch(url, mockPayload); console.log(data.name); — without a second await on .json(). What's wrong?",
   quizCode:
-    "?? /orders/500\nbody: {\"item\": \"desk lamp\", \"total\": 42, \"address\": \"221B Baker St\"}",
+    "async function getUser() {\n  const data = await fetch(\"/api/users/1\", { name: \"Priya\" });\n  console.log(data.name);\n}\n\ngetUser(); // logs: undefined",
   quizOptions: [
-    { key: "a", label: "POST — because you're sending a body of data", correct: false },
-    { key: "b", label: "PUT — because you're replacing the resource at a known id with new data", correct: true },
-    { key: "c", label: "DELETE — because you're changing something about the order", correct: false },
+    {
+      key: "a",
+      label: "data is the Response object, not the parsed body — data.name is undefined until you also await response.json()",
+      correct: true,
+    },
+    { key: "b", label: "Nothing is wrong, fetch's payload is already unwrapped by the first await", correct: false },
+    { key: "c", label: "It throws a syntax error because await can't be used twice in one function", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — you already know the specific resource's id (500) and you're sending its complete new state, which is exactly what PUT means; POST is for creating new resources and DELETE removes them entirely.",
+    "Right — the first await only unwraps the Response object itself (ok, status, and the .json() method live there); the actual body only becomes usable data after a second await on response.json().",
   quizFeedbackIncorrect:
-    "Not quite — POST is for creating a brand-new resource (like a new order), and DELETE removes one entirely; updating an existing, identified resource with a full new body is what PUT is for.",
+    "Not quite — await fetch(...) resolves to the Response object, not the parsed data. Response has ok, status, and a .json() method, but reading .name off the Response itself gives you undefined — you need a second await, on response.json(), to get real fields.",
   takeaway:
-    "The verb is a promise about intent: GET never changes anything, POST creates, PUT replaces, and DELETE removes — learn to read the verb first and you'll know what an API call does before you ever look at its body.",
+    "A real fetch is always two steps: await fetch(url) to get the Response (ok, status), then await response.json() to get the actual data — skip the second await and you're reading fields off the wrong object.",
 };
 
 export default content;
