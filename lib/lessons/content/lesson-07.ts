@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 7,
+  orderIndex: 1,
   phaseLabel: "APIS + HTTP + JSON",
   title: "The response is just a dict",
   minutes: 20,

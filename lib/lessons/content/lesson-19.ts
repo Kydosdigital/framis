@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 19,
+  orderIndex: 1,
   phaseLabel: "TRANSFORMERS + ATTENTION",
   title: "\"It\" doesn't mean anything until it looks around",
   minutes: 20,

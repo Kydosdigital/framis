@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useFramis } from "@/lib/store";
 import { ROADMAP_MODULES, PHASES } from "@/lib/data";
-import { lessonMeta } from "@/lib/lessons";
 
 const COLS = [90, 290, 490, 690];
 const ROW_HEIGHT = 220;
@@ -84,7 +83,7 @@ export default function Roadmap() {
           : status === "current"
             ? "This is where you are right now."
             : "Ahead on your route — not unlocked yet.",
-      action: { label: "Go to lesson →", go: () => goToLesson(lessonMeta(m.num)?.key ?? m.num) },
+      action: { label: "Go to lesson →", go: () => goToLesson(m.num) },
     };
   } else if (selected?.kind === "capstone") {
     const ph = PHASES[selected.phaseIndex];

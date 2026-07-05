@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 21,
+  orderIndex: 1,
   phaseLabel: "AGENTS + ORCHESTRATION",
   title: "Plan, Act, Check, Repeat: The Shape of Every Agent Loop",
   minutes: 20,

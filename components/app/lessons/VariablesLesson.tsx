@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFramis, type QuizKey } from "@/lib/store";
 import { QUIZ_ANSWERS } from "@/lib/data";
+import { moduleLessonList, nextLessonLabel } from "@/lib/lessons";
 import { createClient } from "@/lib/supabase/client";
 import LessonViz from "../LessonViz";
 
@@ -78,7 +79,7 @@ export default function VariablesLesson() {
   return (
     <div>
       <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
-        MODULE 2 · PYTHON BASICS · LESSON 1 OF 4
+        MODULE 2 · PYTHON BASICS · LESSON 1 OF {moduleLessonList(2).length}
       </div>
       <h1 className="mb-2.5 font-inter text-[30px] font-bold tracking-[-0.02em]">
         Variables — storing information
@@ -236,7 +237,7 @@ export default function VariablesLesson() {
         <div>
           <div className="text-[12.5px] text-ink-500">Next up</div>
           <div className="font-inter text-[15px] font-semibold">
-            RAG — teaching an LLM to cite its sources
+            {nextLessonLabel(2, 1)}
           </div>
         </div>
         <button

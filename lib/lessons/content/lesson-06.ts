@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 6,
+  orderIndex: 1,
   phaseLabel: "REACT BASICS + COMPONENTS",
   title: "One click, one re-render: how state updates a component",
   minutes: 20,

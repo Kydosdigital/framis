@@ -4,6 +4,7 @@ export type VizStage = { label: string; body: string; code?: string };
 
 export type LessonData = {
   num: number;
+  orderIndex: number;
   phaseLabel: string;
   title: string;
   minutes: number;
@@ -21,5 +22,6 @@ export type LessonData = {
   quizFeedbackCorrect: string;
   quizFeedbackIncorrect: string;
   takeaway: string;
-  nextUpLabel: string;
+  /** @deprecated "next up" is now computed centrally in lib/lessons/index.ts; this field is ignored. */
+  nextUpLabel?: string;
 };

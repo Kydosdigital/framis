@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 12,
+  orderIndex: 1,
   phaseLabel: "CI/CD + DOCKER + DEPLOYMENT",
   title: "Four gates between your commit and production",
   minutes: 20,

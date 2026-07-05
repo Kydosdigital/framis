@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 4,
+  orderIndex: 1,
   phaseLabel: "FILE I/O + ERRORS + DEBUGGING",
   title: "Catch Me If You Crash: Handling Missing Data with Try/Except",
   minutes: 20,

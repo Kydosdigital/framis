@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 9,
+  orderIndex: 1,
   phaseLabel: "TESTING",
   title: "Right Answer, Wrong Reason: The Test That Passed by Accident",
   minutes: 20,

@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 18,
+  orderIndex: 1,
   phaseLabel: "LINEAR ALGEBRA BASICS",
   title: "Dot product: the one number that says 'these are alike'",
   minutes: 20,

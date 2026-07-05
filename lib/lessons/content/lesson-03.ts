@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 3,
+  orderIndex: 1,
   phaseLabel: "DATA STRUCTURES + CONTROL FLOW",
   title: "The For + If Filter: Building a New List From an Old One",
   minutes: 22,

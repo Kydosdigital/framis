@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 24,
+  orderIndex: 1,
   phaseLabel: "AI PRODUCT DESIGN + EDGE CASES",
   title: "The demo works. Now handle everything else.",
   minutes: 25,

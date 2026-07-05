@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useFramis, type QuizKey } from "@/lib/store";
+import { moduleLessonList, nextLessonLabel } from "@/lib/lessons";
 import { createClient } from "@/lib/supabase/client";
 import RagViz from "./RagViz";
 
@@ -118,7 +119,7 @@ export default function RagLesson() {
   return (
     <div>
       <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
-        MODULE 14 · EMBEDDINGS + RAG · LESSON 1
+        MODULE 14 · EMBEDDINGS + RAG · LESSON 1 OF {moduleLessonList(14).length}
       </div>
       <h1 className="mb-2.5 font-inter text-[30px] font-bold tracking-[-0.02em]">
         RAG — teaching an LLM to cite its sources
@@ -268,7 +269,7 @@ export default function RagLesson() {
         <div>
           <div className="text-[12.5px] text-ink-500">Next up</div>
           <div className="font-inter text-[15px] font-semibold">
-            Structured outputs — getting reliable JSON back
+            {nextLessonLabel(14, 1)}
           </div>
         </div>
         <button

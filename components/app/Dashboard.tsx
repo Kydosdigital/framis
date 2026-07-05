@@ -42,7 +42,7 @@ export default function Dashboard() {
       label: `Lesson: ${nextLesson.title}`,
       meta: `${nextLesson.minutes} min · Module ${stats.nextLessonModuleNumber}`,
       done: false,
-      go: () => goToLesson(nextLesson.key),
+      go: () => goToLesson(stats.nextLessonModuleNumber as number),
     });
   }
   if (stats.capstoneStatus === "not_started") {
@@ -84,7 +84,7 @@ export default function Dashboard() {
         </div>
         {nextLesson && (
           <button
-            onClick={() => goToLesson(nextLesson.key)}
+            onClick={() => goToLesson(stats.nextLessonModuleNumber as number)}
             className="rounded-lg bg-blue px-[22px] py-3 font-inter text-[14px] font-semibold text-white"
           >
             {justStarting ? "Start" : "Resume"}: {nextLesson.title} →

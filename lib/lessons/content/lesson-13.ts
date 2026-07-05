@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 13,
+  orderIndex: 1,
   phaseLabel: "LLM APIS + TOKENS + COST",
   title: "The Meter That's Always Running: Tokens and Cost",
   minutes: 20,

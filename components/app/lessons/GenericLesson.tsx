@@ -7,7 +7,15 @@ import { runPythonExt, type OutputLine } from "@/lib/pythonExt";
 import type { LessonData, QuizOption } from "@/lib/lessons/types";
 import StageViz from "./StageViz";
 
-export default function GenericLesson({ data }: { data: LessonData }) {
+export default function GenericLesson({
+  data,
+  totalLessons,
+  nextUpLabel,
+}: {
+  data: LessonData;
+  totalLessons: number;
+  nextUpLabel: string;
+}) {
   const userId = useFramis((st) => st.userId);
   const [lessonId, setLessonId] = useState<number | null>(null);
   const [simpler, setSimpler] = useState(false);
@@ -23,13 +31,13 @@ export default function GenericLesson({ data }: { data: LessonData }) {
       .from("lessons")
       .select("id, modules!inner(module_number)")
       .eq("modules.module_number", data.num)
-      .eq("order_index", 1)
+      .eq("order_index", data.orderIndex)
       .single()
       .then(({ data: row }) => {
         if (row) setLessonId(row.id as number);
       }, () => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.num]);
+  }, [data.num, data.orderIndex]);
 
   useEffect(() => {
     if (!userId || !lessonId || quizPick == null) return;
@@ -67,7 +75,7 @@ export default function GenericLesson({ data }: { data: LessonData }) {
   return (
     <div>
       <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
-        MODULE {data.num} · {data.phaseLabel}
+        MODULE {data.num} · {data.phaseLabel} · LESSON {data.orderIndex} OF {totalLessons}
       </div>
       <h1 className="mb-2.5 font-inter text-[30px] font-bold tracking-[-0.02em]">{data.title}</h1>
       <div className="mb-[30px] flex flex-wrap items-center gap-3.5">
@@ -205,7 +213,7 @@ export default function GenericLesson({ data }: { data: LessonData }) {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="text-[12.5px] text-ink-500">Next up</div>
-          <div className="font-inter text-[15px] font-semibold">{data.nextUpLabel}</div>
+          <div className="font-inter text-[15px] font-semibold">{nextUpLabel}</div>
         </div>
         <button
           onClick={markComplete}

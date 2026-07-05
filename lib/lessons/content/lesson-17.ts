@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 17,
+  orderIndex: 1,
   phaseLabel: "PROBABILITY + STATISTICS",
   title: "One roll lies, ten thousand rolls tell the truth",
   minutes: 20,

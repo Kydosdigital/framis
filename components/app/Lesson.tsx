@@ -2,7 +2,7 @@
 
 import { useFramis } from "@/lib/store";
 import { PHASES, ROADMAP_MODULES } from "@/lib/data";
-import { lessonMeta, GENERIC_LESSONS } from "@/lib/lessons";
+import { moduleLessonList, resolveLesson, nextLessonLabel } from "@/lib/lessons";
 import VariablesLesson from "./lessons/VariablesLesson";
 import RagLesson from "./lessons/RagLesson";
 import GenericLesson from "./lessons/GenericLesson";
@@ -18,7 +18,38 @@ function BackToAll({ onBack }: { onBack: () => void }) {
   );
 }
 
-function LessonBrowser({ onOpen }: { onOpen: (num: number) => void }) {
+function LessonSubNav({
+  module,
+  activeIndex,
+  onPick,
+}: {
+  module: number;
+  activeIndex: number;
+  onPick: (orderIndex: number) => void;
+}) {
+  const list = moduleLessonList(module);
+  if (list.length < 2) return null;
+  return (
+    <div className="mb-5 flex flex-wrap gap-2">
+      {list.map((l) => (
+        <button
+          key={l.orderIndex}
+          onClick={() => onPick(l.orderIndex)}
+          className="rounded-full px-3.5 py-[7px] font-inter text-[12.5px] font-semibold"
+          style={{
+            border: `1.5px solid ${activeIndex === l.orderIndex ? "#0066CC" : "var(--color-border-input)"}`,
+            background: activeIndex === l.orderIndex ? "#EAF2FB" : "var(--color-card)",
+            color: activeIndex === l.orderIndex ? "#0066CC" : "var(--color-ink-500)",
+          }}
+        >
+          Lesson {l.orderIndex}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function LessonBrowser({ onOpen }: { onOpen: (module: number) => void }) {
   const stats = useFramis((s) => s.stats);
   const completed = stats?.completedModuleNumbers ?? [];
 
@@ -45,7 +76,7 @@ function LessonBrowser({ onOpen }: { onOpen: (num: number) => void }) {
               </div>
               <div className="overflow-hidden rounded-[12px] border border-line bg-card">
                 {modules.map((m, mi) => {
-                  const meta = lessonMeta(m.num);
+                  const list = moduleLessonList(m.num);
                   const isDone = completed.includes(m.num);
                   return (
                     <button
@@ -68,7 +99,7 @@ function LessonBrowser({ onOpen }: { onOpen: (num: number) => void }) {
                         {m.title}
                       </span>
                       <span className="font-mono text-[11px] font-medium text-ink-400">
-                        {meta ? `${meta.minutes} min →` : ""}
+                        {list.length ? `${list.length} lesson${list.length > 1 ? "s" : ""} →` : ""}
                       </span>
                     </button>
                   );
@@ -85,34 +116,33 @@ function LessonBrowser({ onOpen }: { onOpen: (num: number) => void }) {
 export default function Lesson() {
   const active = useFramis((s) => s.activeLessonKey);
   const setActive = useFramis((s) => s.setActiveLessonKey);
+  const goToLesson = useFramis((s) => s.goToLesson);
 
   if (active === null) {
     return (
       <div className="max-w-[780px]">
-        <LessonBrowser onOpen={(num) => setActive(lessonMeta(num)?.key ?? num)} />
+        <LessonBrowser onOpen={(module) => goToLesson(module, 1)} />
       </div>
     );
   }
 
+  const { module, lessonIndex } = active;
+  const ref = resolveLesson(module, lessonIndex);
+  const totalLessons = moduleLessonList(module).length;
+
   return (
     <div className="max-w-[780px]">
-      {active === "variables" && (
-        <>
-          <BackToAll onBack={() => setActive(null)} />
-          <VariablesLesson />
-        </>
-      )}
-      {active === "rag" && (
-        <>
-          <BackToAll onBack={() => setActive(null)} />
-          <RagLesson />
-        </>
-      )}
-      {typeof active === "number" && GENERIC_LESSONS[active] && (
-        <>
-          <BackToAll onBack={() => setActive(null)} />
-          <GenericLesson data={GENERIC_LESSONS[active]} />
-        </>
+      <BackToAll onBack={() => setActive(null)} />
+      <LessonSubNav module={module} activeIndex={lessonIndex} onPick={(i) => goToLesson(module, i)} />
+      {ref?.kind === "bespoke" && ref.bespokeKey === "variables" && <VariablesLesson />}
+      {ref?.kind === "bespoke" && ref.bespokeKey === "rag" && <RagLesson />}
+      {ref?.kind === "generic" && (
+        <GenericLesson
+          key={`${module}-${lessonIndex}`}
+          data={ref.data}
+          totalLessons={totalLessons}
+          nextUpLabel={nextLessonLabel(module, lessonIndex)}
+        />
       )}
     </div>
   );

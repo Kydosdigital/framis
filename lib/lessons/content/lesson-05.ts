@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 5,
+  orderIndex: 1,
   phaseLabel: "HTML, CSS, JAVASCRIPT",
   title: "One button, three languages",
   minutes: 20,

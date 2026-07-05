@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 22,
+  orderIndex: 1,
   phaseLabel: "HUMAN-IN-THE-LOOP + GUARDRAILS",
   title: "The Refund Bot's Three Lanes: Auto-Approve, Ask, or Block",
   minutes: 20,

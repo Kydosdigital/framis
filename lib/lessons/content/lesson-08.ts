@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 8,
+  orderIndex: 1,
   phaseLabel: "BACKEND: PYTHON + POSTGRES",
   title: "The WHERE clause is just a loop and an if",
   minutes: 20,

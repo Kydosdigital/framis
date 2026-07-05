@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 11,
+  orderIndex: 1,
   phaseLabel: "SECURITY + AUTH PATTERNS",
   title: "Never store the password: hashing vs. plaintext",
   minutes: 20,

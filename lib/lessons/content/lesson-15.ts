@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 15,
+  orderIndex: 1,
   phaseLabel: "STRUCTURED OUTPUTS + TOOL CALLING",
   title: "The Dispatcher: Turning a Tool Call Into a Function Call",
   minutes: 20,

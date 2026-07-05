@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 1,
+  orderIndex: 1,
   phaseLabel: "SETUP + TERMINAL + GIT",
   title: "Finding your way around the terminal",
   minutes: 18,

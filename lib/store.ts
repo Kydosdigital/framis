@@ -22,7 +22,7 @@ export type QuizKey = "a" | "b" | "c";
 export type Theme = "light" | "dark";
 // null = browsing the full lesson list; "variables"/"rag" = a built lesson;
 // a number = a module picked from the browser that has no lesson content yet
-export type LessonSelection = "variables" | "rag" | number | null;
+export type LessonSelection = { module: number; lessonIndex: number } | null;
 
 type ObAnswers = { q1: string | null; q2: string | null; q3: string | null };
 type Setup = { py: boolean; vsc: boolean; git: boolean };
@@ -106,7 +106,7 @@ type Actions = {
   toggleSidebar: () => void;
   closeSidebar: () => void;
   setActiveLessonKey: (key: LessonSelection) => void;
-  goToLesson: (key: "variables" | "rag" | number) => void;
+  goToLesson: (module: number, lessonIndex?: number) => void;
 
   setOb: (patch: Partial<Pick<State, "obName" | "obEmail" | "obPw">>) => void;
   answer: (key: keyof ObAnswers, value: string) => void;
@@ -321,7 +321,8 @@ export const useFramis = create<State & Actions>((set, get) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   closeSidebar: () => set({ sidebarOpen: false }),
   setActiveLessonKey: (activeLessonKey) => set({ activeLessonKey }),
-  goToLesson: (key) => set({ activeLessonKey: key, appTab: "lesson", sidebarOpen: false }),
+  goToLesson: (module, lessonIndex = 1) =>
+    set({ activeLessonKey: { module, lessonIndex }, appTab: "lesson", sidebarOpen: false }),
 
   setTheme: (theme) => {
     applyTheme(theme);

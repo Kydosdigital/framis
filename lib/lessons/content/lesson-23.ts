@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 23,
+  orderIndex: 1,
   phaseLabel: "OBSERVABILITY + COST CONTROLS",
   title: "The Two-Line Function Standing Between You and a Surprise Bill",
   minutes: 20,

@@ -2,6 +2,7 @@ import type { LessonData } from "../types";
 
 const content: LessonData = {
   num: 20,
+  orderIndex: 1,
   phaseLabel: "FINE-TUNING + DATASET QUALITY",
   title: "100 clean examples beat 10,000 messy ones",
   minutes: 20,
