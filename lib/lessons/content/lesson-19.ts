@@ -4,106 +4,76 @@ const content: LessonData = {
   num: 19,
   orderIndex: 1,
   phaseLabel: "TRANSFORMERS + ATTENTION",
-  title: "\"It\" doesn't mean anything until it looks around",
-  minutes: 20,
+  title: "Order isn't free: telling the model what came first",
+  minutes: 18,
   concept:
-    "Attention is how a transformer figures out what a word actually means in context, by letting every word look at every other word in the sentence and decide how much each one matters. Take \"The trophy didn't fit in the suitcase because it was too big.\" The word \"it\" has no meaning on its own — it could point to the trophy or the suitcase — so the model computes an attention weight from \"it\" to every other word, and those weights say how much \"trophy,\" \"suitcase,\" \"fit,\" and \"big\" should each contribute to building \"it\"'s meaning in this exact sentence. Because \"big\" is the word that disambiguates things (a big trophy doesn't fit in a small-ish suitcase), \"it\" ends up attending most strongly to \"trophy,\" and the model quietly resolves the reference without anyone hand-coding a grammar rule for it. Swap one word — \"because it was too small\" — and the same mechanism now sends \"it\"'s attention mostly toward \"suitcase\" instead, purely because the weights get recomputed from the new context. Every word in a transformer gets this treatment, not just pronouns, which is how the model builds a representation of each word that's shaped by its whole sentence rather than a fixed dictionary definition.",
+    "Over the next several lessons you'll learn how a transformer uses attention to let every word absorb information from every other word in a sentence. That mechanism has a blind spot worth fixing before we go any further: attention scores measure how relevant two tokens are to each other, not which one came first, so if a model only saw a pile of tokens with no notion of sequence, \"the dog bit the man\" and \"the man bit the dog\" would be built from exactly the same ingredients — same words, same set, same inputs to every score. Since those two sentences describe opposite events, a transformer needs a way to inject \"where in the sentence am I\" into every token before attention (or anything else) gets to run. Positional encoding is that fix: a pattern of numbers generated purely from a token's index in the sequence — position 1 gets one pattern, position 2 a different one, position 3 different again — added directly onto that token's own vector. Real transformers generate this pattern from sine and cosine waves at different frequencies (which gives useful mathematical properties for very long sequences), but the mechanism to internalize is simpler than the formula: whatever the exact pattern is, it gets added to the word's vector before anything else happens, so every later computation — including attention — automatically has access to both \"what is this token\" and \"where does it sit,\" with no special-cased logic for order bolted on afterward.",
   conceptSimpler:
-    "It's like reading a sentence and unconsciously darting your eyes back to the word that clears up an ambiguous \"it\" — attention is the model doing that eye-dart, mathematically, for every word at once.",
+    "It's like handing out numbered tickets to people in a line — without the tickets everyone looks like an interchangeable crowd, but with a ticket stapled to each person, you can finally tell who was first, second, and third.",
   vizStages: [
     {
-      label: "1. Words have no fixed meaning alone",
+      label: "1. A preview problem: relevance without order",
       body:
-        "In the sentence \"The trophy didn't fit in the suitcase because it was too big,\" the word \"it\" is just a placeholder — it grammatically could refer to the trophy or the suitcase. Read in isolation, it resolves to nothing.",
-      code: "sentence: The trophy didn't fit in the suitcase because it was too big\ntarget word: \"it\"  ->  refers to: ???",
+        "Attention, which you're about to learn starting in the next lesson, scores how relevant two tokens are to each other — left to itself, it has no way to know which token came first. Feed it the same set of words in any order and it would score them identically.",
+      code: "words: {dog, bit, man}  -- attention alone treats this as an unordered set",
     },
     {
-      label: "2. Every word scores every other word",
+      label: "2. But word order changes meaning completely",
       body:
-        "The transformer computes an attention score from \"it\" to each other word in the sentence — a number for how relevant that word is to figuring out what \"it\" means here.",
-      code: "\"it\" scoring every word:\n  trophy   -> 0.62\n  suitcase -> 0.19\n  fit      -> 0.08\n  big      -> 0.07\n  because  -> 0.02\n  ...",
+        "\"The dog bit the man\" and \"the man bit the dog\" use identical words but describe opposite events. A model that ignored order would treat these as the same sentence.",
+      code: "\"The dog bit the man.\"   != meaning   \"The man bit the dog.\"",
     },
     {
-      label: "3. The high-weight words win",
+      label: "3. A position signal gets added to each token",
       body:
-        "\"Trophy\" gets the largest share of \"it\"'s attention because \"big\" — a trophy being too big to fit is the sentence's whole logic — points back at it. The model blends mostly \"trophy\" into \"it\"'s meaning, with small contributions from the rest.",
-      code: "\"it\" meaning ~= 0.62*(trophy) + 0.19*(suitcase) + 0.19*(everything else)",
+        "Before attention (or anything else) runs, each token's vector gets a positional encoding added to it — a pattern of numbers generated from its index in the sequence. Position 1's pattern differs from position 2's, which differs from position 3's.",
+      code:
+        "token(\"dog\", position 2) = word_vector(\"dog\") + position_vector(2)\ntoken(\"dog\", position 5) = word_vector(\"dog\") + position_vector(5)  -- different!",
     },
     {
-      label: "4. Change one word, the weights flip",
+      label: "4. Now the same word carries different information by position",
       body:
-        "Replace \"big\" with \"small\": \"...because it was too small.\" Now the logic reverses — something too small wouldn't be the reason it didn't fit — so attention recomputes and \"it\" swings toward \"suitcase\" instead. No rule was rewritten; the weights just responded to new context.",
-      code: "new sentence ends in \"...it was too small\"\n\"it\" scoring every word:\n  suitcase -> 0.58\n  trophy   -> 0.21\n  small    -> 0.11\n  ...",
+        "\"Dog\" at position 2 (the subject, before \"bit\") and \"dog\" at position 5 (the object, after \"bit\") now arrive as distinguishable vectors, so whatever runs next — attention included — can tell the sentences apart.",
+      code: "\"The dog bit the man\":   dog@2, bit@3, man@5\n\"The man bit the dog\":   man@2, bit@3, dog@5",
     },
   ],
   realWorldIntro:
-    "This is exactly why LLMs can track pronouns, resolve ambiguity, and keep a coherent thread across a long paragraph — every token is constantly re-reading the whole context and reweighting what matters, instead of relying on a word's meaning being fixed in advance.",
+    "This is exactly why models can tell \"turn left then right\" apart from \"turn right then left,\" and why longer context windows require extending or redesigning positional encoding schemes. It's also why this step has to happen first in this course: attention just consumes whatever vector arrives at its input, position baked in or not — it has no way to fix a missing position signal after the fact.",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each word below to see which other words it attends to most strongly, and why.",
-    stages: [
-      {
-        label: "\"Trophy\"",
-        body:
-          "\"Trophy\" mostly attends to \"fit\" and \"suitcase\" — those words define the situation it's part of (something that either does or doesn't fit inside something else). It doesn't need to attend to \"it\" or \"big\" much, since it's the noun being described, not the ambiguous one.",
-        code: "trophy --> [fit: 0.41, suitcase: 0.33, didn't: 0.14, big: 0.07, it: 0.05]",
-      },
-      {
-        label: "\"Suitcase\"",
-        body:
-          "\"Suitcase\" attends heavily to \"fit\" and \"trophy,\" the two things it's directly related to in the sentence's core claim, with a smaller pull toward \"big\" since size is what's at stake.",
-        code: "suitcase --> [fit: 0.38, trophy: 0.30, big: 0.16, didn't: 0.10, it: 0.06]",
-      },
-      {
-        label: "\"Fit\"",
-        body:
-          "\"Fit\" is the verb tying the trophy and suitcase together, so it spreads attention fairly evenly across both nouns plus \"didn't,\" since negation flips what \"fit\" means here.",
-        code: "fit --> [trophy: 0.29, suitcase: 0.28, didn't: 0.24, it: 0.10, big: 0.09]",
-      },
-      {
-        label: "\"It\"",
-        body:
-          "\"It\" is the pronoun with no meaning of its own, so it leans hardest on \"trophy\" — the noun that \"big\" logically points back to — while giving \"suitcase\" a smaller, hedged weight since it's still grammatically possible.",
-        code: "it --> [trophy: 0.62, suitcase: 0.19, fit: 0.08, big: 0.07, because: 0.02, ...]",
-      },
-      {
-        label: "\"Big\"",
-        body:
-          "\"Big\" attends most strongly back to \"it\" and \"trophy,\" because it's the adjective doing the disambiguating work — it's the reason the model can confidently resolve what \"it\" means at all.",
-        code: "big --> [it: 0.45, trophy: 0.27, suitcase: 0.15, fit: 0.09, too: 0.04]",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Write add_vectors(vec_a, vec_b) and a position_pattern(position) function, then show that the exact same word produces a different vector depending on where it sits in the sentence.",
+    starterCode:
+      "def add_vectors(vec_a, vec_b):\n    result = []\n    for i in range(len(vec_a)):\n        result.append(vec_a[i] + vec_b[i])\n    return result\n\n# a simplified stand-in for the sine/cosine pattern real transformers use --\n# the real formula needs trig functions our sandbox doesn't have, but this\n# captures the same idea: a pattern that's different at every position.\ndef position_pattern(position):\n    return [position, position * 2, position * 3, position * 4]\n\nword_dog = [3, 5, 0, 0]\n\ntoken_dog_at_2 = add_vectors(word_dog, position_pattern(2))\ntoken_dog_at_5 = add_vectors(word_dog, position_pattern(5))\n\nprint(f\"'dog' alone:         {word_dog}\")\nprint(f\"'dog' at position 2: {token_dog_at_2}\")\nprint(f\"'dog' at position 5: {token_dog_at_5}\")\n\nif token_dog_at_2 == token_dog_at_5:\n    print(\"same vector regardless of position -- order would be invisible\")\nelse:\n    print(\"different vectors -- position is now baked into the representation\")",
   },
   quizQuestion:
-    "In \"The trophy didn't fit in the suitcase because it was too big,\" why does \"it\" attend most strongly to \"trophy\" rather than \"suitcase\"?",
+    "word_cat = [4, 1, 0, 0] and position_pattern(3) returns [3, 6, 9, 12]. What does add_vectors(word_cat, position_pattern(3)) produce, and why does that matter?",
+  quizCode:
+    "word_cat = [4, 1, 0, 0]\npos_3 = position_pattern(3)\ntoken_cat_at_3 = add_vectors(word_cat, pos_3)\nprint(pos_3)\nprint(token_cat_at_3)",
   quizOptions: [
     {
       key: "a",
       label:
-        "\"Trophy\" appears earlier in the sentence, and attention always weights earlier words more heavily",
-      correct: false,
-    },
-    {
-      key: "b",
-      label:
-        "The attention weights are computed from the whole context, and \"big\" as the reason something didn't fit makes \"trophy\" the word that best explains \"it\" here",
+        "[7, 7, 9, 12] — each entry of the position pattern gets added to the matching entry of the word vector, so \"cat\" at position 3 is a distinguishable vector from \"cat\" anywhere else",
       correct: true,
     },
     {
+      key: "b",
+      label: "[12, 6, 0, 0] — the position pattern replaces the word vector's entries instead of adding to them",
+      correct: false,
+    },
+    {
       key: "c",
-      label:
-        "\"Trophy\" and \"it\" are the same part of speech, so the model always links matching parts of speech together",
+      label: "[4, 1, 0, 0] — position information doesn't actually change the vector, it's tracked separately",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Exactly — attention weights aren't based on word order or grammar category, they're recomputed from context, and here \"big\" is the clue that makes \"trophy\" the sensible referent for \"it.\"",
+    "Right — 4+3, 1+6, 0+9, 0+12 gives [7, 7, 9, 12]. The position pattern is added entry-by-entry directly into the word's own vector, so the vector itself now carries positional information, not a separate side channel.",
   quizFeedbackIncorrect:
-    "Not quite — attention isn't driven by word position or matching parts of speech; it's driven by context, and \"big\" is what tips the weights toward \"trophy\" as the thing \"it\" refers to.",
+    "Not quite — positional encoding adds to the word vector rather than replacing or ignoring it: 4+3, 1+6, 0+9, 0+12 gives [7, 7, 9, 12], a vector that's now different from \"cat\" at any other position.",
   takeaway:
-    "Attention lets a model rebuild each word's meaning from its surrounding context every time, which is why the same pronoun can resolve to different things in nearly identical sentences.",
-  nextUpLabel: "Fine-tuning + Dataset Quality",
+    "Positional encoding stamps each token with where it sits in the sequence before any other computation happens, which is exactly what the attention mechanism in the next lesson needs already baked in if it's going to have any hope of respecting word order.",
 };
 
 export default content;

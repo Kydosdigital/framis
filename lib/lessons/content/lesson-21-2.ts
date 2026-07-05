@@ -4,79 +4,81 @@ const content: LessonData = {
   num: 21,
   orderIndex: 2,
   phaseLabel: "AGENTS + ORCHESTRATION",
-  title: "Divide and Conquer: Turning One Goal Into Many Subtasks",
+  title: "Orchestration: The Supervisor That Routes Work to the Right Agent",
   minutes: 20,
   concept:
-    "A single high-level goal like \"plan a trip to Denver\" is too vague for an agent to act on directly — there's no one tool call that does that. Multi-step planning is the process of decomposing that goal into an ordered list of smaller, concrete subtasks, each one small enough to map onto a single tool call or reasoning step, like \"search flights\", \"book hotel\", and \"rent car\". Once that list exists, execution becomes mechanical: a for-loop walks through the subtasks in order, running each one and recording whether it succeeded. This separation matters because planning and doing are different kinds of work — planning benefits from seeing the whole goal at once, while execution only needs to know about the one subtask in front of it. It also makes the plan inspectable: you can print, log, or even show a user the full subtask list before a single tool runs, instead of discovering the agent's intentions one action at a time.",
+    "A single high-level goal like \"write a blog post about Denver's food scene\" is too vague for any one agent to handle end to end — some parts of the work call for very different skills. Orchestration starts with the same decomposition idea as any planning step: break the goal into an ordered list of subtasks. What makes it orchestration is the next decision — not just what to do, but which agent should do it. A research_agent gathers facts; a writer_agent turns facts into prose; neither one is good at the other's job. The piece of code that makes that decision is called a supervisor or coordinator, and it's structurally identical to Module 15's dispatch(call) — except instead of routing a tool name to a tool function, it routes a subtask's type to whichever agent is equipped to handle that kind of work. Once the supervisor has picked an agent for a subtask, execution is still a for-loop, walking through the subtask list in order, handing each one off, and recording the result before moving to the next. This matters because a single agent juggling every possible skill tends to do all of them a little worse, while a system of specialized agents plus a router that hands off cleanly between them tends to do each part better. In production you would rarely hand-write this router from scratch: frameworks like LangGraph and CrewAI exist specifically to manage multi-agent hand-off, shared state, and routing decisions off the shelf — but the underlying idea, a supervisor deciding who does what, is exactly what you're building a miniature version of here.",
   conceptSimpler:
-    "It's like writing a packing list before a trip instead of grabbing random items as you think of them — you decide the whole list up front, then just check items off one by one.",
+    "It's like a manager assigning tasks to the right specialist on a team instead of asking one generalist to do everything — the researcher looks things up, the writer turns findings into prose, and the manager's whole job is deciding who gets which task.",
   vizStages: [
     {
-      label: "1. Start with one vague goal",
+      label: "1. One goal, several kinds of subtasks",
       body:
-        "A goal like \"plan a trip to Denver\" doesn't correspond to any single action an agent can take — it has to be broken down first.",
-      code: "goal = \"plan a trip to Denver\"",
+        "Decomposing the goal isn't just a flat list anymore — each subtask also carries a type, because different subtasks call for genuinely different skills, not just a different order.",
+      code:
+        "subtasks = []\nsubtasks.append({\"task\": \"research neighborhood food scenes\", \"type\": \"research\"})\nsubtasks.append({\"task\": \"write an engaging intro paragraph\", \"type\": \"writing\"})",
     },
     {
-      label: "2. Decompose it into an ordered list of subtasks",
+      label: "2. A supervisor routes each subtask's type to an agent",
       body:
-        "Planning produces a list of short, concrete strings, each one small enough to execute on its own. Order matters — later subtasks often depend on earlier ones finishing first.",
-      code: "subtasks = [\"search flights\", \"book hotel\", \"rent car\", \"confirm itinerary\"]",
+        "This is a dispatcher in every sense that matters — it just routes on subtask[\"type\"] to an agent function instead of routing a tool name to a tool function.",
+      code:
+        "def supervisor(subtask):\n    kind = subtask[\"type\"]\n    if kind == \"research\":\n        return research_agent(subtask[\"task\"])\n    elif kind == \"writing\":\n        return writer_agent(subtask[\"task\"])\n    else:\n        raise ValueError(\"no agent for type: \" + kind)",
     },
     {
-      label: "3. A for-loop executes each subtask in turn",
+      label: "3. Execution is still a for-loop, handing off one subtask at a time",
       body:
-        "With the plan already decided, execution is just a for-loop over the list — no more planning happens mid-loop, just running each subtask and recording the outcome.",
-      code: "results = []\nfor i in range(len(subtasks)):\n    subtask = subtasks[i]\n    ok = execute_subtask(subtask)\n    results.append(ok)",
+        "Nothing about running the plan changes — a for-loop walks the subtask list in order, and each iteration hands one subtask to the supervisor instead of executing it directly.",
+      code:
+        "results = []\nfor i in range(len(subtasks)):\n    outcome = supervisor(subtasks[i])\n    results.append(outcome)",
     },
     {
-      label: "4. The loop keeps going even after a failure",
+      label: "4. Real systems reach for a framework, not a hand-rolled router",
       body:
-        "Because there's no break, one failed subtask (rent car, say) doesn't stop confirm itinerary from being attempted next — the loop just records that one entry as failed and moves on.",
-      code: "# search flights: success\n# book hotel: success\n# rent car: failed\n# confirm itinerary: success\n# results = [True, True, False, True]",
+        "The miniature supervisor above is the whole idea in one function. At production scale, multi-agent frameworks like LangGraph and CrewAI provide this routing, plus shared state and hand-off between agents, without you writing the if/elif chain yourself.",
+      code:
+        "# research_agent(\"research neighborhood food scenes\") -> gathers facts\n# writer_agent(\"write an engaging intro paragraph\") -> drafts prose\n# LangGraph / CrewAI: same supervisor idea, managed for you at scale",
     },
   ],
   realWorldIntro:
-    "Coding agents like those built on Claude routinely turn a request such as \"add dark mode to the settings page\" into a subtask list — find the settings component, add a theme toggle, wire it to a context provider, update the stylesheet — and then execute that list one file-editing step at a time.",
+    "Multi-agent systems built with LangGraph or CrewAI use exactly this supervisor pattern at a larger scale — a coordinator agent looks at the task queue, decides whether the next step needs a research agent, a coding agent, or a review agent, and hands off full conversational context to whichever one is chosen, instead of asking a single agent to be equally good at researching, coding, and reviewing all at once.",
   realWorldCode:
-    "subtasks = [\"locate settings component\", \"add theme toggle\", \"wire context provider\", \"update stylesheet\"]\nfor i in range(len(subtasks)):\n    print(f\"working on: {subtasks[i]}\")",
+    "def supervisor(subtask):\n    kind = subtask[\"type\"]\n    if kind == \"research\":\n        return research_agent(subtask[\"task\"])\n    elif kind == \"writing\":\n        return writer_agent(subtask[\"task\"])\n    elif kind == \"review\":\n        return review_agent(subtask[\"task\"])\n    else:\n        raise ValueError(\"no agent for type: \" + kind)",
   sandbox: {
     kind: "code",
     challenge:
-      "Build a list of subtask strings for a goal, then use a for-loop to execute each one in order and count how many succeeded.",
+      "Write a research_agent and a writer_agent, then a supervisor(subtask) router that hands each subtask off to the right one based on subtask[\"type\"], and run a full subtask list through it.",
     starterCode:
-      "def execute_subtask(subtask):\n    if subtask == \"search flights\":\n        return True\n    elif subtask == \"book hotel\":\n        return True\n    elif subtask == \"rent car\":\n        return False\n    else:\n        return True\n\ngoal = \"plan a trip to Denver\"\nsubtasks = [\"search flights\", \"book hotel\", \"rent car\", \"confirm itinerary\"]\n\nresults = []\ncompleted = 0\nfor i in range(len(subtasks)):\n    subtask = subtasks[i]\n    print(f\"step {i}: attempting -> {subtask}\")\n    ok = execute_subtask(subtask)\n    results.append(ok)\n    if ok:\n        completed = completed + 1\n        print(f\"step {i}: done -> {subtask}\")\n    else:\n        print(f\"step {i}: failed -> {subtask}\")\n\nprint(f\"completed {completed} of {len(subtasks)} subtasks for goal: {goal}\")",
+      "def research_agent(task):\n    return \"[research] found facts for: \" + task\n\ndef writer_agent(task):\n    return \"[writer] drafted prose for: \" + task\n\ndef supervisor(subtask):\n    kind = subtask[\"type\"]\n    if kind == \"research\":\n        return research_agent(subtask[\"task\"])\n    elif kind == \"writing\":\n        return writer_agent(subtask[\"task\"])\n    else:\n        raise ValueError(\"no agent for type: \" + kind)\n\nsubtasks = []\nsubtasks.append({\"task\": \"research neighborhood food scenes\", \"type\": \"research\"})\nsubtasks.append({\"task\": \"write an engaging intro paragraph\", \"type\": \"writing\"})\nsubtasks.append({\"task\": \"find 3 highly rated restaurants\", \"type\": \"research\"})\nsubtasks.append({\"task\": \"write the closing paragraph\", \"type\": \"writing\"})\n\nresults = []\nfor i in range(len(subtasks)):\n    subtask = subtasks[i]\n    print(f\"step {i}: handing off -> {subtask['task']} (type: {subtask['type']})\")\n    outcome = supervisor(subtask)\n    results.append(outcome)\n    print(f\"step {i}: {outcome}\")\n\nprint(f\"completed {len(results)} of {len(subtasks)} subtasks\")",
   },
   quizQuestion:
-    "In this loop, rent car (the third subtask) fails. What happens to search flights and book hotel, which come before it in the list?",
+    "Suppose you deleted the supervisor and research_agent entirely, and routed every subtask below — including the research ones — into writer_agent. What's the most likely real-world consequence, even though the code runs without crashing?",
   quizCode:
-    "subtasks = [\"search flights\", \"book hotel\", \"rent car\", \"confirm itinerary\"]\nfor i in range(len(subtasks)):\n    ok = execute_subtask(subtasks[i])\n    if ok:\n        print(f\"{subtasks[i]}: success\")\n    else:\n        print(f\"{subtasks[i]}: failed\")",
+    "def writer_agent(task):\n    return \"[writer] drafted prose for: \" + task\n\nsubtasks = []\nsubtasks.append({\"task\": \"research neighborhood food scenes\", \"type\": \"research\"})\nsubtasks.append({\"task\": \"write an engaging intro paragraph\", \"type\": \"writing\"})\n\nfor subtask in subtasks:\n    print(writer_agent(subtask[\"task\"]))",
   quizOptions: [
     {
       key: "a",
       label:
-        "Nothing changes for them — they already ran and printed their own success messages before rent car was even attempted, since the loop executes subtasks strictly in list order",
+        "It still runs and prints something for every subtask, but the research subtasks get prose-writing treatment instead of fact-gathering — the code doesn't crash, but the output quality suffers because the wrong specialist handled the task",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "The for loop exits as soon as rent car fails, so confirm itinerary never gets attempted",
+      label: "Python raises a TypeError, since writer_agent's parameter doesn't match a research-shaped subtask",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "search flights and book hotel get automatically re-run to double-check they weren't affected by the later failure",
+      label: "Nothing changes at all, since research_agent and writer_agent do the same thing under the hood",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — a for-loop with no break runs every subtask regardless of earlier outcomes; a failure is just recorded, it doesn't rewind or halt work that already happened.",
+    "Right — this is the real risk orchestration guards against. There's no crash to warn you, since writer_agent runs fine on any string it's handed. The failure is silent and qualitative: a research task run through a writing-only agent produces confident-sounding prose with no actual fact-gathering behind it, which is much harder to catch than a Python error would be.",
   quizFeedbackIncorrect:
-    "Not quite — there's no break statement here, so the loop keeps going through confirm itinerary; and earlier subtasks already finished and printed before rent car ever ran, so there's nothing to undo or re-check.",
+    "Not quite — writer_agent takes a single task string and both subtasks provide one, so nothing crashes. The real problem is invisible to Python entirely: routing a research subtask to a writing-only agent just produces well-written prose with no real facts behind it, a quality failure no stack trace will ever show you.",
   takeaway:
-    "Multi-step planning means deciding the full list of subtasks before execution starts, then letting a simple for-loop run them in order. Separating \"what's the plan\" from \"run the next subtask\" keeps each part of the agent simple and inspectable.",
+    "Orchestration means more than sequencing subtasks — it means deciding which agent should handle each one, and handing off cleanly via a supervisor/router just like Module 15's dispatch(call), but routing to an agent instead of a single function. Production systems reach for frameworks like LangGraph or CrewAI to manage that hand-off, shared state, and routing at scale, but the core idea — a coordinator matching subtask type to specialist agent — is the same one you just built.",
 };
 
 export default content;

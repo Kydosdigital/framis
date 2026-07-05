@@ -4,105 +4,80 @@ const content: LessonData = {
   num: 19,
   orderIndex: 4,
   phaseLabel: "TRANSFORMERS + ATTENTION",
-  title: "Attention forgets order, so the model has to be told what came first",
-  minutes: 18,
+  title: "The payoff: attention weights become an actual answer",
+  minutes: 22,
   concept:
-    "Attention computes a weighted blend of every token in a sentence based on relevance, but that math has no built-in sense of sequence — if you fed it the same set of words in a shuffled order, attention alone would score them identically, because it treats the input as a bag of tokens rather than a line of them. That's a problem, since \"the dog bit the man\" and \"the man bit the dog\" contain the exact same words but mean opposite things. Positional encoding fixes this by adding information about each token's position directly into its representation before attention ever runs, typically as a pattern of values generated from the token's index in the sequence, so token 1 gets a different nudge than token 2, which gets a different nudge than token 3. Because that position information is baked into the vector each token carries, attention can now implicitly take order into account — a word's representation reflects both what it is and where it sits, so \"dog\" appearing before \"bit\" ends up meaning something different from \"dog\" appearing after it. Without this step, a transformer would be a powerful but order-blind machine, equally happy to make sense of a sentence and its randomly scrambled twin.",
+    "Every step so far has been building toward one final move: using the attention weights to actually construct \"it\"'s new, context-aware representation. That construction is a weighted sum — multiply each token's Value vector by the attention weight \"it\" gave it, then add all of those scaled vectors together. Trophy earned the highest weight (about 0.55), so its Value vector contributes the most to the result; suitcase earned the lowest weight (about 0.12), so its Value vector barely moves the needle; big sits in between (about 0.33), pulling the output partway toward whatever \"big\" contributes. The output is a single new vector, the same size as any one Value vector, that blends mostly-trophy with a real but smaller dose of big and a faint trace of suitcase — this is the actual mathematical sense in which \"it\" now means \"mostly trophy, informed by context\" instead of nothing at all. This same three-step recipe — Query dot Key for raw scores, scale and softmax for weights, weighted sum of Values for the output — is exactly what a real transformer runs, except it runs it many times in parallel per layer, called heads, each with its own separately learned Query/Key/Value weight matrices. Nothing forces different heads to specialize, but because each head gets its own weights, one head often ends up tracking grammar, another tracking coreference, another tone — and their separate output vectors get concatenated and combined back into a single vector before moving on to whatever comes next in the block.",
   conceptSimpler:
-    "It's like handing out numbered tickets to people in a line — without the tickets everyone looks like an interchangeable crowd, but with a ticket stapled to each person, you can finally tell who was first, second, and third.",
+    "Once you know how much attention each word deserves, you finally cash those percentages in — take that much of each word's actual content and blend it together, the way mixing paint by percentage gives you one final color instead of a list of ratios.",
   vizStages: [
     {
-      label: "1. Attention alone is order-blind",
+      label: "1. Multiply each Value by its weight",
       body:
-        "Attention scores are based on how relevant two tokens are to each other, not on which one came first. Feed it the same words in any order and, on its own, it has no way to tell the difference.",
-      code: "words: {dog, bit, man}  -- attention alone treats this as an unordered set",
+        "Trophy's Value vector [8, 2, 0, 0] gets scaled by its weight, about 0.55; big's Value [0, 0, 4, 4] gets scaled by about 0.33; suitcase's Value [0, 8, 0, 0] gets scaled by about 0.12. Each scaled vector represents that word's \"fair share\" of the final answer.",
+      code:
+        "weighted_trophy   ~= 0.547 * [8, 2, 0, 0] = [4.37, 1.09, 0, 0]\nweighted_big      ~= 0.331 * [0, 0, 4, 4] = [0, 0, 1.33, 1.33]\nweighted_suitcase ~= 0.122 * [0, 8, 0, 0] = [0, 0.98, 0, 0]",
     },
     {
-      label: "2. But word order changes meaning completely",
+      label: "2. Add the scaled Values together",
       body:
-        "\"The dog bit the man\" and \"the man bit the dog\" use identical words but describe opposite events. A model that ignored order would treat these as the same sentence.",
-      code: "\"The dog bit the man.\"   != meaning   \"The man bit the dog.\"",
+        "Add all three scaled vectors entry by entry. Whatever comes out is the new vector attention hands back for \"it\" at this layer.",
+      code:
+        "output = weighted_trophy + weighted_big + weighted_suitcase\noutput ~= [4.37, 2.07, 1.33, 1.33]",
     },
     {
-      label: "3. A position signal gets added to each token",
+      label: "3. The result: \"it\" now means something concrete",
       body:
-        "Before attention runs, each token's vector gets a positional encoding added to it — a pattern of numbers generated from its index in the sequence. Position 1's pattern differs from position 2's, which differs from position 3's.",
-      code: "token(\"dog\", position 2) = word_vector(\"dog\") + position_vector(2)\ntoken(\"dog\", position 5) = word_vector(\"dog\") + position_vector(5)  -- different!",
+        "Look at the shape of that output vector: entries 0 and 1 come almost entirely from trophy (with a little suitcase mixed into entry 1), while entries 2 and 3 come entirely from big, since trophy and suitcase are both 0 there. \"It\"'s new representation is mostly trophy-shaped, but it carries a real, non-zero trace of \"big\" too — exactly the disambiguating clue that made trophy win in the first place.",
+      code: "output entries 0-1 ~= trophy's signature   |   output entries 2-3 ~= entirely from big",
     },
     {
-      label: "4. Now the same word carries different information by position",
+      label: "4. Real transformers do this several times at once: multi-head attention",
       body:
-        "\"Dog\" at position 2 (the subject, before \"bit\") and \"dog\" at position 5 (the object, after \"bit\") now arrive at attention as distinguishable vectors, so the model can tell the sentences apart.",
-      code: "\"The dog bit the man\":   dog@2, bit@3, man@5\n\"The man bit the dog\":   man@2, bit@3, dog@5",
+        "One attention calculation forces every relationship (grammar, reference, tone) to blend into a single score per pair of words. Multi-head attention runs several of these Query/Key/Value pipelines in parallel, each with its own learned weights, so one head can specialize in grammar, another in coreference, another in tone — nobody assigns these roles by hand, they emerge because splitting the work gives the model room to discover more than one useful pattern per layer.",
+      code:
+        "head 1 (syntax):    \"it\" -> was: 0.55, too: 0.20, ...\nhead 2 (reference):  \"it\" -> trophy: 0.71, suitcase: 0.18, ...\ncombined(\"it\") = merge(head 1 output, head 2 output, ...)",
     },
   ],
   realWorldIntro:
-    "This is exactly why models can tell \"turn left then right\" apart from \"turn right then left,\" and why longer context windows require extending or redesigning positional encoding schemes — the model's whole sense of sequence rides on this one addition.",
+    "A model like GPT runs this whole pipeline — Query dot Key, scale and softmax, weighted sum of Values — across dozens of heads per layer and dozens of stacked layers, which is how a single token's vector accumulates such a rich, context-dependent representation by the time it reaches the output.",
+  realWorldCode:
+    "for head in attention_heads:\n    scores = scale_and_softmax(dot_product(head.query, head.keys))\n    head_output = weighted_sum(scores, head.values)\noutput = combine(all_head_outputs)  # concatenate + project back to one vector",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each reordering of the same five words to see how position changes what the sentence actually means.",
-    stages: [
-      {
-        label: "Original order",
-        body:
-          "\"The dog bit the man.\" Position tells us \"dog\" comes before the verb, making it the one who did the biting, and \"man\" comes after, making him the one who got bitten.",
-        code: "position: 1     2    3   4    5\nword:     The   dog  bit the  man\nmeaning: dog is the biter, man is bitten",
-      },
-      {
-        label: "Swap the noun positions",
-        body:
-          "\"The man bit the dog.\" Same five words, but now \"man\" sits in the biter's position and \"dog\" sits in the bitten position — the entire event reverses purely because of where each word landed.",
-        code: "position: 1     2    3   4    5\nword:     The   man  bit the  dog\nmeaning: man is the biter, dog is bitten",
-      },
-      {
-        label: "A question, from reordering alone",
-        body:
-          "\"Did the dog bite the man?\" Moving a word to the very front and adjusting structure turns a statement into a question — position near the start of a sequence carries a lot of grammatical weight.",
-        code: "position: 1    2   3    4    5   6\nword:     Did  the dog  bite the man\nmeaning: this is now a yes/no question",
-      },
-      {
-        label: "Scrambled beyond grammar",
-        body:
-          "\"Bit man dog the the.\" With no coherent position pattern left to lean on, the words no longer form a clear event at all — this is roughly what a transformer without positional encoding would effectively be reasoning over: relevance without order.",
-        code: "position: 1   2   3    4   5\nword:     Bit man dog  the the\nmeaning: unclear -- no reliable subject or object",
-      },
-      {
-        label: "Position interacting with a longer sentence",
-        body:
-          "\"After the man teased it, the dog bit him.\" Here \"it\" and \"him\" both need position information to resolve correctly — position doesn't just mark word order, it's part of how the model figures out which earlier noun each pronoun is standing in for.",
-        code: "position: 1     2   3   4     5    6   7    8   9   10\nword:     After the man teased it,  the dog  bit him\nmeaning: \"it\" = dog (teased), \"him\" = man (bitten)",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Compute the real attention weights with exp_approx, then use them to compute the weighted sum of the Value vectors for trophy, big, and suitcase — the final output vector for \"it.\"",
+    starterCode:
+      "def exp_approx(x):\n    result = 1\n    term = 1\n    for i in range(1, 20):\n        term = term * x / i\n        result = result + term\n    return result\n\ndef scale_vector(vec, w):\n    result = []\n    for i in range(len(vec)):\n        result.append(vec[i] * w)\n    return result\n\ndef add_vectors(vec_a, vec_b):\n    result = []\n    for i in range(len(vec_a)):\n        result.append(vec_a[i] + vec_b[i])\n    return result\n\n# scaled scores from the previous lesson (raw scores 4, 3, 1 divided by sqrt(4) = 2)\nscaled_trophy = 2\nscaled_big = 1.5\nscaled_suitcase = 0.5\n\nexp_trophy = exp_approx(scaled_trophy)\nexp_big = exp_approx(scaled_big)\nexp_suitcase = exp_approx(scaled_suitcase)\ntotal = exp_trophy + exp_big + exp_suitcase\n\nweight_trophy = exp_trophy / total\nweight_big = exp_big / total\nweight_suitcase = exp_suitcase / total\n\nprint(f\"attention weights: trophy={weight_trophy}, big={weight_big}, suitcase={weight_suitcase}\")\n\nvalue_trophy = [8, 2, 0, 0]\nvalue_big = [0, 0, 4, 4]\nvalue_suitcase = [0, 8, 0, 0]\n\nweighted_trophy = scale_vector(value_trophy, weight_trophy)\nweighted_big = scale_vector(value_big, weight_big)\nweighted_suitcase = scale_vector(value_suitcase, weight_suitcase)\n\noutput = add_vectors(add_vectors(weighted_trophy, weighted_big), weighted_suitcase)\n\nprint(f\"weighted trophy value:   {weighted_trophy}\")\nprint(f\"weighted big value:      {weighted_big}\")\nprint(f\"weighted suitcase value: {weighted_suitcase}\")\nprint(f\"final output vector for 'it': {output}\")",
   },
   quizQuestion:
-    "Without positional encoding, why would a transformer struggle to tell \"the dog bit the man\" apart from \"the man bit the dog\"?",
+    "value_trophy and value_suitcase are both 0 in their last two entries, while value_big = [0, 0, 4, 4]. Which word's Value vector is entirely responsible for the last two entries of the final output, and roughly what value should they be?",
+  quizCode:
+    "value_big = [0, 0, 4, 4]\nweight_big = 0.331  # approx\nweighted_big = scale_vector(value_big, weight_big)\nprint(weighted_big)",
   quizOptions: [
     {
       key: "a",
       label:
-        "Attention on its own scores relevance between tokens but has no built-in notion of sequence order, so it would treat both sentences as the same set of words",
+        "\"Big\" — since trophy and suitcase contribute 0 in those positions, the last two output entries are entirely 0.331 × 4, or roughly 1.33 each",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "The tokenizer would assign \"dog\" and \"man\" the exact same token ID in both sentences, making them indistinguishable before attention even runs",
+      label: "\"Trophy\" — because it has the highest attention weight overall, it must dominate every entry of the output",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "Without positional encoding, the model can't compute attention scores at all, so it would fail to process the sentence entirely",
+      label: "\"Suitcase\" — the lowest-weighted word always ends up controlling the final two dimensions",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — attention scores relevance, not sequence, so without positional information both word orders would look identical to the mechanism computing them.",
+    "Right — having the highest overall weight doesn't mean a word controls every entry; it only contributes where its own Value vector is nonzero. Since value_trophy and value_suitcase are both 0 in the last two slots, only value_big's 4s (scaled by ~0.331) land there, giving roughly 1.33 in each.",
   quizFeedbackIncorrect:
-    "Not quite — the tokenizer still assigns distinct tokens fine, and attention would still run; the actual gap is that attention alone has no concept of order, so it can't tell the two orderings apart without positional encoding.",
+    "Not quite — a word's overall attention weight doesn't override the actual entries of its Value vector. Trophy and suitcase are both 0 in the last two positions, so only big's [4, 4], scaled by its weight (~0.331), can produce a nonzero result there — about 1.33 in each slot.",
   takeaway:
-    "Attention scores relevance between tokens but is blind to sequence, so positional encoding injects order directly into each token's representation, making word order something the model can actually use.",
+    "The weighted sum of Value vectors is where attention weights stop being abstract percentages and start being an actual new vector — and real transformers repeat this whole process across many parallel heads so different kinds of relationships can be captured at once.",
 };
 
 export default content;

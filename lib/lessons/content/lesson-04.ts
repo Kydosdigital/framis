@@ -55,14 +55,14 @@ const content: LessonData = {
   quizCode:
     "prices = {\"widget\": 10, \"gadget\": 25}\n\ntry:\n    print(prices[\"gizmo\"])\nexcept KeyError as e:\n    print(f\"missing key: {e}\")",
   quizOptions: [
-    { key: "a", label: "missing key: gizmo", correct: true },
-    { key: "b", label: "KeyError: gizmo", correct: false },
+    { key: "a", label: "missing key: 'gizmo'", correct: true },
+    { key: "b", label: "missing key: gizmo", correct: false },
     { key: "c", label: "The program crashes because \"gizmo\" isn't in prices", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — prices[\"gizmo\"] raises a KeyError, but except KeyError as e catches it and stores its message (\"gizmo\") in e, so the f-string prints \"missing key: gizmo\" instead of crashing.",
+    "Right — prices[\"gizmo\"] raises a KeyError, and except KeyError as e catches it. Here's the gotcha: KeyError is one of the few exceptions whose str() prints the key with quotes around it (repr-style), so e prints as 'gizmo', not gizmo — the f-string ends up as \"missing key: 'gizmo'\".",
   quizFeedbackIncorrect:
-    "Not quite — the lookup does raise a KeyError, but except KeyError as e catches it before it can crash anything and binds just the message (\"gizmo\") to e, so the output is \"missing key: gizmo\".",
+    "Close — the lookup does raise a KeyError, and except KeyError as e catches it before it can crash anything. But KeyError is one of the few exceptions whose str() prints the key with quotes around it (repr-style), so e prints as 'gizmo' — the output is \"missing key: 'gizmo'\", not \"missing key: gizmo\".",
   takeaway:
     "try/except lets your program attempt something risky and recover gracefully when a specific, expected error occurs, instead of crashing the moment a key or index goes missing. Naming the error type after except and optionally capturing it with \"as e\" turns a fatal crash into a handled case your code can respond to.",
   nextUpLabel: "HTML, CSS, JavaScript",

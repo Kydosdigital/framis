@@ -7,7 +7,7 @@ const content: LessonData = {
   title: "One Model, Many Tools: Routing Between Three or More",
   minutes: 20,
   concept:
-    "Real agents rarely get just one tool — you might hand the model a weather lookup, a web search, and a currency converter all at once, and let it decide which one actually fits the user's request. No matter how many tools you offer, the model still only ever returns one tool call at a time: a single \"name\" and a single \"arguments\" dict. Your dispatcher's job barely changes from the one-tool case — it just needs one elif branch per tool you offered, each pulling the specific arguments that one tool expects out of the arguments dict. Because if/elif is exclusive, only the branch whose condition actually matches runs; the moment one condition is true, every other elif and the final else are skipped entirely, so there's no risk of two tools accidentally firing for one call. The real discipline is bookkeeping: every tool you describe to the model needs a matching elif in your dispatcher, or a call the model was told it could make has nowhere real to go.",
+    "Real agents rarely get just one tool — you might hand the model a weather lookup, a web search, and a currency converter all at once, and let it decide which ones actually fit the user's request. A single response can come back with just one tool call, or several at once (e.g. get_weather for Tokyo and get_weather for Paris in the same turn) — either way, each individual call is still its own \"name\" and \"arguments\" dict. Your dispatcher's job barely changes from the one-tool case — it just needs one elif branch per tool you offered, and it loops over however many calls came back, dispatching each one independently. Because if/elif is exclusive, only the branch whose condition actually matches runs for a given call; the moment one condition is true, every other elif and the final else are skipped entirely, so there's no risk of two tools accidentally firing for the same call. The real discipline is bookkeeping: every tool you describe to the model needs a matching elif in your dispatcher, or a call the model was told it could make has nowhere real to go.",
   conceptSimpler:
     "Giving a model three tools instead of one is like adding more drawers to the same filing cabinet — the clerk still only reads one label at a time and walks to exactly one drawer, it's just that now there are more drawers to keep labeled correctly.",
   vizStages: [
@@ -19,9 +19,9 @@ const content: LessonData = {
         "tools_offered = [\"get_weather\", \"search_web\", \"convert_currency\"]\nprint(f\"model was offered {len(tools_offered)} tools\")",
     },
     {
-      label: "2. It still only returns one name per call",
+      label: "2. Each call is still one name, one arguments dict",
       body:
-        "Even with three tools available, a single response is a single dict — one name, one arguments object. The model chose convert_currency this time because the user asked about money.",
+        "Whether the model comes back with one tool call or three in the same turn, every individual call has the same shape: one name, one arguments object. Here it chose convert_currency because the user asked about money.",
       code:
         "tool_call = {\"name\": \"convert_currency\", \"arguments\": {\"amount\": 100, \"currency\": \"EUR\"}}\nprint(tool_call[\"name\"])",
     },

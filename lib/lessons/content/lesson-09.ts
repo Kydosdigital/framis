@@ -3,11 +3,11 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 9,
   orderIndex: 1,
-  phaseLabel: "TESTING",
+  phaseLabel: "TESTING (UNIT/INTEGRATION/E2E)",
   title: "Right Answer, Wrong Reason: The Test That Passed by Accident",
-  minutes: 20,
+  minutes: 22,
   concept:
-    "A test works by picking one specific input, working out the correct answer by hand ahead of time, and using assert to demand that the function's real output matches that exact number — if it doesn't, the program raises an AssertionError instead of quietly limping along with a wrong result. That single design choice is what makes tests powerful: unlike glancing at printed output and thinking \"yeah, that looks about right,\" an assert has no opinion and no mercy — it only knows whether two values are equal. But an assert is only as good as the input you chose for it. apply_discount(100, 10) happens to equal 90 whether the function does the math correctly or is badly broken, so a test built on that input would pass either way and hide a real bug. A well-chosen test picks numbers where the correct answer and a plausible buggy answer come out different, so the two behaviors can't be confused with each other. That's why writing good tests takes as much thought as writing the function itself — an assert only ever catches what its chosen input is capable of exposing.",
+    "A test works by picking one specific input, working out the correct answer by hand ahead of time, and using assert to demand that the function's real output matches that exact number — if it doesn't, the program raises an AssertionError instead of quietly limping along with a wrong result. That single design choice is what makes tests powerful: unlike glancing at printed output and thinking \"yeah, that looks about right,\" an assert has no opinion and no mercy — it only knows whether two values are equal. But an assert is only as good as the input you chose for it. apply_discount(100, 10) happens to equal 90 whether the function does the math correctly or is badly broken, so a test built on that input would pass either way and hide a real bug. A well-chosen test picks numbers where the correct answer and a plausible buggy answer come out different, so the two behaviors can't be confused with each other. That's why writing good tests takes as much thought as writing the function itself — an assert only ever catches what its chosen input is capable of exposing. In a real project you don't run these asserts by hand one at a time — you wrap each one in its own function whose name starts with test_, save it in a file, and run the pytest command from the terminal. pytest automatically finds every function named test_* in the project, calls each one, and reports which passed and which raised an AssertionError, so \"testing the code\" becomes a single command instead of a manual ritual.",
   conceptSimpler:
     "An assert is a smoke detector, but only for the exact spot you wired it into — it won't warn you about a fire in the room next door.",
   vizStages: [
@@ -38,6 +38,20 @@ const content: LessonData = {
         "Testing with price=200 instead makes the two behaviors disagree: correct math gives 180, but the buggy shortcut gives 190. Now the assert finally has something real to catch.",
       code:
         "result = apply_discount(200, 10)\nassert result == 180, \"10% off $200 should be $180\"\n# AssertionError: 10% off $200 should be $180",
+    },
+    {
+      label: "5. Wrap it in a function pytest can find",
+      body:
+        "pytest doesn't scan for stray assert statements — it scans for functions whose name starts with test_. Put the sharp assert from stage 4 inside one of those, in a file, and pytest will discover and run it automatically.",
+      code:
+        "# tests/test_pricing.py\ndef test_ten_percent_discount():\n    result = apply_discount(200, 10)\n    assert result == 180, \"10% off $200 should be $180\"",
+    },
+    {
+      label: "6. Run pytest and read the result",
+      body:
+        "From the terminal, running pytest against that file executes every test_* function it finds and prints one line per test. A correct apply_discount reports PASSED; the broken price - percent version reports FAILED along with the exact assert that blew up.",
+      code:
+        "$ pytest tests/test_pricing.py -v\ntests/test_pricing.py::test_ten_percent_discount PASSED\n\n1 passed in 0.01s\n\n# if apply_discount were still the broken price - percent version:\n$ pytest tests/test_pricing.py -v\ntests/test_pricing.py::test_ten_percent_discount FAILED\n\nAssertionError: 10% off $200 should be $180\nassert 190 == 180\n\n1 failed in 0.01s",
     },
   ],
   realWorldIntro:

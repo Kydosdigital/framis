@@ -3,7 +3,7 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 9,
   orderIndex: 2,
-  phaseLabel: "TESTING",
+  phaseLabel: "TESTING (UNIT/INTEGRATION/E2E)",
   title: "Isolated on Purpose: What Makes a Test a Unit Test",
   minutes: 18,
   concept:

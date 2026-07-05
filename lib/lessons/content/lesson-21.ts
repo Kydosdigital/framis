@@ -4,81 +4,80 @@ const content: LessonData = {
   num: 21,
   orderIndex: 1,
   phaseLabel: "AGENTS + ORCHESTRATION",
-  title: "Plan, Act, Check, Repeat: The Shape of Every Agent Loop",
+  title: "Plan, Act, Check, Repeat: The ReAct Pattern Behind Every Agent Loop",
   minutes: 20,
   concept:
-    "Every agent loop follows the same three-beat rhythm on each pass through a fixed number of steps: plan, act, check. First the agent decides what to do next — the plan step, often an LLM call reasoning over the current state — then it actually performs that action against the real world, the tool step, like running a command or calling an API. After the tool runs, the loop checks whether the goal condition is now true before deciding whether there's anything left to do. The whole thing lives inside a hard cap on iterations, usually called max_steps, because an agent that keeps planning and acting with no ceiling and no guaranteed convergence can burn time and money forever without ever finishing. Once the goal is met, every remaining iteration should skip the real work instead of quietly re-running tool calls on a job that's already done — re-running a finished task wastes resources and can even undo progress.",
+    "Every agent loop follows the same three-beat rhythm on each pass through a fixed number of steps, and that rhythm has a name: ReAct, short for Reason, Act, Observe. First the agent reasons about what to do next — the plan step, often an LLM call deciding which tool to call and with what arguments, structured exactly like Module 15's tool calls: a dict with a \"name\" field and an \"arguments\" field. Then it acts: that call gets routed through a dispatcher — the very same dispatch(call) pattern from Module 15 — which runs the real function behind the tool's name against the real world, like running a command or calling an API. Finally it observes: the tool's return value is read back and used to check whether the goal condition is now true before deciding whether there's anything left to do. Line up an agent loop's plan/act/check against ReAct's reason/act/observe and they match exactly. The whole thing lives inside a hard cap on iterations, usually called max_steps, because an agent that keeps reasoning and acting with no ceiling and no guaranteed convergence can burn time and money forever without ever finishing. Once the goal is met, break exits the loop immediately instead of quietly re-running tool calls on a job that's already done — re-running a finished task wastes resources and can even undo progress.",
   conceptSimpler:
-    "It's like giving someone at most 5 tries to solve a puzzle: each try they think, then move a piece, then check if it's solved — the moment it's solved, they just sit still for whatever tries are left over.",
+    "It's like giving someone at most 5 tries to solve a puzzle: each try they think about which move to make (reason), make it (act), then check if it's solved (observe) — the moment it's solved, they just sit still for whatever tries are left over.",
   vizStages: [
     {
-      label: "1. Three actions per step: plan, act, check",
+      label: "1. ReAct: reason, act, observe",
       body:
-        "Inside a single iteration, the agent decides what to do (plan), does it (tool call), then checks whether the goal is now satisfied.",
+        "Reasoning produces the same shape of call you saw in Module 15 — a dict with a name field (which tool) and an arguments field (what to run it with). This is the plan step, just named the way real agent frameworks name it.",
       code:
-        "action = plan_step(state)\nresult = tool_step(action)\nif goal_met(state):\n    state[\"done\"] = True",
+        "call = reason(state)\nprint(call[\"name\"])       # which tool to run\nprint(call[\"arguments\"])  # what to run it with",
     },
     {
-      label: "2. Wrap it in a bounded loop",
+      label: "2. Act means dispatching the call, same as Module 15",
       body:
-        "That single step repeats inside a for-loop capped at max_steps — a hard ceiling that guarantees the agent stops eventually even if it never reaches its goal.",
+        "The act step doesn't invent new machinery — it reuses the exact dispatch(call) router from Module 15, matching call[\"name\"] against an if/elif chain of real functions and running the one that matches.",
       code:
-        "max_steps = 5\nfor step in range(max_steps):\n    action = plan_step(state)\n    result = tool_step(action)",
+        "def dispatch(call, state):\n    name = call[\"name\"]\n    if name == \"search\":\n        return search(state)\n    elif name == \"refine\":\n        return refine(state)\n    else:\n        raise ValueError(\"unknown tool\")",
     },
     {
-      label: "3. Skip the real work once the goal is met",
+      label: "3. Wrap reason-act-observe in a bounded loop",
       body:
-        "There's no break statement here, so the loop still counts all the way to max_steps. Instead, an if state[\"done\"] check at the top of every iteration turns the leftover passes into no-ops.",
+        "That single reason/act/observe step repeats inside a for-loop capped at max_steps — a hard ceiling that guarantees the agent stops eventually even if it never reaches its goal.",
       code:
-        "for step in range(max_steps):\n    if state[\"done\"]:\n        print(\"already done, skipping\")\n    else:\n        action = plan_step(state)\n        result = tool_step(action)\n        if goal_met(state):\n            state[\"done\"] = True",
+        "max_steps = 5\nfor step in range(max_steps):\n    call = reason(state)\n    result = dispatch(call, state)",
     },
     {
-      label: "4. Trace a full run",
+      label: "4. break the moment observe confirms the goal",
       body:
-        "With max_steps = 5 and a goal reached on the second pass, the trace shows real work on steps 0 and 1, then three skipped iterations that do nothing but confirm the job is finished.",
+        "There's no reason to keep looping once observing the result shows the goal is already satisfied — break exits the for loop immediately, so steps 2, 3, and 4 never run at all, not even as a skipped no-op.",
       code:
-        "# step 0: progress 0 -> 2, not done yet\n# step 1: progress 2 -> 3, goal reached!\n# step 2: already done, skipping\n# step 3: already done, skipping\n# step 4: already done, skipping",
+        "for step in range(max_steps):\n    call = reason(state)\n    result = dispatch(call, state)\n    if goal_met(state):\n        state[\"done\"] = True\n        break",
     },
   ],
   realWorldIntro:
-    "A coding agent iterating on a failing test suite runs exactly this loop: plan a fix, apply the patch, run the tests, and stop doing real work the moment the check comes back green — capped at, say, 10 attempts so a stubborn bug can't spin the agent forever.",
+    "A coding agent iterating on a failing test suite runs exactly this ReAct loop: reason about a fix, act by dispatching a patch-tool call, observe whether tests now pass, and break the instant the check comes back green — capped at, say, 10 attempts so a stubborn bug can't spin the agent forever.",
   realWorldCode:
-    "for attempt in range(max_attempts):\n    if state[\"tests_pass\"]:\n        print(\"tests already green, skipping\")\n    else:\n        patch = plan_fix(state)\n        apply_patch(patch)\n        state[\"tests_pass\"] = run_tests()",
+    "for attempt in range(max_attempts):\n    call = reason(state)\n    result = dispatch(call, state)\n    state[\"tests_pass\"] = run_tests()\n    if state[\"tests_pass\"]:\n        break",
   sandbox: {
     kind: "code",
     challenge:
-      "Simulate an agent loop that plans, acts, and checks a goal each step, then skips the remaining steps once the goal is already met.",
+      "Simulate a ReAct loop: reason about which tool to call, dispatch it (Module 15's pattern), observe the result, and check the goal each step — then break out of the loop the instant the goal is met.",
     starterCode:
-      "def plan_step(state):\n    if state[\"progress\"] == 0:\n        return \"search\"\n    else:\n        return \"refine\"\n\ndef tool_step(action):\n    if action == \"search\":\n        return 2\n    elif action == \"refine\":\n        return 1\n    else:\n        return 0\n\ndef goal_met(state):\n    return state[\"progress\"] >= state[\"target\"]\n\nstate = {\"progress\": 0, \"target\": 3, \"done\": False}\nmax_steps = 5\n\nfor step in range(max_steps):\n    if state[\"done\"]:\n        print(f\"step {step}: goal already met, skipping\")\n    else:\n        action = plan_step(state)\n        print(f\"step {step}: plan chose -> {action}\")\n        gained = tool_step(action)\n        state[\"progress\"] = state[\"progress\"] + gained\n        print(f\"step {step}: tool ran, progress is now {state['progress']}\")\n        if goal_met(state):\n            state[\"done\"] = True\n            print(f\"step {step}: goal reached, stopping early\")",
+      "def search(state):\n    return 2\n\ndef refine(state):\n    return 1\n\ndef dispatch(call, state):\n    name = call[\"name\"]\n    if name == \"search\":\n        return search(state)\n    elif name == \"refine\":\n        return refine(state)\n    else:\n        raise ValueError(\"unknown tool\")\n\ndef reason(state):\n    if state[\"progress\"] == 0:\n        return {\"name\": \"search\", \"arguments\": {}}\n    else:\n        return {\"name\": \"refine\", \"arguments\": {}}\n\ndef goal_met(state):\n    return state[\"progress\"] >= state[\"target\"]\n\nstate = {\"progress\": 0, \"target\": 3}\nmax_steps = 5\n\nfor step in range(max_steps):\n    call = reason(state)\n    print(f\"step {step}: reason chose -> {call['name']}\")\n    gained = dispatch(call, state)\n    state[\"progress\"] = state[\"progress\"] + gained\n    print(f\"step {step}: act + observe done, progress is now {state['progress']}\")\n    if goal_met(state):\n        print(f\"step {step}: goal reached, stopping\")\n        break",
   },
   quizQuestion:
-    "This loop has no break statement. Once state[\"done\"] becomes True on step 1, what actually happens on steps 2, 3, and 4?",
+    "This loop breaks the moment the goal is met. If that happens on step 1 (the second iteration, since step starts at 0), what happens on steps 2, 3, and 4?",
   quizCode:
-    "for step in range(max_steps):\n    if state[\"done\"]:\n        print(f\"step {step}: skipping\")\n    else:\n        action = plan_step(state)\n        result = tool_step(action)\n        state[\"progress\"] = state[\"progress\"] + result\n        if goal_met(state):\n            state[\"done\"] = True",
+    "for step in range(max_steps):\n    action = plan_step(state)\n    result = tool_step(action)\n    state[\"progress\"] = state[\"progress\"] + result\n    if goal_met(state):\n        print(f\"step {step}: done\")\n        break\n    print(f\"step {step}: not done yet\")",
   quizOptions: [
     {
       key: "a",
-      label:
-        "The loop keeps iterating all the way through step 4, but each remaining pass just prints a skip message instead of calling plan_step or tool_step again",
+      label: "They never run at all — break exits the loop entirely the moment the goal check passes on step 1",
       correct: true,
     },
     {
       key: "b",
-      label: "The for loop exits immediately once done becomes True, the same as a break statement would",
+      label: "They still run, but plan_step and tool_step's results get thrown away",
       correct: false,
     },
     {
       key: "c",
-      label: "plan_step and tool_step still run every remaining iteration, but their results get thrown away",
+      label: "They run and print \"not done yet\" each time, since nothing tells the loop to stop early",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — without a break statement, range(max_steps) always finishes every iteration; the if state[\"done\"] check just makes each remaining pass a no-op that skips the real work instead of exiting the loop early.",
+    "Right — break exits the for loop immediately once the goal is met on step 1; range(max_steps) never gets to produce 2, 3, or 4, so nothing about those steps ever runs.",
   quizFeedbackIncorrect:
-    "Not quite — this language has no break statement, so the for loop still counts all the way to max_steps; the done check doesn't exit the loop, it just prevents plan_step and tool_step from running again once the goal is already met.",
+    "Not quite — break doesn't just skip the remaining work, it exits the loop entirely. The instant goal_met(state) is true on step 1 and break runs, steps 2, 3, and 4 never happen at all.",
   takeaway:
-    "An agent loop is plan, act, check — repeated inside a hard cap on iterations so it can never run forever. Once the goal check passes, every remaining iteration should skip the real work instead of assuming the loop will stop itself.",
+    "An agent loop is Reason, Act, Observe — ReAct for short — repeated inside a hard cap on iterations so it can never run forever, and broken out of immediately the moment the goal check passes instead of wasting further iterations on a job that's already done. Reason decides a tool call shaped just like Module 15's; act runs it through dispatch; observe reads the result back in to drive the next reason step.",
   nextUpLabel: "Human-in-the-Loop + Guardrails",
 };
 

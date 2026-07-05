@@ -4,66 +4,64 @@ const content: LessonData = {
   num: 2,
   orderIndex: 4,
   phaseLabel: "PYTHON BASICS",
-  title: "Your First Real Script: Variables + a Function + a Decision",
+  title: "Lists and For Loops: Storing Many Values, Doing Something With Each",
   minutes: 24,
   concept:
-    "A real program is rarely one concept in isolation — it's variables, functions, and if/else composed together into a small pipeline. First, variables hold the raw inputs: names, numbers, whatever the program has to work with. Next, a function takes some of those variables in as parameters and turns them into a single result with return, keeping the calculation logic in one reusable place instead of scattered inline. Finally, if/else looks at that result and decides what should happen next — which message to show, which path to take. Once you can see these three pieces working together, you can read (and write) most small scripts, because bigger programs are just more of the same pattern, layered deeper.",
+    "So far every variable has held exactly one value. A list holds many values in a single variable, written as a comma-separated sequence inside square brackets, like scores = [72, 85, 91, 68]. Each value has a position, called an index, starting at 0 — not 1 — so scores[0] is the first item and scores[3] is the fourth. len() tells you how many items a list holds, and .append() adds a new item onto the end of an existing list, which is how you grow a list that starts out empty. A for loop is how you work through a list without touching each position by hand: for score in scores: runs its indented block once per item, automatically binding score to each value in order, from the first item to the last. Put the two together — loop over a list with for, and build a brand-new list with .append() as you go — and you have the core move behind almost every program that processes a whole collection of data instead of one value at a time.",
   conceptSimpler:
-    "Think of a small assembly line: raw materials (variables) go into a machine (a function) that produces a part (a return value), and an inspector at the end (if/else) sorts that part into a pass or fail bin.",
+    "A list is a numbered egg carton — one variable holding many slots, each one reachable by its position, counting from 0. A for loop is you tapping each egg in the carton in order, one at a time, without having to write out 'egg 1, egg 2, egg 3' yourself.",
   vizStages: [
     {
-      label: "1. Start with variables holding the raw inputs",
+      label: "1. A list holds many values in one variable",
       body:
-        "Before any logic runs, the program stores the facts it needs in plain variables: a name, hours worked, and an hourly rate. Nothing is calculated yet — this is just the raw data.",
-      code: 'name = "Priya"\nhours_worked = 46\nhourly_rate = 22',
+        "Square brackets with commas between values create a list. scores holds four numbers at once, in the exact order they were written — len() counts how many items are inside.",
+      code: "scores = [72, 85, 91, 68]\nprint(scores)\nprint(len(scores))\n\n[72, 85, 91, 68]\n4",
     },
     {
-      label: "2. A function turns inputs into a result",
+      label: "2. Reach one item by its index — counting from 0",
       body:
-        "calculate_pay takes hours and rate as parameters and uses its own if/else to decide whether overtime applies, then returns a single number — the pay amount — without printing anything itself.",
-      code:
-        "def calculate_pay(hours, rate):\n    if hours > 40:\n        overtime = hours - 40\n        return 40 * rate + overtime * rate * 1.5\n    else:\n        return hours * rate",
+        "Square brackets after a list name reach one specific item by position. scores[0] is the first item (72, not the '0th' in some separate sense — 0 just is the first position), and scores[2] is the third item (91).",
+      code: "print(scores[0])\nprint(scores[2])\n\n72\n91",
     },
     {
-      label: "3. if / else decides what to tell the user",
+      label: "3. for loops visit each item automatically",
       body:
-        "Once pay comes back from the function, a separate if/else looks at that result and picks which message fits — this decision has nothing to do with overtime, it's purely about how big the final number is.",
-      code:
-        'pay = calculate_pay(hours_worked, hourly_rate)\nif pay > 900:\n    print(name, "earned a big paycheck:", pay)\nelse:\n    print(name, "earned:", pay)',
+        "for score in scores: runs its body once per item in the list — score becomes 72, then 85, then 91, then 68 — without you ever writing scores[0], scores[1], scores[2] by hand.",
+      code: "for score in scores:\n    print(score)\n\n72\n85\n91\n68",
     },
     {
-      label: "4. All three pieces, working together",
+      label: "4. append() grows a list — often building a new one inside a loop",
       body:
-        "hours_worked (46) and hourly_rate (22) flow into calculate_pay, which sees 46 > 40, calculates 6 hours of overtime, and returns 1078. The final if/else then sees 1078 > 900 is True and prints the \"big paycheck\" message.",
+        "doubled starts empty. Each pass through the loop computes score * 2 and appends it onto doubled, so by the time the loop finishes, doubled holds one transformed value for every original score, in the same order.",
       code:
-        'name = "Priya"\nhours_worked = 46\nhourly_rate = 22\n\ndef calculate_pay(hours, rate):\n    if hours > 40:\n        overtime = hours - 40\n        return 40 * rate + overtime * rate * 1.5\n    else:\n        return hours * rate\n\npay = calculate_pay(hours_worked, hourly_rate)\nif pay > 900:\n    print(name, "earned a big paycheck:", pay)\nelse:\n    print(name, "earned:", pay)\n\nPriya earned a big paycheck: 1078',
+        "doubled = []\nfor score in scores:\n    doubled.append(score * 2)\nprint(doubled)\n\n[144, 170, 182, 136]",
     },
   ],
   realWorldIntro:
-    "This exact pattern — gather inputs into variables, run them through a function, then branch on the result — is basically how a payroll system, a shipping calculator, or a loan-approval check works under the hood.",
+    "Every shopping cart, leaderboard, or set of search results your code touches is stored as a list — and looping over it with for is exactly how you total up prices, display every row, or check each item against a rule, one at a time.",
   realWorldCode:
-    "def is_eligible(income, debt):\n    if income == 0:\n        return False\n    ratio = debt / income\n    return ratio < 0.4",
+    "cart_prices = [12.50, 8.00, 24.99]\ntotal = 0\nfor price in cart_prices:\n    total = total + price\nprint(total)",
   sandbox: {
     kind: "code",
     challenge:
-      'Add an if/else after the existing print that also prints "Discount applied" when items_bought * item_price is 100 or more, and "No discount" otherwise.',
+      "Add a second list called hot that only keeps temperatures of 85 and above (use the same for + if + append pattern as warm), then print hot.",
     starterCode:
-      'customer = "Jordan"\nitems_bought = 7\nitem_price = 15\n\ndef total_cost(items, price):\n    subtotal = items * price\n    if subtotal >= 100:\n        return subtotal - 10\n    else:\n        return subtotal\n\nfinal_price = total_cost(items_bought, item_price)\nprint(customer, "owes:", final_price)',
+      "temps = [58, 71, 84, 90, 62, 77]\nwarm = []\nfor t in temps:\n    if t >= 70:\n        warm.append(t)\nprint(warm)\nprint(len(warm))",
   },
   quizQuestion: "What does the following code print?",
   quizCode:
-    'def grade_label(score):\n    if score >= 60:\n        return "Pass"\n    else:\n        return "Fail"\n\nstudent = "Sam"\nresult = grade_label(55)\nprint(student, result)',
+    "prices = [10, 20, 30]\nwith_tax = []\nfor p in prices:\n    with_tax.append(p + 2)\nprint(with_tax)",
   quizOptions: [
-    { key: "a", label: "Sam Fail", correct: true },
-    { key: "b", label: "Sam Pass", correct: false },
-    { key: "c", label: "Fail Sam", correct: false },
+    { key: "a", label: "[12, 22, 32]", correct: true },
+    { key: "b", label: "[10, 20, 30]", correct: false },
+    { key: "c", label: "36", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — grade_label(55) hits the else branch since 55 >= 60 is False, returning \"Fail\", which gets stored in result and then printed after student's name, in the order they were passed to print().",
+    "Right — the loop visits 10, 20, and 30 in order, and each pass appends p + 2 (not p itself) onto with_tax, so the new list ends up as [12, 22, 32] while the original prices list is never changed.",
   quizFeedbackIncorrect:
-    'Not quite — trace it in order: grade_label(55) checks 55 >= 60 (False), so it returns "Fail" from the else branch; that value lands in result, and print(student, result) prints student first, then result, in that order.',
+    "Not quite — walk through it one item at a time: for each p in prices, the loop appends p + 2, not p, onto with_tax. That gives 10 + 2, 20 + 2, and 30 + 2 — so [12, 22, 32], not the original numbers and not a single total.",
   takeaway:
-    "Real programs are built by composing pieces you already know: variables hold data, functions turn that data into a result, and if/else decides what happens next based on that result. Layer these three together and you can build almost anything.",
+    "A list stores many values in one ordered variable, indexed from 0; len() tells you how many items it holds, and .append() adds new ones onto the end. A for loop visits every item automatically, one at a time — pair for with .append() to build a brand-new list out of an old one, which is the core pattern behind almost every program that works on a whole collection instead of a single value.",
 };
 
 export default content;

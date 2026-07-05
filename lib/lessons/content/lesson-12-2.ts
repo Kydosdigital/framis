@@ -7,7 +7,7 @@ const content: LessonData = {
   title: "Containers: why \"it works on my machine\" stops being an excuse",
   minutes: 20,
   concept:
-    "A container packages your application together with the exact runtime, libraries, and system dependencies it needs to run, sealed into one artifact called an image. That image is built once from a Dockerfile — a list of instructions like \"start from Node 20, copy in these files, install these exact dependency versions\" — and then that same, unchanging image is what runs on your laptop, in CI, and in production. This is different from a virtual machine, which emulates entire hardware and boots a full separate operating system; a container instead shares the host machine's kernel and just isolates the process, its filesystem, and its dependencies, which is why containers start in milliseconds instead of minutes. Because the image is frozen at build time, there's no longer a gap between \"the version of Node/Python/OpenSSL installed on my laptop\" and \"the version installed on the server\" — the image carries its own copy of all of that, so it behaves identically no matter where it's run. That's the whole point: bugs caused by environment drift, like a library version mismatch, simply can't happen anymore, because everyone is running the literal same bytes.",
+    "A container packages your application together with the exact runtime, libraries, and system dependencies it needs to run, sealed into one artifact called an image. That image is built once from a Dockerfile — a list of instructions like \"start from Node 20, copy in these files, install these exact dependency versions\" — and then that same, unchanging image is what runs on your laptop, in CI, and in production. This is different from a virtual machine, which emulates entire hardware and boots a full separate operating system; a container instead shares the host machine's kernel and just isolates the process, its filesystem, and its dependencies, which is why containers start in milliseconds instead of minutes. Because the image is frozen at build time, there's no longer a gap between \"the version of Node/Python/OpenSSL installed on my laptop\" and \"the version installed on the server\" — the image carries its own copy of all of that, so it behaves identically no matter where it's run. That's the whole point: bugs caused by environment drift, like a library version mismatch, simply can't happen anymore, because everyone is running the literal same bytes. Under the hood, an image is built as a stack of layers, one per instruction in the Dockerfile, and Docker caches each layer so an unchanged instruction is reused instead of re-run on every rebuild — which means the order instructions appear in matters just as much as what they say. A multi-stage build takes this further: one throwaway image with compilers and build tools produces the app, and a second, minimal image ships only the finished result, so build-time tooling never bloats what actually runs in production.",
   conceptSimpler:
     "A container is like a shipping container for your code: it doesn't matter what's packed inside or which ship, crane, or truck moves it — the container's fixed shape means every piece of infrastructure handles it exactly the same way.",
   vizStages: [
@@ -26,7 +26,7 @@ const content: LessonData = {
     {
       label: "3. A Dockerfile freezes the environment",
       body:
-        "The Dockerfile pins the exact base image and installs dependencies from a lockfile, so the runtime is no longer \"whatever happens to be on this machine\" — it's specified, in writing, as part of the codebase.",
+        "The Dockerfile pins the exact base image and installs dependencies from a lockfile, so the runtime is no longer \"whatever happens to be on this machine\" — it's specified, in writing, as part of the codebase. Notice it copies package.json and runs the install before copying the rest of the source: Docker caches each instruction as its own layer, so that (usually slow) install step is reused on every rebuild unless package.json itself changes, instead of reinstalling every dependency just because a source file was edited.",
       code: "FROM node:20.11.0-slim\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nCMD [\"npm\", \"start\"]",
     },
     {
@@ -34,6 +34,12 @@ const content: LessonData = {
       body:
         "docker build turns that Dockerfile into an image. Every machine — a laptop, a CI runner, a production server — runs that exact image instead of installing things fresh, so \"it works on my machine\" is no longer a meaningful distinction.",
       code: "$ docker build -t framis-api:a1b2c3 .\n$ docker run framis-api:a1b2c3\n> Server running on port 3000\n# identical result, any host",
+    },
+    {
+      label: "5. More than one container: docker-compose",
+      body:
+        "A single Dockerfile packages one container, but a real app is rarely just one — this API also needs a Postgres database running alongside it. docker-compose describes every service and how they connect in one YAML file, so the whole stack comes up together with a single command instead of hand-running a separate docker run for each piece.",
+      code: "# docker-compose.yml\nservices:\n  api:\n    build: .\n    ports:\n      - \"3000:3000\"\n    environment:\n      DATABASE_URL: postgres://db:5432/app\n    depends_on:\n      - db\n  db:\n    image: postgres:16\n    environment:\n      POSTGRES_PASSWORD: devpassword\n\n$ docker compose up\n> Creating framis_db_1 ... done\n> Creating framis_api_1 ... done",
     },
   ],
   realWorldIntro:

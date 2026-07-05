@@ -3,7 +3,7 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 9,
   orderIndex: 4,
-  phaseLabel: "TESTING",
+  phaseLabel: "TESTING (UNIT/INTEGRATION/E2E)",
   title: "The Bug Between Them: Writing an Integration Test",
   minutes: 22,
   concept:

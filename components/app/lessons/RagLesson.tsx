@@ -23,30 +23,77 @@ const DEFAULT_QUIZ: { key: QuizKey; label: string; correct: boolean }[] = [
   { key: "c", label: "To make the UI look more complex", correct: false },
 ];
 
+// Real embedding models turn text into hundreds or thousands of numbers,
+// learned automatically. We can't run one of those in the browser, but the
+// underlying mechanism is exactly this: each chunk gets a small numeric
+// vector along "meaning" axes, and the query gets compared against every
+// chunk with real cosine-similarity math — not by checking whether words
+// literally appear in both. Axes: [refunds, password/login, shipping].
+const AXES = ["refunds", "password/login", "shipping"] as const;
+
 const KB = [
-  { id: 1, text: "Refunds are processed within 5–7 business days after the return is received." },
-  { id: 2, text: "Password resets require clicking the emailed link within 30 minutes." },
-  { id: 3, text: "Free shipping applies to orders over £50 within the UK only." },
+  {
+    id: 1,
+    text: "Refunds are processed within 5–7 business days after the return is received.",
+    // a long, detailed chunk — big numbers in every direction, not just "refunds"
+    vector: [6, 5, 5],
+  },
+  {
+    id: 2,
+    text: "Password resets require clicking the emailed link within 30 minutes.",
+    vector: [0, 3, 0],
+  },
+  {
+    id: 3,
+    text: "Free shipping applies to orders over £50 within the UK only.",
+    vector: [0, 0, 3],
+  },
 ];
 
-const STOPWORDS = new Set(["the", "a", "an", "is", "are", "to", "of", "for", "and", "in", "how", "what", "do", "i"]);
+// A toy "embedder": counts how many words in the query hit each axis's
+// keyword set. This stands in for a real embedding model (there's no ML
+// model running in the browser) — but everything downstream of this is
+// real vector math, computed for real, not string matching.
+const AXIS_KEYWORDS = [
+  ["refund", "refunds", "return", "returns", "returned", "money", "back", "reimburse"],
+  ["password", "passwords", "reset", "resets", "login", "log", "account", "email", "link"],
+  ["shipping", "ship", "shipped", "delivery", "deliver", "free", "order", "orders", "postage"],
+];
+
+function embed(text: string): number[] {
+  const words = text.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  return AXIS_KEYWORDS.map((keywords) => words.filter((w) => keywords.includes(w)).length);
+}
+
+function dotProduct(a: number[], b: number[]): number {
+  let total = 0;
+  for (let i = 0; i < a.length; i++) total += a[i] * b[i];
+  return total;
+}
+
+function magnitude(v: number[]): number {
+  return Math.sqrt(dotProduct(v, v));
+}
+
+// The actual retrieval math: cosine similarity, not keyword overlap.
+// Dividing by both magnitudes is what keeps a long, "big-numbered" chunk
+// from automatically beating a short, precisely-on-topic one (see Lesson 2).
+function cosineSimilarity(a: number[], b: number[]): number {
+  const denom = magnitude(a) * magnitude(b);
+  if (denom === 0) return 0;
+  return dotProduct(a, b) / denom;
+}
 
 function retrieve(query: string) {
-  const words = query
-    .toLowerCase()
-    .split(/[^a-z]+/)
-    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
-  let best = KB[0];
-  let bestScore = -1;
-  for (const doc of KB) {
-    const docWords = doc.text.toLowerCase();
-    const score = words.filter((w) => docWords.includes(w)).length;
-    if (score > bestScore) {
-      bestScore = score;
-      best = doc;
-    }
-  }
-  return { doc: best, score: bestScore };
+  const queryVector = embed(query);
+  const scored = KB.map((doc) => ({
+    doc,
+    dot: dotProduct(queryVector, doc.vector),
+    cosine: cosineSimilarity(queryVector, doc.vector),
+  }));
+  const byCosine = [...scored].sort((a, b) => b.cosine - a.cosine);
+  const byDotOnly = [...scored].sort((a, b) => b.dot - a.dot);
+  return { queryVector, scored, best: byCosine[0], bestByRawDot: byDotOnly[0] };
 }
 
 export default function RagLesson() {
@@ -57,7 +104,7 @@ export default function RagLesson() {
   const [simpler, setSimpler] = useState(false);
 
   const [query, setQuery] = useState("How long do refunds take?");
-  const [result, setResult] = useState<{ doc: (typeof KB)[number]; score: number } | null>(null);
+  const [result, setResult] = useState<ReturnType<typeof retrieve> | null>(null);
 
   const [ragQuizPick, setRagQuizPick] = useState<QuizKey | null>(null);
   const [ragDone, setRagDone] = useState(false);
@@ -154,7 +201,8 @@ export default function RagLesson() {
           policy doc, then answers from it:
         </p>
         <div className="rounded-lg bg-[#F4F6F9] px-[18px] py-3.5 font-mono text-[13.5px]/[1.7] text-ink-900 dark:bg-[#1B2536]">
-          query → embed → search(top_k=1) → <span className="text-teal">stuff into prompt</span> → answer
+          query → embed → cosine-similarity search(top_k=1) →{" "}
+          <span className="text-teal">stuff into prompt</span> → answer
         </div>
       </div>
 
@@ -165,21 +213,35 @@ export default function RagLesson() {
         </div>
         <div className="px-5 py-[18px]">
           <div className="mb-3 font-mono text-[11px] font-medium text-ink-500">
-            KNOWLEDGE BASE (3 chunks)
+            KNOWLEDGE BASE (3 chunks) — each pre-embedded as a toy vector along axes [{AXES.join(", ")}]
           </div>
+          <p className="mb-3 text-[13px]/[1.55] text-ink-500">
+            Real embeddings have hundreds of dimensions learned by a model; here we use 3 hand-picked
+            ones so the math stays visible. Matching happens with real cosine similarity — a dot
+            product divided by both vectors&apos; lengths — never by checking whether words literally
+            repeat between your question and a chunk.
+          </p>
           <div className="mb-4 flex flex-col gap-2">
-            {KB.map((doc) => (
-              <div
-                key={doc.id}
-                className="rounded-md border border-line-input px-3 py-2 font-mono text-[12.5px] text-ink-700"
-                style={{
-                  borderColor: result?.doc.id === doc.id ? "#4B9E8F" : undefined,
-                  background: result?.doc.id === doc.id ? "rgba(75,158,143,0.08)" : undefined,
-                }}
-              >
-                chunk {doc.id} · {doc.text}
-              </div>
-            ))}
+            {KB.map((doc) => {
+              const scored = result?.scored.find((s) => s.doc.id === doc.id);
+              const isBest = result?.best.doc.id === doc.id;
+              return (
+                <div
+                  key={doc.id}
+                  className="rounded-md border border-line-input px-3 py-2 font-mono text-[12.5px] text-ink-700"
+                  style={{
+                    borderColor: isBest ? "#4B9E8F" : undefined,
+                    background: isBest ? "rgba(75,158,143,0.08)" : undefined,
+                  }}
+                >
+                  chunk {doc.id} · {doc.text}
+                  <div className="mt-1 text-[11px] text-ink-500">
+                    vector [{doc.vector.join(", ")}]
+                    {scored ? ` · dot ${scored.dot.toFixed(1)} · cosine ${scored.cosine.toFixed(2)}` : ""}
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <div className="flex gap-2">
             <input
@@ -197,10 +259,23 @@ export default function RagLesson() {
           </div>
           {result && (
             <div className="mt-3 rounded-lg bg-[#F4F6F9] px-4 py-3 font-mono text-[13px]/[1.6] dark:bg-[#1B2536]">
-              retrieved chunk {result.doc.id} → answer:{" "}
-              <span className="text-teal">
-                {result.score > 0 ? result.doc.text : "no confident match — the model would say so, not guess."}
-              </span>
+              <div>query vector (toy embedding) → [{result.queryVector.join(", ")}]</div>
+              <div className="mt-1.5">
+                retrieved chunk {result.best.cosine > 0.05 ? result.best.doc.id : "—"} (cosine{" "}
+                {result.best.cosine.toFixed(2)}) → answer:{" "}
+                <span className="text-teal">
+                  {result.best.cosine > 0.05
+                    ? result.best.doc.text
+                    : "no confident match — the model would say so, not guess."}
+                </span>
+              </div>
+              {result.best.cosine > 0.05 && result.bestByRawDot.doc.id !== result.best.doc.id && (
+                <div className="mt-1.5 text-[11.5px] text-ink-500">
+                  note: raw dot product alone would have picked chunk {result.bestByRawDot.doc.id} instead
+                  (dot {result.bestByRawDot.dot.toFixed(1)}) — it just has bigger numbers in every
+                  direction. Dividing by vector length (cosine similarity) corrects for that.
+                </div>
+              )}
             </div>
           )}
         </div>

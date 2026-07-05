@@ -33,11 +33,25 @@ const content: LessonData = {
         "Alongside each embedding, a vector database stores the original chunk of text and metadata like source, page, or user ID — and supports filtering that search, so a query can mean 'find the nearest vectors, but only among this user's own documents.'",
       code: 'results = index.search(query_vector, top_k=3, filter={"user_id": 42})',
     },
+    {
+      label: "5. Retrieval's whole job is feeding generation",
+      body:
+        "Every HNSW hop and every IVF cluster lookup exists for one reason: to hand the model a small, relevant slice of text before it answers. The retrieved chunks get formatted into a context section of the prompt, right alongside the user's question, with the model instructed to answer only from what's in front of it. That's the 'generation' half of retrieval-augmented generation — the payoff the entire search pipeline was built to deliver.",
+      code:
+        'def build_prompt(question, chunks):\n    context = ""\n    for chunk in chunks:\n        context = context + "[" + chunk["source"] + "] " + chunk["text"] + "\\n"\n    prompt = "Answer using only this context:\\n" + context + "\\nQuestion: " + question\n    return prompt',
+    },
+    {
+      label: "6. The model answers — and cites its source",
+      body:
+        "The prompt built above goes straight into an ordinary LLM chat call. Because the actual policy text is sitting right there in the prompt, the model can quote it directly and name exactly which retrieved chunk it came from, instead of answering from memory and hoping it's right.",
+      code:
+        'prompt = build_prompt(\n    "How long do refunds take?",\n    [{"source": "refund-policy.pdf", "text": "Refunds are processed within 5-7 business days after the return is received."}],\n)\nanswer = llm.chat(prompt)\nprint(answer)\n\n"Refunds are processed within 5-7 business days after the return is received. [source: refund-policy.pdf]"',
+    },
   ],
   realWorldIntro:
-    "Production RAG systems reach for purpose-built vector databases — Pinecone, Weaviate, or pgvector as a Postgres extension — instead of hand-rolling similarity search, because these systems have already solved indexing, filtering, and scaling for embeddings numbering in the millions.",
+    "Production RAG systems reach for purpose-built vector databases — Pinecone, Weaviate, or pgvector as a Postgres extension — instead of hand-rolling similarity search, because these systems have already solved indexing, filtering, and scaling for embeddings numbering in the millions. But the search result is never the end of the road: those retrieved chunks get stitched into the prompt and handed to the LLM for the generation step, which is what actually produces the grounded, citable answer every piece of retrieval machinery in this module was built to support.",
   realWorldCode:
-    'results = index.query(vector=query_embedding, top_k=5, filter={"doc_type": "policy"})\n# returns the 5 closest chunks, each with its similarity score and source text',
+    'results = index.query(vector=query_embedding, top_k=3, filter={"doc_type": "policy"})\n\ncontext = ""\nfor r in results:\n    context = context + "[" + r.metadata["source"] + "] " + r.text + "\\n"\n\nprompt = "Answer using only this context:\\n" + context + "\\nQuestion: " + question\nanswer = llm.chat(prompt)\n# the model can now quote its answer and cite exactly which retrieved chunk it used',
   sandbox: {
     kind: "explore",
     instructions:
@@ -72,6 +86,13 @@ const content: LessonData = {
         body:
           "Both HNSW and IVF can occasionally miss the single truest closest vector, since they never look at every vector directly — that's the 'approximate' in approximate nearest neighbor. In exchange, search latency stays roughly flat even as the collection grows from 3,000 vectors to 300 million.",
       },
+      {
+        label: "Closing the loop: retrieval feeds generation",
+        body:
+          "Every index, cluster, and similarity score above exists to answer one question: which chunks belong in the prompt? Once the top matches come back, they're formatted into the context section of the prompt sent to the LLM, and the model is told to answer only from that context — so it can point to exactly which chunk backs up its answer, instead of guessing from memory.",
+        code:
+          'question = "How long do refunds take?"\nchunks = [{"source": "refund-policy.pdf", "text": "Refunds are processed within 5-7 business days after the return is received."}]\n\ncontext = ""\nfor chunk in chunks:\n    context = context + "[" + chunk["source"] + "] " + chunk["text"] + "\\n"\n\nprompt = "Answer using only this context:\\n" + context + "\\nQuestion: " + question\nanswer = llm.chat(prompt)\nprint(answer)\n\n"Refunds are processed within 5-7 business days after the return is received. [source: refund-policy.pdf]"',
+      },
     ],
   },
   quizQuestion:
@@ -99,7 +120,7 @@ const content: LessonData = {
   quizFeedbackIncorrect:
     "Not quite — brute-force comparison works fine at any number of dimensions, it's just too slow once a collection reaches millions of vectors. ANN indexes exist purely for speed, trading a small amount of guaranteed accuracy for search that stays fast at scale.",
   takeaway:
-    "A vector database's core job is fast nearest-neighbor search at scale, using ANN indexes like HNSW or IVF so lookups stay fast even across millions of embeddings. The tradeoff is baked into the name — approximate, not exact — and it's usually invisible to users but very visible in your latency graphs.",
+    "A vector database's core job is fast nearest-neighbor search at scale, using ANN indexes like HNSW or IVF so lookups stay fast even across millions of embeddings. The tradeoff in the search itself is baked into the name — approximate, not exact — and it's usually invisible to users but very visible in your latency graphs. But retrieval was only ever half the job: the retrieved chunks get stitched into a prompt and handed to the LLM for the generation step, which is what actually produces the grounded, citable answer the whole RAG pipeline — chunk, embed, retrieve, generate — was built to deliver.",
 };
 
 export default content;
