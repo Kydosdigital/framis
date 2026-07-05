@@ -75,12 +75,13 @@ type State = {
   quizPick: QuizKey | null;
   lessonDone: boolean;
 
-  // capstone
-  criteria: boolean[];
-  hintsOpen: boolean[];
-  ghUrl: string;
-  depUrl: string;
-  capstoneSubmitted: boolean;
+  // capstone — keyed by project slug, since a learner can have several in flight
+  activeCapstoneSlug: string;
+  criteria: Record<string, boolean[]>;
+  hintsOpen: Record<string, boolean[]>;
+  ghUrl: Record<string, string>;
+  depUrl: Record<string, string>;
+  capstoneSubmitted: Record<string, boolean>;
 
   // peer review
   scores: Scores;
@@ -120,11 +121,12 @@ type Actions = {
   pickQuiz: (key: QuizKey) => void;
   completeLesson: () => void;
 
-  toggleCriterion: (i: number) => void;
-  revealHint: (i: number) => void;
-  setGhUrl: (v: string) => void;
-  setDepUrl: (v: string) => void;
-  submitCapstone: () => void;
+  goToCapstone: (slug: string) => void;
+  toggleCriterion: (slug: string, i: number) => void;
+  revealHint: (slug: string, i: number) => void;
+  setGhUrl: (slug: string, v: string) => void;
+  setDepUrl: (slug: string, v: string) => void;
+  submitCapstone: (slug: string, totalCriteria: number) => void;
 
   setScore: (key: keyof Scores, n: number) => void;
   setFeedback: (key: keyof Feedback, v: string) => void;
@@ -164,11 +166,12 @@ export const useFramis = create<State & Actions>((set, get) => ({
   quizPick: null,
   lessonDone: false,
 
-  criteria: [false, false, false, false, false, false, false],
-  hintsOpen: [false, false, false],
-  ghUrl: "",
-  depUrl: "",
-  capstoneSubmitted: false,
+  activeCapstoneSlug: "notes-app-with-login",
+  criteria: {},
+  hintsOpen: {},
+  ghUrl: {},
+  depUrl: {},
+  capstoneSubmitted: {},
 
   scores: { crit: 0, read: 0, tests: 0, deploy: 0, readme: 0 },
   feedback: { well: "", improve: "", question: "", learned: "" },
@@ -357,25 +360,26 @@ export const useFramis = create<State & Actions>((set, get) => ({
       return { lessonDone: true, weekDone: w };
     }),
 
-  toggleCriterion: (i) =>
+  goToCapstone: (slug) => set({ activeCapstoneSlug: slug, appTab: "capstone", sidebarOpen: false }),
+  toggleCriterion: (slug, i) =>
     set((s) => {
-      const c = [...s.criteria];
+      const c = [...(s.criteria[slug] ?? [])];
       c[i] = !c[i];
-      return { criteria: c };
+      return { criteria: { ...s.criteria, [slug]: c } };
     }),
-  revealHint: (i) =>
+  revealHint: (slug, i) =>
     set((s) => {
-      const h = [...s.hintsOpen];
+      const h = [...(s.hintsOpen[slug] ?? [])];
       h[i] = true;
-      return { hintsOpen: h };
+      return { hintsOpen: { ...s.hintsOpen, [slug]: h } };
     }),
-  setGhUrl: (ghUrl) => set({ ghUrl }),
-  setDepUrl: (depUrl) => set({ depUrl }),
-  submitCapstone: () => {
+  setGhUrl: (slug, v) => set((s) => ({ ghUrl: { ...s.ghUrl, [slug]: v } })),
+  setDepUrl: (slug, v) => set((s) => ({ depUrl: { ...s.depUrl, [slug]: v } })),
+  submitCapstone: (slug, totalCriteria) => {
     const s = get();
-    const ready =
-      s.criteria.filter(Boolean).length === 7 && s.ghUrl.trim() && s.depUrl.trim();
-    if (ready) set({ capstoneSubmitted: true });
+    const criteriaCount = (s.criteria[slug] ?? []).filter(Boolean).length;
+    const ready = criteriaCount === totalCriteria && (s.ghUrl[slug] ?? "").trim() && (s.depUrl[slug] ?? "").trim();
+    if (ready) set({ capstoneSubmitted: { ...s.capstoneSubmitted, [slug]: true } });
   },
 
   setScore: (key, n) => set((s) => ({ scores: { ...s.scores, [key]: n } })),

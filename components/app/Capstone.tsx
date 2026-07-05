@@ -2,45 +2,58 @@
 
 import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
-import { CRITERIA_LABELS, HINT_TEXTS } from "@/lib/data";
+import { CAPSTONES } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
 import { Check } from "../ui";
 
 export default function Capstone() {
   const s = useFramis();
   const userId = useFramis((st) => st.userId);
+  const slug = useFramis((st) => st.activeCapstoneSlug);
+  const data = CAPSTONES.find((c) => c.slug === slug) ?? CAPSTONES[0];
+
   const [projectId, setProjectId] = useState<number | null>(null);
   const [requirements, setRequirements] = useState<string[] | null>(null);
   const [hints, setHints] = useState<string[] | null>(null);
 
   useEffect(() => {
+    setProjectId(null);
+    setRequirements(null);
+    setHints(null);
     const supabase = createClient();
     supabase
       .from("projects")
       .select("id, requirements, hints")
-      .eq("slug", "notes-app-with-login")
+      .eq("slug", data.slug)
       .single()
-      .then(({ data }) => {
-        if (data) {
-          setProjectId(data.id);
-          if (Array.isArray(data.requirements) && data.requirements.length) {
-            setRequirements(data.requirements as string[]);
+      .then(({ data: row }) => {
+        if (row) {
+          setProjectId(row.id);
+          if (Array.isArray(row.requirements) && row.requirements.length) {
+            setRequirements(row.requirements as string[]);
           }
-          if (Array.isArray(data.hints) && data.hints.length) {
-            setHints(data.hints as string[]);
+          if (Array.isArray(row.hints) && row.hints.length) {
+            setHints(row.hints as string[]);
           }
         }
       }, () => {});
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.slug]);
 
-  const criteriaLabels = requirements ?? CRITERIA_LABELS;
-  const hintTexts = hints ?? HINT_TEXTS;
-  const critCount = s.criteria.filter(Boolean).length;
+  const criteriaLabels = requirements ?? data.criteria;
+  const hintTexts = hints ?? data.hints;
+  const criteria = s.criteria[data.slug] ?? [];
+  const hintsOpen = s.hintsOpen[data.slug] ?? [];
+  const ghUrl = s.ghUrl[data.slug] ?? "";
+  const depUrl = s.depUrl[data.slug] ?? "";
+  const submitted = s.capstoneSubmitted[data.slug] ?? false;
+
+  const critCount = criteria.filter(Boolean).length;
   const capReady =
-    critCount === criteriaLabels.length && s.ghUrl.trim() && s.depUrl.trim();
+    critCount === criteriaLabels.length && ghUrl.trim() && depUrl.trim();
 
   const submit = () => {
-    s.submitCapstone();
+    s.submitCapstone(data.slug, criteriaLabels.length);
     if (capReady && userId && projectId) {
       const supabase = createClient();
       supabase
@@ -49,8 +62,8 @@ export default function Capstone() {
           {
             user_id: userId,
             project_id: projectId,
-            github_url: s.ghUrl,
-            deployed_url: s.depUrl,
+            github_url: ghUrl,
+            deployed_url: depUrl,
             status: "submitted",
             submitted_at: new Date().toISOString(),
           },
@@ -63,18 +76,16 @@ export default function Capstone() {
   return (
     <div className="max-w-[780px]">
       <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
-        CAPSTONE 2 · PHASE 2 · INTERMEDIATE · 2–3 WEEKS · SOLO
+        CAPSTONE · PHASE {data.phaseIndex + 1} · {data.metaTags}
       </div>
       <h1 className="mb-3.5 font-inter text-[30px] font-bold tracking-[-0.02em]">
-        Full-stack notes app with login
+        {data.title}
       </h1>
       <p className="mb-[26px] max-w-[640px] text-[15.5px]/[1.65] text-ink-700">
-        You’re building an MVP where users sign up, log in, and manage private
-        notes. React frontend, FastAPI + SQLite backend, deployed on Vercel +
-        Railway, 70%+ test coverage.
+        {data.description}
       </p>
 
-      {!s.capstoneSubmitted ? (
+      {!submitted ? (
         <>
           {/* acceptance criteria */}
           <div className="mb-[18px] rounded-[12px] border border-line bg-card px-[26px] py-[22px]">
@@ -91,11 +102,11 @@ export default function Capstone() {
             </div>
             <div className="flex flex-col gap-2.5">
               {criteriaLabels.map((label, i) => {
-                const on = s.criteria[i];
+                const on = criteria[i];
                 return (
                   <button
                     key={i}
-                    onClick={() => s.toggleCriterion(i)}
+                    onClick={() => s.toggleCriterion(data.slug, i)}
                     className="flex items-center gap-3 border-none bg-transparent px-0 py-0.5 text-left"
                   >
                     <span
@@ -124,7 +135,7 @@ export default function Capstone() {
             </p>
             <div className="flex flex-col gap-[9px]">
               {hintTexts.map((text, i) =>
-                s.hintsOpen[i] ? (
+                hintsOpen[i] ? (
                   <div
                     key={i}
                     className="rounded-lg bg-[#F4F6F9] px-4 py-3 text-[13.5px]/[1.55] text-ink-900 dark:bg-[#1B2536]"
@@ -137,7 +148,7 @@ export default function Capstone() {
                 ) : (
                   <button
                     key={i}
-                    onClick={() => s.revealHint(i)}
+                    onClick={() => s.revealHint(data.slug, i)}
                     className="rounded-lg border border-dashed border-[#C4CBD6] bg-card px-4 py-3 text-left font-inter text-[13px] font-semibold text-ink-500"
                   >
                     Reveal hint {i + 1}
@@ -154,14 +165,14 @@ export default function Capstone() {
             </div>
             <div className="flex flex-col gap-3">
               <input
-                value={s.ghUrl}
-                onChange={(e) => s.setGhUrl(e.target.value)}
+                value={ghUrl}
+                onChange={(e) => s.setGhUrl(data.slug, e.target.value)}
                 placeholder="GitHub repo URL (must be public)"
                 className="rounded-lg border border-line-input bg-transparent px-3.5 py-3 font-mono text-[14px] text-ink-900"
               />
               <input
-                value={s.depUrl}
-                onChange={(e) => s.setDepUrl(e.target.value)}
+                value={depUrl}
+                onChange={(e) => s.setDepUrl(data.slug, e.target.value)}
                 placeholder="Deployed URL"
                 className="rounded-lg border border-line-input bg-transparent px-3.5 py-3 font-mono text-[14px] text-ink-900"
               />
@@ -194,11 +205,10 @@ export default function Capstone() {
             </svg>
           </div>
           <h2 className="mb-2 font-inter text-[22px] font-bold">
-            Shipped. That’s project 3 of 6.
+            {data.shippedHeadline}
           </h2>
           <p className="mb-1.5 text-[14.5px]/[1.6] text-ink-500">
-            Auto-checks passed: repo public · README found · no secrets detected
-            · 12/12 tests green.
+            {data.autoCheckLine}
           </p>
           <p className="mb-[22px] text-[14.5px]/[1.6] text-ink-500">
             Two peers have been assigned. Reviews land within 3 days, then it
@@ -215,7 +225,7 @@ export default function Capstone() {
               onClick={() => s.goTab("review")}
               className="rounded-lg border border-[#C9DEF2] bg-card px-[22px] py-3 font-inter text-[14px] font-semibold text-blue"
             >
-              Review Jordan’s project now
+              Review a peer’s project now
             </button>
           </div>
         </div>

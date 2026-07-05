@@ -113,6 +113,63 @@ export const REVIEW_ROWS: { key: "crit" | "read" | "tests" | "deploy" | "readme"
   { key: "readme", label: "README is clear for someone new", weight: "10%" },
 ];
 
+export type CapstoneData = {
+  phaseIndex: number; // 0-5, matches PHASES array index
+  slug: string; // matches supabase projects.slug
+  title: string;
+  metaTags: string; // e.g. "INTERMEDIATE · 2-3 WEEKS · SOLO"
+  description: string;
+  criteria: string[];
+  hints: string[];
+  repoBadgeLabel: string;
+  liveBadgeLabel: string;
+  coverageLabel: string;
+  bugFilename: string;
+  bugCodeBefore: string;
+  bugCodeLine: string;
+  bugCodeAfter: string;
+  bugNote: string;
+  reviewFlagCopy: string;
+  shippedHeadline: string;
+  autoCheckLine: string;
+};
+
+export const CAPSTONES: CapstoneData[] = [
+  {
+    phaseIndex: 1,
+    slug: "notes-app-with-login",
+    title: "Full-stack notes app with login",
+    metaTags: "INTERMEDIATE · 2–3 WEEKS · SOLO",
+    description:
+      "You’re building an MVP where users sign up, log in, and manage private notes. React frontend, FastAPI + SQLite backend, deployed on Vercel + Railway, 70%+ test coverage.",
+    criteria: [
+      "User can create an account with email + password",
+      "User can log in and see only their own notes",
+      "User can create, edit and delete notes",
+      "Logging out clears the auth token",
+      "Backend tests cover the main flows (70%+)",
+      "No hardcoded secrets anywhere in the repo",
+      "Deployed and working at a public URL",
+    ],
+    hints: [
+      "Start with the database schema: a users table and a notes table with a user_id foreign key.",
+      "Never store raw passwords — hash them with bcrypt before they touch the database.",
+      "Attach a JWT to each request; the backend checks it before returning any notes.",
+    ],
+    repoBadgeLabel: "github.com/•••/notes-app",
+    liveBadgeLabel: "notes-app.vercel.app ✓ live",
+    coverageLabel: "coverage 74%",
+    bugFilename: "auth.py",
+    bugCodeBefore: `def login(email, password):\n    user = db.get_user(email)\n    `,
+    bugCodeLine: "if user.password == password:",
+    bugCodeAfter: `\n        return make_token(user)\n    return None`,
+    bugNote: "← plain-text compare?",
+    reviewFlagCopy: "You flagged the plain-text password compare. That’s exactly the judgment Framis is built to train.",
+    shippedHeadline: "Shipped. That’s project 2 of 6.",
+    autoCheckLine: "Auto-checks passed: repo public · README found · no secrets detected · 12/12 tests green.",
+  },
+];
+
 export const FEEDBACK_FIELDS: { key: "well" | "improve" | "question" | "learned"; label: string; ph: string }[] = [
   { key: "well", label: "What worked well (1–2 things)", ph: "e.g. Clean separation between routes and db logic…" },
   { key: "improve", label: "One thing that could improve", ph: "e.g. Passwords are compared in plain text — try bcrypt…" },

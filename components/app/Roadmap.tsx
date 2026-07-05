@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useFramis } from "@/lib/store";
-import { ROADMAP_MODULES, PHASES } from "@/lib/data";
+import { ROADMAP_MODULES, PHASES, CAPSTONES } from "@/lib/data";
 
 const COLS = [90, 290, 490, 690];
 const ROW_HEIGHT = 220;
@@ -26,7 +26,7 @@ export default function Roadmap() {
   const statsLoading = useFramis((s) => s.statsLoading);
   const loadStats = useFramis((s) => s.loadStats);
   const goToLesson = useFramis((s) => s.goToLesson);
-  const goTab = useFramis((s) => s.goTab);
+  const goToCapstone = useFramis((s) => s.goToCapstone);
   const [selected, setSelected] = useState<Selection | null>(null);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function Roadmap() {
     return "locked";
   };
 
-  const notesAppShipped = stats ? stats.capstoneStatus !== "not_started" : false;
+  const capstoneShipped = (slug: string) => stats?.shippedCapstoneSlugs?.includes(slug) ?? false;
 
   const anchorFor = (x: number): "left" | "center" | "right" => {
     if (x <= COLS[0] + 10) return "left";
@@ -87,17 +87,14 @@ export default function Roadmap() {
     };
   } else if (selected?.kind === "capstone") {
     const ph = PHASES[selected.phaseIndex];
-    const isNotesApp = selected.phaseIndex === 1;
+    const capstone = CAPSTONES.find((c) => c.phaseIndex === selected.phaseIndex);
+    const shipped = capstone ? capstoneShipped(capstone.slug) : false;
     popoverPos = capstonePositions[selected.phaseIndex];
     popoverBody = {
       eyebrow: `CAPSTONE · PHASE ${ph.num}`,
       title: ph.capstone.replace(/^Capstone:\s*/, ""),
-      desc: isNotesApp
-        ? notesAppShipped
-          ? "Shipped — nice work."
-          : "This is the one real capstone brief right now."
-        : "Unlocks when you reach this phase.",
-      action: isNotesApp ? { label: "Open project brief →", go: () => goTab("capstone") } : undefined,
+      desc: shipped ? "Shipped — nice work." : "Open the brief when you're ready to start.",
+      action: capstone ? { label: "Open project brief →", go: () => goToCapstone(capstone.slug) } : undefined,
     };
   }
 
@@ -166,8 +163,8 @@ export default function Roadmap() {
             {/* capstone spurs + diamonds */}
             {capstonePositions.map((cp, phaseIdx) => {
               const rowEndY = TOP_PAD + phaseIdx * ROW_HEIGHT;
-              const isNotesAppCapstone = phaseIdx === 1;
-              const shipped = isNotesAppCapstone && notesAppShipped;
+              const capstoneAtPhase = CAPSTONES.find((c) => c.phaseIndex === phaseIdx);
+              const shipped = capstoneAtPhase ? capstoneShipped(capstoneAtPhase.slug) : false;
               const isSelected = selected?.kind === "capstone" && selected.phaseIndex === phaseIdx;
               return (
                 <g key={`cap-${phaseIdx}`}>

@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
-import { REVIEW_ROWS, FEEDBACK_FIELDS } from "@/lib/data";
+import { REVIEW_ROWS, FEEDBACK_FIELDS, CAPSTONES } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
 
-type SubmissionInfo = { id: number; title: string | null } | null;
+type SubmissionInfo = { id: number; title: string | null; slug: string | null } | null;
 
 export default function PeerReview() {
   const s = useFramis();
@@ -19,7 +19,7 @@ export default function PeerReview() {
     const supabase = createClient();
     supabase
       .from("review_assignments")
-      .select("id, project_submissions(id, projects(title))")
+      .select("id, project_submissions(id, projects(title, slug))")
       .eq("reviewer_id", userId)
       .eq("status", "pending")
       .limit(1)
@@ -31,11 +31,13 @@ export default function PeerReview() {
             : data.project_submissions;
           const project = sub && (Array.isArray(sub.projects) ? sub.projects[0] : sub.projects);
           setAssignmentId(data.id);
-          setSubmission({ id: sub?.id ?? 0, title: project?.title ?? null });
+          setSubmission({ id: sub?.id ?? 0, title: project?.title ?? null, slug: project?.slug ?? null });
         }
         setCheckedAssignment(true);
       }, () => setCheckedAssignment(true));
   }, [userId]);
+
+  const capstone = CAPSTONES.find((c) => c.slug === submission?.slug) ?? CAPSTONES[0];
 
   const scoresDone = Object.values(s.scores).every((v) => v > 0);
   const reviewReady =
@@ -52,7 +54,7 @@ export default function PeerReview() {
     }
   };
 
-  const reviewTitle = submission?.title ?? "Notes App";
+  const reviewTitle = submission?.title ?? capstone.title;
   const reviewLabel = submission ? `learner #${submission.id}` : "learner #4127";
 
   return (
@@ -71,33 +73,29 @@ export default function PeerReview() {
         <>
           <div className="mb-5 flex flex-wrap gap-2.5">
             <span className="rounded-full bg-[#EAF2FB] px-[15px] py-[7px] font-mono text-[12.5px] font-medium text-blue">
-              github.com/•••/notes-app
+              {capstone.repoBadgeLabel}
             </span>
             <span className="rounded-full bg-[#E7F5F1] px-[15px] py-[7px] font-mono text-[12.5px] font-medium text-success">
-              notes-app.vercel.app ✓ live
+              {capstone.liveBadgeLabel}
             </span>
             <span className="rounded-full bg-[#F4F6F9] px-[15px] py-[7px] font-mono text-[12.5px] font-medium text-ink-500 dark:bg-[#1B2536]">
-              coverage 74%
+              {capstone.coverageLabel}
             </span>
           </div>
 
           {/* code with planted bug */}
           <div className="mb-5 rounded-[12px] bg-navy px-6 py-5">
             <div className="mb-3 font-mono text-[11.5px] font-medium text-slateink-300">
-              auth.py · does anything look off?
+              {capstone.bugFilename} · does anything look off?
             </div>
             <pre className="m-0 whitespace-pre-wrap font-mono text-[13.5px]/[1.75] text-[#E8EAF0]">
-              {`def login(email, password):
-    user = db.get_user(email)
-    `}
+              {capstone.bugCodeBefore}
               <span className="rounded bg-[rgba(220,38,38,.22)] px-1 py-px">
-                if user.password == password:
+                {capstone.bugCodeLine}
               </span>
               {"  "}
-              <span className="text-slateink-400"># ← plain-text compare?</span>
-              {`
-        return make_token(user)
-    return None`}
+              <span className="text-slateink-400">{capstone.bugNote}</span>
+              {capstone.bugCodeAfter}
             </pre>
           </div>
 
@@ -171,8 +169,7 @@ export default function PeerReview() {
             Review sent — nicely spotted.
           </h2>
           <p className="mb-2 text-[14.5px]/[1.6] text-ink-500">
-            You flagged the plain-text password compare. That’s exactly the
-            judgment Framis is built to train.
+            {capstone.reviewFlagCopy}
           </p>
           <p className="mb-[22px] text-[13px] font-medium text-amber">
             +1 toward your Peer Reviewer Star badge · 1 of 2 reviews done this
