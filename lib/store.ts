@@ -101,6 +101,7 @@ type Actions = {
   bootstrap: () => Promise<void>;
   setObMode: (mode: "signup" | "login") => void;
   submitAccount: () => Promise<void>;
+  signInWithGithub: () => Promise<void>;
   signOut: () => Promise<void>;
   setTheme: (theme: Theme) => void;
   loadStats: () => Promise<void>;
@@ -290,6 +291,16 @@ export const useFramis = create<State & Actions>((set, get) => ({
     } catch {
       set({ authBusy: false, authError: "Network error — please try again." });
     }
+  },
+
+  signInWithGithub: async () => {
+    set({ authBusy: true, authError: null, authNotice: null });
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) set({ authBusy: false, authError: error.message });
   },
 
   signOut: async () => {
