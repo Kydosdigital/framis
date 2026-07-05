@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useFramis } from "@/lib/store";
 import VariablesLesson from "./lessons/VariablesLesson";
 import RagLesson from "./lessons/RagLesson";
 
@@ -10,7 +10,8 @@ const LESSONS = [
 ] as const;
 
 export default function Lesson() {
-  const [active, setActive] = useState<(typeof LESSONS)[number]["key"]>("variables");
+  const active = useFramis((s) => s.activeLessonKey);
+  const setActive = useFramis((s) => s.setActiveLessonKey);
 
   return (
     <div className="max-w-[780px]">

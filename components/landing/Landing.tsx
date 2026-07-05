@@ -28,26 +28,26 @@ export default function Landing() {
   return (
     <div>
       {/* nav */}
-      <div className="flex items-center justify-between bg-navy px-12 py-[18px]">
-        <div className="flex items-center gap-3">
-          <Logo size={30} wordSize={20} light />
+      <div className="flex items-center justify-between gap-3 bg-navy px-5 py-[14px] sm:px-12 sm:py-[18px]">
+        <div className="flex min-w-0 items-center gap-3">
+          <Logo size={26} wordSize={17} light />
         </div>
-        <div className="flex items-center gap-7">
+        <div className="flex flex-none items-center gap-4 sm:gap-7">
           <a
             href="#curriculum"
-            className="text-[14px] font-medium text-slateink-200 no-underline"
+            className="hidden text-[14px] font-medium text-slateink-200 no-underline sm:inline"
           >
             Curriculum
           </a>
           <a
             href="#how"
-            className="text-[14px] font-medium text-slateink-200 no-underline"
+            className="hidden text-[14px] font-medium text-slateink-200 no-underline sm:inline"
           >
             How it works
           </a>
           <button
             onClick={startOnboarding}
-            className="rounded-lg bg-blue px-5 py-[10px] font-inter text-[14px] font-semibold text-white"
+            className="rounded-lg bg-blue px-4 py-2 font-inter text-[13px] font-semibold text-white sm:px-5 sm:py-[10px] sm:text-[14px]"
           >
             Start free
           </button>

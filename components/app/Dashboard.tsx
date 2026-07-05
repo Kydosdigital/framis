@@ -1,31 +1,99 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFramis, useDisplayName, CONFIG } from "@/lib/store";
-import { WEEK_TASKS } from "@/lib/data";
+import { PHASES } from "@/lib/data";
 import { Check } from "../ui";
+
+const LESSON_META: Record<number, { title: string; key: "variables" | "rag"; minutes: number }> = {
+  2: { title: "Variables — storing information", key: "variables", minutes: 25 },
+  14: { title: "RAG — teaching an LLM to cite its sources", key: "rag", minutes: 25 },
+};
+
+const CAPSTONE_COPY: Record<string, string> = {
+  not_started: "You haven't started this yet — open the brief when you're ready.",
+  submitted: "Submitted — waiting on peer review.",
+  under_review: "Under peer review right now.",
+  passed: "Passed! This one's shipped.",
+};
 
 export default function Dashboard() {
   const s = useFramis();
   const displayName = useDisplayName();
+  const stats = useFramis((st) => st.stats);
+  const statsLoading = useFramis((st) => st.statsLoading);
+  const loadStats = useFramis((st) => st.loadStats);
+  const goToLesson = useFramis((st) => st.goToLesson);
+
+  useEffect(() => {
+    if (!stats && !statsLoading) loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (statsLoading || !stats) {
+    return <div className="text-[14px] text-ink-500">Loading your progress…</div>;
+  }
+
+  const nextLesson = stats.nextLessonModuleNumber != null ? LESSON_META[stats.nextLessonModuleNumber] : null;
+  const phaseNum = Math.min(6, Math.max(1, Math.ceil((stats.nextLessonModuleNumber ?? 24) / 4)));
+  const phase = PHASES[phaseNum - 1];
+  const justStarting = stats.completedLessons === 0 && stats.shippedCapstones === 0;
+  const lessonPct = stats.totalLessons ? Math.round((stats.completedLessons / stats.totalLessons) * 100) : 0;
+
+  const tasks: { label: string; meta: string; done: boolean; go: () => void }[] = [];
+  if (nextLesson) {
+    tasks.push({
+      label: `Lesson: ${nextLesson.title}`,
+      meta: `${nextLesson.minutes} min · Module ${stats.nextLessonModuleNumber}`,
+      done: false,
+      go: () => goToLesson(nextLesson.key),
+    });
+  }
+  if (stats.capstoneStatus === "not_started") {
+    tasks.push({
+      label: "Capstone: submit Notes App",
+      meta: "2–3 wks",
+      done: false,
+      go: () => s.goTab("capstone"),
+    });
+  } else {
+    tasks.push({
+      label: "Capstone: Notes App",
+      meta: CAPSTONE_COPY[stats.capstoneStatus],
+      done: stats.capstoneStatus === "passed",
+      go: () => s.goTab("capstone"),
+    });
+  }
+  if (stats.pendingReviews > 0) {
+    tasks.push({
+      label: `Peer review (${stats.pendingReviews} due)`,
+      meta: "Reviewing others is how you learn to read code",
+      done: false,
+      go: () => s.goTab("review"),
+    });
+  }
 
   return (
     <div>
       <div className="mb-[26px] flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="mb-1.5 font-inter text-[27px] font-bold tracking-[-0.02em]">
-            Welcome back, {displayName}.
+            {justStarting ? "Welcome" : "Welcome back"}, {displayName}.
           </h1>
           <p className="text-[14.5px] text-ink-500">
-            Phase 3 · Software Engineering Discipline · estimated completion Nov
-            2026
+            {justStarting
+              ? `Week 1 · Phase ${phaseNum} · ${phase.title} · let's get started`
+              : `Week ${stats.weekNumber} of 48 · Phase ${phaseNum} · ${phase.title}`}
           </p>
         </div>
-        <button
-          onClick={() => s.goTab("lesson")}
-          className="rounded-lg bg-blue px-[22px] py-3 font-inter text-[14px] font-semibold text-white"
-        >
-          Resume: Testing Basics →
-        </button>
+        {nextLesson && (
+          <button
+            onClick={() => goToLesson(nextLesson.key)}
+            className="rounded-lg bg-blue px-[22px] py-3 font-inter text-[14px] font-semibold text-white"
+          >
+            {justStarting ? "Start" : "Resume"}: {nextLesson.title} →
+          </button>
+        )}
       </div>
 
       {/* overall progress */}
@@ -35,18 +103,20 @@ export default function Dashboard() {
             Overall progress
           </span>
           <span className="font-mono text-[12.5px] font-medium text-ink-500">
-            Week 18 / 48 · 38%
+            Week {stats.weekNumber} / 48
           </span>
         </div>
         <div className="h-2.5 overflow-hidden rounded-[5px] bg-[var(--color-track)]">
-          <div className="h-full w-[38%] rounded-[5px] bg-gradient-to-r from-blue to-teal" />
+          <div
+            className="h-full rounded-[5px] bg-gradient-to-r from-blue to-teal"
+            style={{ width: `${lessonPct}%` }}
+          />
         </div>
         <div className="mt-4 flex flex-wrap gap-[26px]">
           {[
-            ["8", "modules complete"],
-            ["2/6", "capstones shipped"],
-            ["94%", "lesson completion"],
-            ["4.2/5", "review quality"],
+            [`${stats.completedLessons}/${stats.totalLessons}`, "lessons complete"],
+            [`${stats.shippedCapstones}/${stats.totalCapstones}`, "capstones shipped"],
+            [String(stats.pendingReviews), "reviews due"],
           ].map(([n, label]) => (
             <div key={label}>
               <span className="font-inter text-[18px] font-bold">{n}</span>{" "}
@@ -60,50 +130,46 @@ export default function Dashboard() {
         {/* this week */}
         <div className="rounded-[12px] border border-line bg-card px-6 py-[22px]">
           <div className="mb-4 font-inter text-[14px] font-semibold">
-            This week{" "}
-            <span className="text-[12.5px] font-normal text-ink-500">
-              · 6.5 of 10–15 hrs
-            </span>
+            Up next
           </div>
           <div className="flex flex-col gap-3">
-            {WEEK_TASKS.map((task, i) => {
-              const done = s.weekDone[i];
-              return (
+            {tasks.length === 0 ? (
+              <p className="text-[13.5px] text-ink-500">You&apos;re all caught up — nice work.</p>
+            ) : (
+              tasks.map((task, i) => (
                 <button
                   key={i}
-                  onClick={() => s.goTab(task.tab)}
+                  onClick={task.go}
                   className="flex w-full items-center gap-3 rounded-[9px] px-[14px] py-3 text-left"
                   style={{
-                    background: done ? "var(--color-done-bg)" : "var(--color-card)",
-                    border: `1px solid ${done ? "var(--color-done-border)" : "var(--color-border)"}`,
+                    background: task.done ? "var(--color-done-bg)" : "var(--color-card)",
+                    border: `1px solid ${task.done ? "var(--color-done-border)" : "var(--color-border)"}`,
                   }}
                 >
                   <span
                     className="flex h-[19px] w-[19px] flex-none items-center justify-center rounded-md"
                     style={{
-                      border: `1.5px solid ${done ? "#059669" : "#C4CBD6"}`,
-                      background: done ? "#059669" : "var(--color-card)",
+                      border: `1.5px solid ${task.done ? "#059669" : "#C4CBD6"}`,
+                      background: task.done ? "#059669" : "var(--color-card)",
                     }}
                   >
-                    <Check size={11} opacity={done ? 1 : 0} />
+                    <Check size={11} opacity={task.done ? 1 : 0} />
                   </span>
                   <span className="flex-1">
                     <span
                       className="block text-[13.5px] font-medium text-ink-900"
-                      style={{ textDecoration: done ? "line-through" : "none" }}
+                      style={{ textDecoration: task.done ? "line-through" : "none" }}
                     >
                       {task.label}
                     </span>
-                    <span className="block text-[11.5px] text-ink-500">
-                      {task.meta}
-                    </span>
+                    <span className="block text-[11.5px] text-ink-500">{task.meta}</span>
                   </span>
                   <span className="font-mono text-[11.5px] font-medium text-blue">
-                    {done ? "done" : task.cta + " →"}
+                    {task.done ? "done" : "open →"}
                   </span>
                 </button>
-              );
-            })}
+              ))
+            )}
           </div>
         </div>
 
@@ -111,14 +177,10 @@ export default function Dashboard() {
         <div className="flex flex-col gap-5">
           <div className="rounded-[12px] border border-line bg-card px-6 py-[22px]">
             <div className="mb-3.5 font-inter text-[14px] font-semibold">
-              Capstone in progress
-            </div>
-            <div className="mb-1 font-inter text-[16px] font-semibold">
-              Project 3 — App with tests, auth &amp; CI
+              Capstone: Notes App
             </div>
             <p className="mb-3.5 text-[13.5px]/[1.55] text-ink-500">
-              Due in 2 weeks. Two peers are assigned to review your Notes App
-              this Friday.
+              {CAPSTONE_COPY[stats.capstoneStatus]}
             </p>
             <button
               onClick={() => s.goTab("capstone")}
@@ -130,39 +192,35 @@ export default function Dashboard() {
 
           <div className="rounded-[12px] border border-line bg-card px-6 py-[22px]">
             <div className="mb-3.5 font-inter text-[14px] font-semibold">
-              Peer review queue{" "}
-              <span className="ml-1.5 rounded-full bg-[#DC2626] px-2 py-0.5 font-inter text-[11px] font-semibold text-white">
-                1 due
-              </span>
+              Peer review queue
+              {stats.pendingReviews > 0 && (
+                <span className="ml-1.5 rounded-full bg-[#DC2626] px-2 py-0.5 font-inter text-[11px] font-semibold text-white">
+                  {stats.pendingReviews} due
+                </span>
+              )}
             </div>
             <p className="mb-3.5 text-[13.5px]/[1.55] text-ink-500">
-              Jordan submitted their Notes App. Your review is due in 2 days —
-              reviewing others is how you learn to read code.
+              {stats.pendingReviews > 0
+                ? "Reviewing others is how you learn to read code — take a look when you can."
+                : "No reviews assigned yet. They're assigned automatically once capstones start shipping."}
             </p>
-            <button
-              onClick={() => s.goTab("review")}
-              className="rounded-lg border border-[#C9DEF2] bg-[#F0F6FC] px-[18px] py-2.5 font-inter text-[13px] font-semibold text-blue"
-            >
-              Start review
-            </button>
+            {stats.pendingReviews > 0 && (
+              <button
+                onClick={() => s.goTab("review")}
+                className="rounded-lg border border-[#C9DEF2] bg-[#F0F6FC] px-[18px] py-2.5 font-inter text-[13px] font-semibold text-blue"
+              >
+                Start review
+              </button>
+            )}
           </div>
 
-          {CONFIG.showStreaks && (
+          {CONFIG.showStreaks && stats.currentStreak > 0 && (
             <div className="rounded-[12px] border border-line bg-card px-6 py-[22px]">
-              <div className="mb-3 font-inter text-[14px] font-semibold">
-                Badges
+              <div className="flex items-baseline gap-2">
+                <span className="font-inter text-[22px] font-bold text-teal">{stats.currentStreak}</span>
+                <span className="text-[13px] font-medium text-ink-500">day streak</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-[#EAF2FB] px-[13px] py-1.5 text-[12px] font-medium text-blue">
-                  Git Master
-                </span>
-                <span className="rounded-full bg-[#E7F5F1] px-[13px] py-1.5 text-[12px] font-medium text-success">
-                  Debugger
-                </span>
-                <span className="rounded-full bg-[#FDF3E1] px-[13px] py-1.5 text-[12px] font-medium text-amber">
-                  Peer Reviewer Star
-                </span>
-              </div>
+              <div className="mt-1 text-[12px] text-ink-500">Longest: {stats.longestStreak} days</div>
             </div>
           )}
         </div>
