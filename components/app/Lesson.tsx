@@ -1,9 +1,11 @@
 "use client";
 
 import { useFramis } from "@/lib/store";
-import { PHASES, ROADMAP_MODULES, LESSON_CONTENT } from "@/lib/data";
+import { PHASES, ROADMAP_MODULES } from "@/lib/data";
+import { lessonMeta, GENERIC_LESSONS } from "@/lib/lessons";
 import VariablesLesson from "./lessons/VariablesLesson";
 import RagLesson from "./lessons/RagLesson";
+import GenericLesson from "./lessons/GenericLesson";
 
 function BackToAll({ onBack }: { onBack: () => void }) {
   return (
@@ -13,25 +15,6 @@ function BackToAll({ onBack }: { onBack: () => void }) {
     >
       ← All lessons
     </button>
-  );
-}
-
-function ComingSoon({ num, title, onBack }: { num: number; title: string; onBack: () => void }) {
-  return (
-    <div>
-      <BackToAll onBack={onBack} />
-      <div className="rounded-[12px] border border-line bg-card px-7 py-[26px]">
-        <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
-          MODULE {num}
-        </div>
-        <h1 className="mb-2.5 font-inter text-[22px] font-bold tracking-[-0.02em]">
-          {title}
-        </h1>
-        <p className="text-[14.5px]/[1.6] text-ink-500">
-          This lesson isn&apos;t published yet — check back soon.
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -62,7 +45,7 @@ function LessonBrowser({ onOpen }: { onOpen: (num: number) => void }) {
               </div>
               <div className="overflow-hidden rounded-[12px] border border-line bg-card">
                 {modules.map((m, mi) => {
-                  const built = LESSON_CONTENT[m.num];
+                  const meta = lessonMeta(m.num);
                   const isDone = completed.includes(m.num);
                   return (
                     <button
@@ -84,15 +67,9 @@ function LessonBrowser({ onOpen }: { onOpen: (num: number) => void }) {
                       <span className="flex-1 font-inter text-[14px] font-medium">
                         {m.title}
                       </span>
-                      {built ? (
-                        <span className="font-mono text-[11px] font-medium text-ink-400">
-                          {built.minutes} min →
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-[#F4F6F9] px-2.5 py-[3px] font-mono text-[10.5px] font-medium text-ink-400 dark:bg-[#1B2536]">
-                          Coming soon
-                        </span>
-                      )}
+                      <span className="font-mono text-[11px] font-medium text-ink-400">
+                        {meta ? `${meta.minutes} min →` : ""}
+                      </span>
                     </button>
                   );
                 })}
@@ -112,9 +89,7 @@ export default function Lesson() {
   if (active === null) {
     return (
       <div className="max-w-[780px]">
-        <LessonBrowser
-          onOpen={(num) => setActive(LESSON_CONTENT[num] ? LESSON_CONTENT[num].key : num)}
-        />
+        <LessonBrowser onOpen={(num) => setActive(lessonMeta(num)?.key ?? num)} />
       </div>
     );
   }
@@ -133,12 +108,11 @@ export default function Lesson() {
           <RagLesson />
         </>
       )}
-      {typeof active === "number" && (
-        <ComingSoon
-          num={active}
-          title={ROADMAP_MODULES.find((m) => m.num === active)?.title ?? ""}
-          onBack={() => setActive(null)}
-        />
+      {typeof active === "number" && GENERIC_LESSONS[active] && (
+        <>
+          <BackToAll onBack={() => setActive(null)} />
+          <GenericLesson data={GENERIC_LESSONS[active]} />
+        </>
       )}
     </div>
   );
