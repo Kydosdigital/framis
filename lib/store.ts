@@ -17,7 +17,7 @@ function applyTheme(theme: "light" | "dark") {
 }
 
 export type Screen = "landing" | "onboarding" | "app";
-export type AppTab = "dashboard" | "lesson" | "capstone" | "review" | "portfolio";
+export type AppTab = "dashboard" | "lesson" | "capstone" | "review" | "portfolio" | "roadmap";
 export type QuizKey = "a" | "b" | "c";
 export type Theme = "light" | "dark";
 
