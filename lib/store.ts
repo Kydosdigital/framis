@@ -26,6 +26,7 @@ export type LessonSelection = { module: number; lessonIndex: number } | null;
 
 type ObAnswers = { q1: string | null; q2: string | null; q3: string | null };
 type Setup = { py: boolean; vsc: boolean; git: boolean };
+export const OB_STEP_COUNT = 9;
 type Scores = {
   crit: number;
   read: number;
@@ -67,6 +68,8 @@ type State = {
   obPw: string;
   obAnswers: ObAnswers;
   setup: Setup;
+  obLearningGoal: string;
+  obSaving: boolean;
 
   // lesson
   simpler: boolean;
@@ -110,10 +113,12 @@ type Actions = {
   setActiveLessonKey: (key: LessonSelection) => void;
   goToLesson: (module: number, lessonIndex?: number) => void;
 
-  setOb: (patch: Partial<Pick<State, "obName" | "obEmail" | "obPw">>) => void;
+  setOb: (patch: Partial<Pick<State, "obName" | "obEmail" | "obPw" | "obLearningGoal">>) => void;
   answer: (key: keyof ObAnswers, value: string) => void;
   obNext: () => void;
+  obBack: () => void;
   toggleSetup: (key: keyof Setup) => void;
+  completeOnboarding: () => Promise<void>;
 
   toggleSimpler: () => void;
   setCode: (code: string) => void;
@@ -160,6 +165,8 @@ export const useFramis = create<State & Actions>((set, get) => ({
   obPw: "",
   obAnswers: { q1: null, q2: null, q3: null },
   setup: { py: false, vsc: false, git: false },
+  obLearningGoal: "",
+  obSaving: false,
 
   simpler: false,
   code: STARTER_CODE,
@@ -319,6 +326,7 @@ export const useFramis = create<State & Actions>((set, get) => ({
       obEmail: "",
       obPw: "",
       obAnswers: { q1: null, q2: null, q3: null },
+      obLearningGoal: "",
       theme: "light",
       stats: null,
     });
@@ -354,10 +362,42 @@ export const useFramis = create<State & Actions>((set, get) => ({
   obNext: () => {
     const s = get();
     const allAnswered = s.obAnswers.q1 && s.obAnswers.q2 && s.obAnswers.q3;
-    if (s.obStep === 2 && !allAnswered) return;
-    set({ obStep: Math.min(3, s.obStep + 1) });
+    if (s.obStep === 8 && !allAnswered) return;
+    set({ obStep: Math.min(OB_STEP_COUNT, s.obStep + 1) });
   },
+  obBack: () => set((s) => ({ obStep: Math.max(2, s.obStep - 1) })),
   toggleSetup: (key) => set((s) => ({ setup: { ...s.setup, [key]: !s.setup[key] } })),
+
+  completeOnboarding: async () => {
+    const s = get();
+    if (!s.userId) return;
+    set({ obSaving: true });
+    const supabase = createClient();
+    const beginner = s.obAnswers.q1 === "Never used it";
+    try {
+      await supabase
+        .from("profiles")
+        .update({
+          learning_goal: s.obLearningGoal.trim() || null,
+          placement_answers: s.obAnswers,
+          setup_checklist: s.setup,
+          onboarding_completed_at: new Date().toISOString(),
+        })
+        .eq("id", s.userId);
+      // Fire-and-forget: the route re-checks welcome_email_day itself before
+      // sending, so a dropped network call here just means Day 1 arrives via
+      // the next day's cron catch-up instead of instantly — not a retry risk.
+      fetch("/api/send-onboarding-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: s.userId }),
+      }).catch(() => {});
+    } finally {
+      set({ obSaving: false });
+    }
+    set({ screen: "app" });
+    get().goToLesson(beginner ? 1 : 2, 1);
+  },
 
   toggleSimpler: () => set((s) => ({ simpler: !s.simpler })),
   setCode: (code) => set({ code }),
