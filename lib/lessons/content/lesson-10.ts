@@ -3,72 +3,100 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 10,
   orderIndex: 1,
-  phaseLabel: "DEBUGGING + LOGGING + MONITORING",
-  title: "Print Statements: X-Ray Vision for Broken Code",
+  phaseLabel: "FEATURE ENGINEERING + SELECTION",
+  title: "Feature Engineering: Turning Raw Columns Into Signal",
   minutes: 20,
   concept:
-    "A function can run without crashing and still hand back the wrong answer — that's the hardest kind of bug, because there's no error message pointing you at the problem. The fix is to interrogate the code while it runs: drop a print() statement right where you suspect trouble, so you can watch a variable's real value at that exact moment instead of guessing from reading the code. Trace one loop iteration at a time — print what came in, print what you're about to store, and print what actually got stored — until you find the exact line where the printed value stops matching what you expected. Everything before that line was fine; the bug lives right there. This turns a vague feeling of \"the number is wrong somewhere\" into a precise, provable \"the number goes wrong on line 6, inside the loop, when total gets reassigned instead of added to.\"",
+    "A machine learning model never sees your raw data the way you do — it only sees numbers, and it treats every number purely as a number, with no idea what it \"means.\" A raw timestamp like minute 510 of the day is technically a number, but it's nearly useless to a simple model on its own: the model has to somehow discover, from scratch, that minutes 480-539 cluster into a meaningful \"morning\" pattern, or that day-of-week matters for some things but not others. Feature engineering is the practice of doing some of that translation yourself before the data ever reaches the model — deriving new columns like hour_of_day (a simple integer division) or is_weekend (a boolean flag) that put a pattern you already know is there into a form the model can use directly, instead of forcing it to reverse-engineer that pattern from raw numbers. The same idea applies to ratios (pages viewed per minute tells you more about engagement than either raw count alone) and bucketed categories (grouping a continuous score into \"low/medium/high\" bands). None of this is exotic math — it's loops and conditionals computing new values from old ones, one row at a time — but it's often the single biggest lever you have over a model's accuracy, more so than which algorithm you pick.",
   conceptSimpler:
-    "It's like a detective questioning witnesses in order along a timeline — you're not guessing who's lying, you're checking each person's story until you find the exact moment the account stops matching reality.",
+    "Raw data is like a fact sheet with no summary — feature engineering is writing the summary yourself (the busy hour, whether it's a weekend, whether this row looks \"engaged\") so the model doesn't have to guess it from a wall of raw numbers.",
   vizStages: [
     {
-      label: "1. A function that lies quietly",
+      label: "1. Raw data, no obvious pattern",
       body:
-        "This function is supposed to add up late fees across every order, but it returns a suspiciously small number. It doesn't crash, so nothing points you at the problem — you just get a wrong total back.",
+        "Here's a single row of raw session data. minute_of_day is just a number from 0 to 1439 — nothing about the number 510 by itself tells a model \"this is morning\" or \"this is a weekday.\"",
       code:
-        "def calculate_total_fees(orders):\n    total = 0\n    for order in orders:\n        fee = order[\"days_late\"] * 5\n        total = fee\n    return total\n\norders = [{\"days_late\": 2}, {\"days_late\": 5}, {\"days_late\": 1}]\nresult = calculate_total_fees(orders)\nprint(f\"Total late fees: ${result}\")",
+        "row = {\"minute_of_day\": 510, \"day_of_week\": 0, \"pages_viewed\": 8, \"minutes_on_site\": 4}\nprint(row)",
     },
     {
-      label: "2. Drop a print checkpoint inside the loop",
+      label: "2. Derive hour_of_day with integer division",
       body:
-        "Instead of staring at the code hoping to spot the bug, add a print() right after the line you're suspicious of. Now every single loop iteration reports its own fee and the running total at that moment.",
+        "// (floor division) turns minute-of-day into a 0-23 hour bucket. \"Morning vs. evening\" is now a small, learnable category instead of one of 1440 possible raw values.",
       code:
-        "def calculate_total_fees(orders):\n    total = 0\n    for order in orders:\n        fee = order[\"days_late\"] * 5\n        total = fee\n        print(f\"fee={fee} total={total}\")\n    return total",
+        "row = {\"minute_of_day\": 510}\nprint(row[\"minute_of_day\"] // 60)",
     },
     {
-      label: "3. Read the trace line by line",
+      label: "3. Derive is_weekend as a boolean flag",
       body:
-        "The printed trace shows fee is correct every time, but total is always identical to fee — it never carries forward what came before. That's the tell: total is being replaced, not accumulated.",
-      code: "fee=10 total=10\nfee=25 total=25\nfee=5 total=5",
+        "day_of_week runs 0-6; using a Monday-first convention, Saturday and Sunday are 5 and 6. A single or comparison turns that into a clean True/False flag.",
+      code:
+        "row = {\"day_of_week\": 5}\nis_weekend = row[\"day_of_week\"] == 5 or row[\"day_of_week\"] == 6\nprint(is_weekend)",
     },
     {
-      label: "4. Fix the exact line the trace pointed to",
+      label: "4. Derive a ratio, then bucket it",
       body:
-        "Once the trace shows total resetting instead of growing, the fix is obvious: add the new fee to the existing total instead of overwriting it. Rerun and the printed total now climbs across iterations.",
+        "pages_viewed / minutes_on_site — a ratio feature — is more informative than either raw number alone. Bucketing it into low/medium/high with if/elif turns a continuous ratio into a simple category a model, or a human reading a dashboard, can reason about.",
       code:
-        "def calculate_total_fees(orders):\n    total = 0\n    for order in orders:\n        fee = order[\"days_late\"] * 5\n        total = total + fee\n        print(f\"fee={fee} total={total}\")\n    return total",
+        "pages_viewed = 3\nminutes_on_site = 6\npages_per_minute = pages_viewed / minutes_on_site\nprint(pages_per_minute)\nif pages_per_minute < 1:\n    bucket = \"low\"\nelif pages_per_minute < 3:\n    bucket = \"medium\"\nelse:\n    bucket = \"high\"\nprint(bucket)",
     },
   ],
   realWorldIntro:
-    "In a live production system you can't pause a request and poke at variables in a debugger, so engineers leave print-style log lines inside functions on purpose — tools like Datadog or CloudWatch then let them replay exactly what a variable held at each step of one specific failed request.",
+    "This exact translation is why feature engineering is often called the highest-leverage step in a modeling pipeline — you're injecting domain knowledge the model has no way to discover on its own. In real pandas code you'd do this across an entire column at once instead of looping row by row: df['hour_of_day'] = df['minute_of_day'] // 60, df['is_weekend'] = df['day_of_week'].isin([5, 6]), and df['engagement_bucket'] = pd.cut(df['pages_per_minute'], bins=[0, 1, 3, float('inf')], labels=['low', 'medium', 'high']). The engineered features are identical — pandas just vectorizes the loop you're about to write by hand.",
   realWorldCode:
-    "def calculate_shipping_cost(order):\n    print(f\"order_id={order['id']} weight={order['weight']}\")\n    cost = order[\"weight\"] * 2\n    print(f\"order_id={order['id']} computed_cost={cost}\")\n    return cost",
+    "# hand-built (one row at a time):\nrow[\"hour_of_day\"] = row[\"minute_of_day\"] // 60\nrow[\"is_weekend\"] = row[\"day_of_week\"] == 5 or row[\"day_of_week\"] == 6\n\n# real pandas (whole column at once):\n# df[\"hour_of_day\"] = df[\"minute_of_day\"] // 60\n# df[\"is_weekend\"] = df[\"day_of_week\"].isin([5, 6])",
   sandbox: {
     kind: "code",
     challenge:
-      "Add print statements inside the loop to find where the running total stops accumulating, then fix the bug.",
+      "Given a list of raw session rows, derive three new features on each row: hour_of_day (an integer hour from minute_of_day), is_weekend (a boolean from day_of_week), and engagement_bucket (\"low\"/\"medium\"/\"high\" from the pages_viewed-per-minute ratio). Print a summary line per row.",
     starterCode:
-      "def calculate_total_distance(trips):\n    total = 0\n    for trip in trips:\n        miles = trip[\"miles\"]\n        total = miles\n    return total\n\ntrips = [{\"miles\": 12}, {\"miles\": 8}, {\"miles\": 20}]\nresult = calculate_total_distance(trips)\nprint(f\"Total distance: {result} miles\")",
+      "rows = []\nrows.append({\"minute_of_day\": 510, \"day_of_week\": 0, \"pages_viewed\": 8, \"minutes_on_site\": 4})\nrows.append({\"minute_of_day\": 1330, \"day_of_week\": 5, \"pages_viewed\": 3, \"minutes_on_site\": 6})\nrows.append({\"minute_of_day\": 60, \"day_of_week\": 6, \"pages_viewed\": 12, \"minutes_on_site\": 3})\nrows.append({\"minute_of_day\": 720, \"day_of_week\": 2, \"pages_viewed\": 5, \"minutes_on_site\": 5})\n\nfor row in rows:\n    row[\"hour_of_day\"] = row[\"minute_of_day\"] // 60\n    row[\"is_weekend\"] = row[\"day_of_week\"] == 5 or row[\"day_of_week\"] == 6\n    pages_per_minute = row[\"pages_viewed\"] / row[\"minutes_on_site\"]\n    if pages_per_minute < 1:\n        row[\"engagement_bucket\"] = \"low\"\n    elif pages_per_minute < 3:\n        row[\"engagement_bucket\"] = \"medium\"\n    else:\n        row[\"engagement_bucket\"] = \"high\"\n    print(f\"hour={row['hour_of_day']} weekend={row['is_weekend']} bucket={row['engagement_bucket']}\")",
   },
   quizQuestion:
-    "You add print(f\"fee={fee} total={total}\") inside the loop and see this trace. What does it reveal about the bug?",
-  quizCode: "fee=10 total=10\nfee=25 total=25\nfee=5 total=5",
+    "row = {\"minute_of_day\": 845, \"day_of_week\": 3}. You derive hour_of_day with // 60 and is_weekend by checking day_of_week against 5 and 6. What do the two prints show?",
+  quizCode:
+    "row = {\"minute_of_day\": 845, \"day_of_week\": 3}\nrow[\"hour_of_day\"] = row[\"minute_of_day\"] // 60\nrow[\"is_weekend\"] = row[\"day_of_week\"] == 5 or row[\"day_of_week\"] == 6\nprint(row[\"hour_of_day\"], row[\"is_weekend\"])",
   quizOptions: [
-    {
-      key: "a",
-      label: "total is being reassigned to the latest fee each iteration instead of adding to the running total",
-      correct: true,
-    },
-    { key: "b", label: "fee is being calculated with the wrong multiplier, so every value is wrong", correct: false },
-    { key: "c", label: "the for loop is only running once, so later orders are skipped entirely", correct: false },
+    { key: "a", label: "14 False", correct: true },
+    { key: "b", label: "14 True", correct: false },
+    { key: "c", label: "13 False", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — fee is correct on every line of the trace, but total always equals that iteration's fee, which means the loop is overwriting total instead of accumulating it with total = total + fee.",
+    "Right — 845 // 60 floors down to 14 (14 * 60 = 840, with 5 minutes left over), and day_of_week 3 is Thursday, which matches neither 5 nor 6, so is_weekend evaluates to False.",
   quizFeedbackIncorrect:
-    "Look again at the fee values in the trace (10, 25, 5) — they're all correct for their orders, so the multiplier is fine and the loop is clearly running three times; the tell is that total always matches fee exactly, meaning it's being replaced, not summed.",
+    "Not quite — // is floor (integer) division, so 845 // 60 rounds down to 14 rather than up to 15; and since day_of_week is 3 (Thursday), it doesn't equal 5 or 6, so is_weekend is False.",
   takeaway:
-    "When code runs but returns the wrong answer, don't just reread it — print the suspect variable at each step and watch where the trace stops matching what you expected. That exact line is the bug, and this same instinct is what real logging and monitoring in production systems is built on.",
-  nextUpLabel: "Security + Auth Patterns",
+    "A model only ever sees numbers, not meaning — feature engineering is the loop-and-conditional work of deriving columns (hour_of_day, is_weekend, a ratio, a bucketed category) that put a pattern you already know exists into a form the model can actually use, and it's frequently a bigger accuracy lever than the choice of algorithm itself.",
+  explainers: [
+    {
+      id: "what-is-feature",
+      term: "What's a Feature?",
+      emoji: "🧩",
+      shortDef:
+        "A feature is just one input column a model looks at — age, income, hour_of_day, is_weekend. \"Feature\" is the ML word for \"column used as input.\"",
+      longDef:
+        "Every column you feed into a model is called a feature. Some features come straight from your raw data (a column your database already has); others are engineered — computed from one or more raw columns, like hour_of_day computed from minute_of_day. A model doesn't distinguish between the two once training starts; it just sees a list of numbers per row. The difference matters entirely to you, the person deciding what those numbers should contain.",
+      whyMatters:
+        "The features you hand a model set a hard ceiling on what it can possibly learn. A model can't discover a pattern that isn't representable in some feature you gave it — no algorithm, however powerful, can invent hour_of_day out of a raw minute count on its own.",
+      realWorldExample:
+        "If you're predicting whether someone will finish an order, \"minutes since they added the last item to their cart\" is a feature you'd have to build — it isn't sitting in any raw column, it's computed from two timestamps that are.",
+      relatedTerms: ["what-is-feature-engineering"],
+      expandedByDefault: true,
+    },
+    {
+      id: "what-is-feature-engineering",
+      term: "What's Feature Engineering?",
+      emoji: "🛠️",
+      shortDef:
+        "Feature engineering is creating new, more useful columns out of the raw columns you already have.",
+      longDef:
+        "Feature engineering covers any transformation you apply to raw data before a model sees it: deriving hour_of_day from a timestamp, computing a ratio like pages_per_minute, bucketing a continuous score into low/medium/high, or one-hot encoding a category. It's called \"engineering\" because it's deliberate design work — you're using what you know about the problem to hand the model a head start, instead of making it discover everything from raw numbers alone.",
+      whyMatters:
+        "In practice, good feature engineering often improves a model's accuracy more than switching to a fancier algorithm does. A simple model with well-engineered features regularly beats a complex model fed only raw columns.",
+      realWorldExample:
+        "A raw \"account_created_at\" timestamp is nearly useless to most models. \"account_age_in_days\" (a single subtraction) turns that same timestamp into one of the most predictive features in a typical churn model.",
+      relatedTerms: ["what-is-feature"],
+    },
+  ],
 };
 
 export default content;

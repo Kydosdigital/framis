@@ -3,105 +3,81 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 20,
   orderIndex: 2,
-  phaseLabel: "FINE-TUNING + DATASET QUALITY",
-  title: "Don't fine-tune a problem a better prompt can fix in an afternoon",
+  phaseLabel: "EVALS + SAFETY + GUARDRAILS",
+  title: "In and out: a guardrail that checks both ends of the conversation",
   minutes: 18,
   concept:
-    "Fine-tuning changes the model's weights, which means it can fix problems no prompt ever could — it's the only lever for teaching a genuinely new output format the model resists, a domain-specific style it can't be talked into, or a task where you need lower latency by baking instructions into the weights instead of sending them every request. But fine-tuning costs real time and money: you need a curated dataset, a training run, an eval pass, and a redeploy every time the task definition changes even slightly. Most of what feels like \"the model isn't doing what I want\" is actually a prompt problem — vague instructions, missing examples, no clear output schema — and those are fixed in minutes by rewriting the prompt, not weeks by retraining. The rule of thumb: reach for better prompting, few-shot examples, and retrieval first, and only fine-tune once you've proven the model can already do the task when given a great prompt, but does it inconsistently or too slowly to use at scale. Fine-tuning on a badly-defined task doesn't clarify the task — it just bakes the confusion in more permanently.",
+    "A guardrail is a plain function that runs alongside the model, not inside it — it checks a piece of text against a list of things you've decided are unsafe, and returns whether that text is allowed through. The same guardrail typically runs twice: once on the user's input before it ever reaches the model, and once on the model's output before it ever reaches the user, because a bad response can show up even from a completely innocent-looking prompt. The simplest version of this check is a blocklist: a list of exact words or phrases you consider unsafe, compared one at a time against every word in the text you're checking, with a flag that flips the moment any match is found. Because this comparison is exact matching rather than any real understanding of meaning, a blocklist guardrail is fast, cheap, and completely predictable — but it only catches the specific words you thought to list, so a synonym, a typo, or a clever rephrasing slides right through untouched. That's why guardrails get described as a floor, not a ceiling: they catch the obvious, known-bad cases for almost no cost, and everything subtler still needs a smarter classifier, a real eval, or a human.",
   conceptSimpler:
-    "It's the difference between giving someone clearer instructions versus sending them back to school — school works for a real skill gap, but most performance problems are just unclear instructions, and no amount of schooling fixes those faster than just being clearer.",
+    "It's the metal detector at a stadium gate: fast, and great at catching the exact things it was built to detect, but it does nothing at all against a threat it wasn't designed to recognize.",
   vizStages: [
     {
-      label: "1. The cheap fix first",
+      label: "1. Two checkpoints, not one",
       body:
-        "A support-ticket classifier keeps mislabeling billing tickets as bugs. Before touching training data, the team rewrites the prompt to include the exact category definitions and three labeled examples.",
-      code: "prompt = \"Classify as billing, bug, or question.\\n\" +\n  \"billing = anything about charges, refunds, or payment methods.\\n\" +\n  \"Example: 'charged twice' -> billing\\n\" +\n  \"Example: 'app crashes on open' -> bug\"",
+        "A guardrail sits at both ends of the pipeline — once between the user and the model, and once between the model and the user — because unsafe text can originate from either side.",
+      code:
+        "# user_input -> [guardrail] -> model -> [guardrail] -> user\nblocked_terms = [\"malware\", \"bomb\", \"ssn\"]",
     },
     {
-      label: "2. When the cheap fix is enough",
+      label: "2. The blocklist is just a list",
       body:
-        "Accuracy jumps from 71% to 95% just from clearer instructions and examples. There's no fine-tuning problem here — there was a prompt-clarity problem, and it's solved.",
-      code: "// before: accuracy 71%\n// after adding definitions + examples: accuracy 95%\n// no training run needed",
+        "There's no cleverness here on purpose — it's a list of exact strings someone decided are never acceptable, kept separate from the checking logic so it can be updated without touching any code.",
+      code: "blocked_terms = [\"malware\", \"bomb\", \"ssn\", \"creditcard\"]",
     },
     {
-      label: "3. When prompting hits a real wall",
+      label: "3. Checking word by word with a flag",
       body:
-        "A different team needs the model to output a rigid internal JSON schema with 40 fields, every time, with zero drift, at high volume and low latency. Even a great prompt gets the format right 90% of the time and occasionally adds a stray field or explanatory sentence.",
-      code: "// best prompt achievable: 90% schema-valid, and slower\n// per-request cost of re-sending 40-field instructions every call: high",
+        "The checker walks every word in the text and compares it against every entry in the blocklist. The moment one matches, a boolean flag flips to unsafe — there's no partial credit and no early exit needed for correctness.",
+      code:
+        "def is_safe(words, blocked):\n    safe = True\n    for w in words:\n        for term in blocked:\n            if w == term:\n                safe = False\n    return safe",
     },
     {
-      label: "4. That's the fine-tuning case",
+      label: "4. Allow or block, nothing in between",
       body:
-        "This is a good fine-tuning candidate: the task is precisely defined, the failure is consistency and cost rather than confusion, and a curated set of correct examples can teach the exact format so it doesn't need to be re-explained every request.",
-      code: "// fine-tuned on 300 correctly-formatted examples:\n// schema-valid: 99.6%, no instructions needed in the prompt at all",
+        "The final decision is binary: if is_safe comes back True, the text moves on to the next stage of the pipeline; if it comes back False, it gets rejected or rewritten before it goes any further.",
+      code:
+        "if is_safe(reply_words, blocked_terms):\n    send_to_user(reply_words)\nelse:\n    print(\"BLOCKED: response withheld\")",
     },
   ],
   realWorldIntro:
-    "Teams that skip straight to fine-tuning often discover, after a training run, that the same gain was available from adding two few-shot examples to the prompt — which is why most fine-tuning guides insist on a documented prompt-engineering attempt first.",
+    "Many production assistants run a moderation check as a required pipeline step on every single request and every single response, rejecting or rewriting anything that trips it regardless of how the model itself would have handled it left alone.",
   realWorldCode:
-    "// before opening a training job, answer:\n// 1. does the best possible prompt already do this task correctly?\n// 2. if yes, is the only problem consistency, cost, or latency at scale?\n// only fine-tune if both checks point that way",
+    "if not is_safe(user_words, blocked_terms):\n    print(\"request blocked before reaching the model\")\nelif not is_safe(model_words, blocked_terms):\n    print(\"response blocked before reaching the user\")\nelse:\n    print(\"delivered\")",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each scenario and decide whether it calls for a better prompt or an actual fine-tune before reading the verdict.",
-    stages: [
-      {
-        label: "Scenario 1: the model ignores a rule you never wrote down",
-        body:
-          "A team wants replies under 50 words but never puts a word limit in the prompt, then plans a fine-tuning run to \"teach brevity.\" Verdict: prompt fix. Just add the constraint — the model was never told the rule it's being blamed for breaking.",
-        code: "prompt = \"Reply to the customer.\"\n// missing: \"Keep the reply under 50 words.\"",
-      },
-      {
-        label: "Scenario 2: the task needs a house style no instruction captures",
-        body:
-          "A legal team needs contract summaries written in their firm's exact phrasing conventions, built up over decades, that can't be reduced to a short rule list. Verdict: fine-tune candidate. This is a style-transfer problem where examples teach something instructions can't compactly describe.",
-        code: "// hundreds of firm-authored summary pairs:\n// { contract_excerpt: ..., firm_style_summary: ... }",
-      },
-      {
-        label: "Scenario 3: it works, but costs too much per call",
-        body:
-          "A prompt that works needs 1,200 tokens of instructions and examples resent on every single request, at huge volume. Verdict: fine-tune candidate, but for a cost reason, not a capability reason — bake the always-repeated instructions into the weights and cut the per-request prompt to almost nothing.",
-        code: "// current: 1,200-token instruction prompt x 2M requests/month\n// fine-tuned: near-empty prompt, same behavior baked into the model",
-      },
-      {
-        label: "Scenario 4: the examples in the prompt are just wrong",
-        body:
-          "A classifier prompt includes three few-shot examples, and one of them is mislabeled. The team is about to build a 5,000-row training set because \"the model still gets confused.\" Verdict: prompt fix. Fix the one wrong example first — fine-tuning on a dataset built to compensate for a prompt bug just launders the same bug into the weights.",
-        code: "// few-shot example 3 (wrong):\n// { input: \"double charged\", label: \"bug\" }  // should be \"billing\"",
-      },
-      {
-        label: "Scenario 5: it's inconsistent despite a genuinely good prompt",
-        body:
-          "The prompt is clear, well-tested, and includes solid examples, but the model still flips its answer on the same input across runs at a rate that hurts production reliability. Verdict: fine-tune candidate. When prompting is already good and the remaining gap is stability rather than confusion, training on curated examples locks in the behavior instructions alone can't guarantee.",
-        code: "// same input, 5 runs with the best prompt found:\n// billing, billing, bug, billing, billing  <- 20% flip rate",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Trace the guardrail below: it checks a user message and a model reply against a shared blocklist and prints ALLOWED or BLOCKED for each.",
+    starterCode:
+      "blocked_terms = [\"bomb\", \"malware\", \"ssn\", \"creditcard\"]\n\ndef is_safe(words, blocked):\n    safe = True\n    for w in words:\n        for term in blocked:\n            if w == term:\n                safe = False\n    return safe\n\ndef check_and_report(label, words, blocked):\n    if is_safe(words, blocked):\n        print(f\"{label}: ALLOWED\", words)\n    else:\n        print(f\"{label}: BLOCKED\", words)\n\nuser_input = [\"explain\", \"how\", \"photosynthesis\", \"works\"]\nrisky_input = [\"give\", \"me\", \"a\", \"customer\", \"ssn\"]\n\nmodel_output = [\"the\", \"sun\", \"provides\", \"energy\"]\nrisky_output = [\"here\", \"is\", \"malware\", \"code\"]\n\ncheck_and_report(\"user_input\", user_input, blocked_terms)\ncheck_and_report(\"risky_input\", risky_input, blocked_terms)\ncheck_and_report(\"model_output\", model_output, blocked_terms)\ncheck_and_report(\"risky_output\", risky_output, blocked_terms)",
   },
   quizQuestion:
-    "A team's model mislabels tickets containing the word 'refund' as 'bug' about 30% of the time. They haven't yet added any examples or category definitions to their prompt. What should they try first?",
+    "A team only runs their blocklist guardrail on the user's input, never on the model's output. Which scenario slips through anyway?",
+  quizCode:
+    "def is_safe(words, blocked):\n    safe = True\n    for w in words:\n        for term in blocked:\n            if w == term:\n                safe = False\n    return safe\n\nblocked_terms = [\"malware\"]\nuser_message = [\"please\", \"explain\", \"encryption\"]\nmodel_reply = [\"here\", \"is\", \"malware\", \"code\"]\n\nif is_safe(user_message, blocked_terms):\n    print(\"input check: ALLOWED - forwarding model reply to user\")\nprint(model_reply)",
   quizOptions: [
     {
       key: "a",
-      label: "Start collecting and labeling a training set for a fine-tune, since 30% is a large error rate",
-      correct: false,
-    },
-    {
-      key: "b",
-      label: "Add clear category definitions and a few labeled examples to the prompt, then re-measure the error rate",
+      label:
+        "The model generates unsafe content in response to a totally benign-looking prompt, so nothing about the input would have tripped the filter — only checking the output would catch it",
       correct: true,
     },
     {
+      key: "b",
+      label: "The blocklist doesn't have enough words in it, which is the only reason anything unsafe could ever get through",
+      correct: false,
+    },
+    {
       key: "c",
-      label: "Switch to a larger base model, since bigger models make fewer classification errors",
+      label: "Checking input alone is always sufficient, since a model can never produce unsafe text on its own",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — a 30% error rate with no definitions or examples in the prompt is a strong sign the task was never clearly specified, and clarifying it costs minutes; fine-tuning should wait until a well-specified prompt still can't hit the needed accuracy or consistency.",
+    "Right — the quiz code shows exactly this: user_message passes the input check easily, but model_reply contains \"malware\" and is never checked at all, so it goes straight to the user unfiltered.",
   quizFeedbackIncorrect:
-    "Not quite — before spending days on a training set or swapping models, the prompt hasn't even been given category definitions or examples yet, and that cheap fix routinely closes gaps this size on its own.",
+    "Not quite — the list length isn't the issue here; even a perfect blocklist can't catch anything if it's only ever applied to the input side, and the model's own output was never run through it.",
   takeaway:
-    "Fine-tuning is for a well-defined task the model already does correctly with a great prompt but not consistently, quickly, or cheaply enough — not a shortcut around the harder work of writing a clear prompt in the first place.",
+    "Guardrails are exact-match filters that should run on both the input reaching the model and the output leaving it, since an unsafe result can appear on either side — but because they only catch what's on the list, they're a cheap first line of defense, not a substitute for real evals or human review.",
 };
 
 export default content;

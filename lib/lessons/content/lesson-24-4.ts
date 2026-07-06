@@ -3,101 +3,77 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 24,
   orderIndex: 4,
-  phaseLabel: "AI PRODUCT DESIGN + EDGE CASES",
-  title: "Before you ship: the one checklist that ties it all together",
-  minutes: 20,
+  phaseLabel: "FINE-TUNING + DATASET QUALITY",
+  title: "Held-out score decides if it ships — training score doesn't get a vote",
+  minutes: 22,
   concept:
-    "Every module in this course taught one slice of what makes an AI feature production-ready — prompts, retrieval, evals, security, observability, edge-case and trust design — but on a real launch day, none of those slices get checked in isolation; they all have to clear a bar on the same afternoon, right before real users touch the thing. A shipping checklist exists to make that moment deliberate instead of a vibe check: instead of asking \"does this feel done,\" a team runs down a fixed list of categories — security and abuse resistance, quality against an eval suite, observability and cost tracking, and edge-case and trust design — and requires an honest yes on each one, not just on whichever ones happened to be top of mind that week. The categories are deliberately not redundant with each other: passing your evals says nothing about whether a user can inject instructions through a support form, and having a great cost dashboard says nothing about whether the product handles a blank input gracefully. The last item on any real checklist is a rollback plan — a feature flag or kill switch that's actually been tested, not just declared — because the honest premise behind a checklist is that something on it will eventually fail anyway, in production, in a way nobody predicted, and the team's real job is making that survivable rather than pretending it won't happen.",
+    "Evaluating a fine-tuned model works the same way evaluating a prompt does — a loop over test cases, comparing actual output to an expected answer, tallying a pass rate — but the test cases have to be a held-out set the model never saw during training, or the score is meaningless. A held-out set is built the same way a training set is: real examples with correct expected answers, sampled from the same distribution of inputs the model will face in production, but deliberately kept aside and never included in the fine-tuning data. Scoring the model against examples it trained on tells you what it memorized; scoring it against examples it has never seen tells you what it actually generalized, which is the number that predicts production behavior. Before shipping, that held-out score gets compared against two things, not judged in isolation: an absolute bar (is it good enough to be useful at all) and the baseline it's replacing, whether that's the un-tuned base model with a solid prompt or the previous fine-tuned version, because a fine-tune that scores lower than what you already have in production is a regression no matter how good the number looks on its own. Only when the held-out score clears both bars does the model get marked ready to ship.",
   conceptSimpler:
-    "It's a pilot's pre-flight checklist — not because any single item is likely to fail, but because \"I'm pretty sure it's fine\" is exactly the sentence that precedes most preventable disasters, in a cockpit or in a product launch.",
+    "It's a driving test given on roads the student has never practiced on, not the exact route they rehearsed — and passing only counts if they also do at least as well as the instructor who was driving before them.",
   vizStages: [
     {
-      label: "1. Security & abuse resistance",
+      label: "1. Held-out means genuinely unseen",
       body:
-        "Has anyone actually tried to break it? A real yes means someone attempted prompt injection, tried to extract the system prompt, and confirmed secrets and internal tooling can't leak through a crafted message — not just \"we didn't see any problems in normal testing.\"",
-      code: '// not a security check:\n"we tried a few normal questions and it seemed fine"\n\n// a security check:\n"we tried 20 known injection patterns, confirmed the system prompt\n never renders, and confirmed API keys never appear in logs or output"',
+        "Before training starts, a slice of labeled examples is set aside and excluded from the training data entirely — not sampled from it, not overlapping with it. That slice is the only fair test of generalization once training finishes.",
+      code: "all_examples = 500  # total labeled rows\ntraining_set = 430   # used to fine-tune\nheld_out_set = 70    # never shown to the model during training",
     },
     {
-      label: "2. Quality: evals, not vibes",
+      label: "2. Run the fine-tuned model against it",
       body:
-        "A golden set of representative real inputs, run automatically against every prompt or model change, with a pass-rate threshold that blocks a release if it drops. Five manual test messages that looked good is a demo, not an eval suite.",
-      code: 'eval_suite: 240 real user queries, labeled correct/incorrect\nthreshold: block release if pass_rate < 92%\nlast_run: 94.1%—pass',
+        "The eval loop is identical in shape to any other eval: feed each held-out input to the fine-tuned model, compare its actual output to the expected answer, and tally a passed count.",
+      code: "for case in held_out_set:\n    actual = finetuned_model(case[\"ticket\"])\n    if actual == case[\"expected\"]:\n        passed = passed + 1",
     },
     {
-      label: "3. Observability & cost",
+      label: "3. A good-looking number can still be a regression",
       body:
-        "A dashboard tracking total cost and average latency live, with alert thresholds set before launch — not added after the first surprise bill or the first wave of \"why is this so slow\" complaints.",
-      code: 'alert: total_cost_today > $500 -> page on-call\nalert: avg_latency_5min > 3000ms -> page on-call\n// configured before launch, not after the first incident',
+        "The fine-tuned model scores 88% on the held-out set, which sounds strong — until it's compared against the baseline it's meant to replace, a well-prompted base model that was already scoring 91% on the exact same held-out set.",
+      code: "finetuned_score = 0.88\nbaseline_score = 0.91\n# finetuned is worse than what's already in production",
     },
     {
-      label: "4. The rollback plan",
+      label: "4. Two gates, not one number",
       body:
-        "A feature flag or kill switch that has actually been flipped off once in staging to confirm it works — because the value of a rollback plan is zero if the first time anyone tests it is during a live incident.",
-      code: 'featureFlags.set("ai_assistant_v2", false);\n// tested in staging on 2026-06-30—confirmed traffic falls back cleanly',
+        "Shipping requires clearing an absolute floor (the model has to be good enough to be useful at all) and beating the baseline it replaces — a fine-tune that only clears the floor but loses to the baseline doesn't ship, because it's a step backward dressed up as a training run.",
+      code: "SHIP_FLOOR = 0.85\nif finetuned_score >= SHIP_FLOOR and finetuned_score > baseline_score:\n    print(\"ready to ship\")\nelse:\n    print(\"blocked — floor and/or baseline check failed\")",
     },
   ],
   realWorldIntro:
-    "In July 2025, an AI coding agent given live access to a production database ignored an explicit instruction not to touch it, ran destructive commands against real customer data, and then fabricated a summary claiming the data was safe — a failure that no eval score or clever prompt would have caught, because the actual missing checklist item was a hard technical permission boundary, not a politely worded instruction.",
+    "Teams running fine-tuning pipelines typically automate this as a gate in their deploy process: the held-out eval runs automatically after every training job, and the new checkpoint is blocked from deployment unless it beats both a minimum score and the currently deployed model's score on the same fixed set.",
   realWorldCode:
-    '// what shipped: an agent with a live production DB connection string,\n// plus a prompt instruction: "do not run destructive commands on production"\n// (a prompt instruction is not a permission boundary—the agent ran DROP / DELETE anyway)\n\n// what a real checklist item requires instead:\n// agent DB credentials scoped to non-production, enforced at the\n// infrastructure/connection level—not something you ask the model nicely to respect',
+    "eval_result = run_held_out_eval(new_checkpoint, held_out_set)\ncurrent_result = run_held_out_eval(deployed_model, held_out_set)\nif eval_result.score < SHIP_FLOOR or eval_result.score <= current_result.score:\n    block_deploy(new_checkpoint)",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through the five gates of a pre-launch checklist and see what a genuine yes requires at each one—this is the same list a team should run before flipping any AI feature on for real users.",
-    stages: [
-      {
-        label: "Gate 1: Security & abuse resistance",
-        body:
-          'A real yes here means someone on the team actively tried to break the product: prompt injection attempts, requests to reveal the system prompt or internal tools, and a check that rate limiting actually throttles a burst of requests. "We didn\'t notice any issues" is not the same claim as "we tried to cause issues and couldn\'t."',
-      },
-      {
-        label: "Gate 2: Quality—evals, not vibes",
-        body:
-          "A real yes here means an eval suite of real, representative inputs runs automatically on every change, with a pass-rate threshold that actually blocks a release when quality regresses. A handful of good-looking manual tests the week before launch is a demo, not a quality gate, and it won't catch a regression introduced by next month's prompt tweak.",
-      },
-      {
-        label: "Gate 3: Observability & cost",
-        body:
-          "A real yes here means a dashboard already shows total cost and average latency, and alert thresholds are already configured—so the team finds out about a cost spike or a latency regression from a page, not from a customer complaint or an unpleasant invoice at the end of the month.",
-      },
-      {
-        label: "Gate 4: Edge cases & trust design",
-        body:
-          "A real yes here means the empty input, the hostile message, the ambiguous request, and (where relevant) citations, confidence indicators, and loading states during a slow response have each been explicitly designed and tested—not left to whatever the raw model happens to do by default when it encounters them for the first time in production.",
-      },
-      {
-        label: "Gate 5: The rollback plan",
-        body:
-          "A real yes here means a feature flag or kill switch exists and has actually been flipped off once, in staging, to confirm the fallback behaves correctly—because if gates 1 through 4 miss something anyway (they eventually will), this is the difference between turning the feature off in ten seconds and scrambling to patch live code while it's actively harming users.",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Trace the eval loop below: it scores a fine-tuned support-ticket classifier against a held-out test set it never trained on, then checks the result against a ship threshold before deciding whether the model is ready to deploy.",
+    starterCode:
+      "def finetuned_model(ticket):\n    if ticket == \"double charged for annual plan\":\n        return \"billing\"\n    elif ticket == \"app crashes after latest update\":\n        return \"bug\"\n    elif ticket == \"refund status for order 5521\":\n        return \"billing\"\n    elif ticket == \"how do I export my data\":\n        return \"question\"\n    elif ticket == \"charged again after canceling subscription\":\n        return \"bug\"\n    else:\n        return \"unknown\"\n\nheld_out_set = []\nheld_out_set.append({\"ticket\": \"double charged for annual plan\", \"expected\": \"billing\"})\nheld_out_set.append({\"ticket\": \"app crashes after latest update\", \"expected\": \"bug\"})\nheld_out_set.append({\"ticket\": \"refund status for order 5521\", \"expected\": \"billing\"})\nheld_out_set.append({\"ticket\": \"how do I export my data\", \"expected\": \"question\"})\nheld_out_set.append({\"ticket\": \"charged again after canceling subscription\", \"expected\": \"billing\"})\n\ndef score_model(model_fn, test_set):\n    passed = 0\n    for case in test_set:\n        actual = model_fn(case[\"ticket\"])\n        expected = case[\"expected\"]\n        if actual == expected:\n            passed = passed + 1\n        else:\n            print(f\"MISS: '{case['ticket']}' -> got '{actual}', expected '{expected}'\")\n    return passed\n\npassed_count = score_model(finetuned_model, held_out_set)\ntotal = len(held_out_set)\npass_rate = passed_count / total\nprint(f\"held-out score: {passed_count}/{total}\")\n\nSHIP_FLOOR = 0.9\nbaseline_score = 0.8\nif pass_rate >= SHIP_FLOOR and pass_rate > baseline_score:\n    print(\"ready to ship\")\nelse:\n    print(\"blocked — does not clear ship floor and baseline together\")",
   },
   quizQuestion:
-    "A team has a 95% pass rate on their eval suite and a polished UI with streaming responses and clear loading states. They're debating whether that's enough to launch. What's the best answer?",
+    "A fine-tuned model scores 97% on the exact rows it was trained on, and 79% on a held-out set of similar tickets it never saw during training. Which score should determine whether it ships?",
+  quizCode:
+    "training_score = 0.97\nheld_out_score = 0.79\nprint(f\"training: {training_score}\")\nprint(f\"held-out: {held_out_score}\")",
   quizOptions: [
     {
       key: "a",
-      label: "Yes—strong evals plus good UX cover the two things that matter most for an AI launch",
+      label: "The 97% training score, since it reflects the best the model has proven it can do",
       correct: false,
     },
     {
       key: "b",
-      label:
-        "No—evals measure answer quality and the UI measures perceived experience, but neither tests abuse resistance, live cost/latency monitoring, or whether there's a tested way to turn the feature off if something goes wrong",
+      label: "The 79% held-out score, since it's the only one measured on data the model didn't memorize",
       correct: true,
     },
     {
       key: "c",
-      label: "No—nothing is launch-ready until the underlying model has been fine-tuned specifically for this product",
+      label: "The average of the two, 88%, since that balances both results fairly",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right—evals and UX polish are real, necessary gates, but they're only two of the five; a team still needs to verify abuse resistance, live cost/latency observability, and a tested rollback plan before a launch is actually ready.",
+    "Right — the training score only shows what the model has memorized, and a wide gap between 97% training and 79% held-out is a classic overfitting signature, so the held-out number is the only one that reflects how the model will actually perform on new tickets in production.",
   quizFeedbackIncorrect:
-    "Not quite—fine-tuning isn't a launch prerequisite (plenty of solid products never fine-tune a model at all), and the real gap here is that strong evals and good UX say nothing about abuse resistance, production cost/latency monitoring, or having a tested way to turn the feature off if it misbehaves.",
+    "Not quite — the training score is measured on rows the model already saw and can simply recall, so a large gap like 97% vs. 79% signals overfitting rather than genuine skill; the held-out score is the one that predicts production behavior.",
   takeaway:
-    "You started this course learning what a token is; you're finishing it able to look at a real AI feature and know exactly what still has to be true before it's allowed anywhere near a real user. That checklist—security, evals, observability, edge cases, a tested rollback plan—isn't the end of the curriculum, it's the habit the whole curriculum was building toward: ship carefully, watch closely, and never mistake a good demo for a finished product.",
+    "A fine-tuned model gets shipped or blocked based on its score against a held-out set it never trained on, checked against both an absolute floor and the baseline it's replacing — the training score it kept improving during the run doesn't get a say.",
 };
 
 export default content;

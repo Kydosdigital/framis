@@ -3,115 +3,108 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 16,
   orderIndex: 4,
-  phaseLabel: "EVALS + SAFETY + GUARDRAILS",
-  title: "The eval can't tell: when a person has to make the call",
-  minutes: 18,
+  phaseLabel: "CI/CD + DOCKER + DEPLOYMENT",
+  title: "Rollbacks: what happens when a deploy goes wrong",
+  minutes: 20,
   concept:
-    "Automated evals are excellent at answering questions with a clear right answer — did the SQL query run, does the output contain the required disclaimer, is the JSON valid — but plenty of real quality problems aren't yes/no at all. Whether a reply sounds condescending, whether a joke landed as funny rather than offensive, whether a summary captured the actually important point instead of a technically-true but irrelevant one — these are judgment calls that even a carefully written eval script, or a second model grading the first one, can get systematically wrong without anyone noticing. Human review closes that gap by routing a sample of real outputs to a person who reads them the way an actual user would and rates them against criteria evals can't operationalize, like tone, trustworthiness, or whether an edge case was handled with good judgment rather than just technically-defensible logic. Because reviewing every single output doesn't scale, teams typically sample: a random slice of everyday traffic to catch slow, quiet drift, plus a mandatory full review of anything flagged as high-risk, like refunds, medical topics, or anything a guardrail already hesitated on. The review process only stays trustworthy if multiple reviewers are checked against each other for agreement — if two people shown the same output rate it differently half the time, the rubric is too vague to rely on yet, and that's a signal to fix before the review scores mean anything.",
+    "This lesson's examples run on Kubernetes, so it's worth pinning down what that word actually means before diving in: Kubernetes is an orchestrator — a system that runs your containers across a whole fleet of machines instead of just one, automatically restarting a container that crashes and rescheduling containers onto healthy machines as things come and go. The smallest unit Kubernetes actually runs is a pod: one or more containers bundled together that always live on the same machine and share a network address and storage, so in practice a pod is just \"one running copy of your app, as far as Kubernetes is concerned.\" You talk to a cluster through kubectl, its command-line tool, and a deployment is the object that tells Kubernetes \"keep this many pods of this version running at all times\" — which is exactly what makes a rollback possible. A rollback reverts production to the last version that was known to work, instead of trying to fix a broken deploy while it's actively live and hurting users. This is possible because CI/CD already builds and tags an immutable image for every deploy, so the previous version is still sitting in the registry, fully built and ready to run — a rollback doesn't rebuild anything, it just repoints traffic at an image that already exists, which is why it can happen in seconds rather than the minutes a fresh build and test cycle would take. Monitoring is what makes this fast: health checks, error-rate dashboards, and crash-loop detection are what actually notice a bad deploy, often before a human does, and many pipelines trigger an automatic rollback the moment a new version fails its own health check. The key judgment call for a team is that rolling back is not the same as fixing the bug — it's a stop-the-bleeding move that restores a safe, known state for users while the actual root cause gets diagnosed calmly, offline, without the pressure of live errors piling up. Only after that diagnosis and a real fix does the team deploy forward again, as a new version.",
   conceptSimpler:
-    "Automated evals are a spell-checker — instant and great at catching clear-cut errors; human review is an editor who actually reads the piece and asks whether it's any good.",
+    "A rollback is like restoring your last saved game instead of trying to un-break the level you just broke while still playing it live — you go back to the checkpoint you know was fine, and figure out what went wrong afterward, with no pressure.",
   vizStages: [
     {
-      label: "1. What automated evals are good at",
+      label: "1. A deploy goes out",
       body:
-        "Crisp, checkable properties — exact string matches, valid formats, required fields present — run fast, cost nothing per check, and never disagree with themselves.",
-      code:
-        "if response_json[\"status\"] in [\"ok\", \"error\"]:\n    passed = passed + 1\n# fast, cheap, unambiguous",
+        "A new image, built and tested by the pipeline, gets rolled out to replace the currently running version. Everything about the build process looked fine — no failing tests, no failed image build.",
+      code: "$ kubectl set image deployment/api api=framis-api:v42\n> deployment \"api\" successfully rolled out",
     },
     {
-      label: "2. Where they fall apart",
+      label: "2. Monitoring catches the problem",
       body:
-        "Two candidate replies to a sensitive question can both pass every automated check — no banned words, correct format, right facts — while one reads as warm and the other reads as cold and dismissive. No blocklist or exact-match test sees that difference.",
-      code:
-        "reply_a = \"That's not covered, sorry.\"\nreply_b = \"I hear you — unfortunately that's outside what we cover, but here's what I can do instead.\"\n# both pass every automated check identically",
+        "Within minutes, error rates spike and Kubernetes' readiness probe — a health check it repeatedly runs against each pod to confirm it can actually handle traffic — starts failing on the new pods. This is the kind of problem that only shows up under real production traffic and data, not in the test suite.",
+      code: "ALERT: error_rate > 5% for 3m\nAPI /checkout returning 500\npod api-7f4c9-x2j failed readiness probe (3/3)",
     },
     {
-      label: "3. Sampling: reviewing everything doesn't scale",
+      label: "3. Roll back, don't debug live",
       body:
-        "Instead of reading every output, teams review a random slice of ordinary traffic to catch slow drift, and treat anything flagged as high-risk — refunds, health topics, anything a guardrail hesitated on — as mandatory, 100% reviewed.",
-      code:
-        "if is_high_risk(conversation):\n    queue_for_review(conversation)  # always\nelif random_sample_hit():\n    queue_for_review(conversation)  # sometimes",
+        "Instead of trying to patch the bug in production, the on-call engineer reverts to the previous image — v41 — which is already built, tagged, and sitting in the registry, ready to run immediately.",
+      code: "$ kubectl rollout undo deployment/api\n> deployment \"api\" rolled back to revision 41",
     },
     {
-      label: "4. Reviewer agreement closes the loop back to evals",
+      label: "4. Safe again, now diagnose",
       body:
-        "If two reviewers rate the same output differently, the rubric needs tightening before its scores mean anything. Patterns that keep surfacing in review often get turned into brand-new automated test cases — human judgment feeding the eval suite for next time.",
-      code:
-        "if reviewer_a_score != reviewer_b_score:\n    print(\"rubric unclear — reconcile before trusting scores\")\n# confirmed bad case -> becomes a new test_case in the eval suite",
+        "Traffic is served by the known-good version again and the error rate drops back to normal. Only now, without users actively affected, does the team dig into what v42 actually broke.",
+      code: "error_rate: 5.2% -> 0.1%\nstatus: stable on framis-api:v41\nnext: root-cause v42 offline before redeploying",
     },
   ],
   realWorldIntro:
-    "Teams shipping a customer-facing assistant commonly route a random 2-5% of daily conversations plus every conversation touching refunds or account closure into a review queue, where a human rates tone and judgment on a rubric — separate from, and in addition to, the automated eval suite that already ran on the same prompt.",
+    "On Kubernetes this is a single command, kubectl rollout undo, and on platforms like Vercel or Heroku it's a \"revert to previous deployment\" button — both work because the previous Docker image, tagged by commit SHA, was never deleted from the registry.",
+  realWorldCode:
+    "$ kubectl rollout history deployment/api\nREVISION  CHANGE-CAUSE\n40        deploy framis-api:v40\n41        deploy framis-api:v41\n42        deploy framis-api:v42\n\n$ kubectl rollout undo deployment/api --to-revision=41",
   sandbox: {
     kind: "explore",
     instructions:
-      "Click through each stage to see why some outputs need a person's judgment call, and how a review queue samples production traffic instead of reading every response.",
+      "Click through each stage to see a bad deploy get caught, rolled back, and properly fixed afterward.",
     stages: [
       {
-        label: "A perfect automated score",
+        label: "New version deploys",
         body:
-          "The eval suite runs 40 test cases against the new prompt and every single one passes: correct facts, valid format, no blocked words. On paper, this looks like a clean ship.",
-        code: "run_eval(new_prompt, test_cases)\n# result: 40/40 passed",
+          "Version 42 passed every pipeline gate — build, test, package — and rolls out to production. Nothing in CI could have caught this next problem, because it only appears under real production load.",
+        code: "$ kubectl set image deployment/api api=framis-api:v42\n> deployment \"api\" successfully rolled out",
       },
       {
-        label: "The human spot-check disagrees",
+        label: "Production starts failing",
         body:
-          "A reviewer reads 20 real conversations that used the new prompt and flags several as \"technically correct but rude.\" Nothing in the eval suite was testing for rudeness, so the perfect score never had a chance of catching it.",
-        code:
-          "# reviewer notes on ticket #4821:\n# \"factually right, but the tone would upset a customer\"",
+          "A connection pool setting that was fine in testing gets exhausted under real traffic volume, and requests start timing out. This is a class of bug that tests alone often can't catch.",
+        code: "ERROR: connection pool exhausted (max 10, requested 47)\nrequests timing out after 30s\nerror_rate climbing: 1% -> 4% -> 9%",
       },
       {
-        label: "The review queue: sampling, not reading everything",
+        label: "Alerting fires",
         body:
-          "With thousands of conversations a day, reading all of them isn't realistic. A random sample catches issues that appear broadly across ordinary traffic; a mandatory full review on flagged, high-stakes conversations catches issues that would be most costly to miss.",
-        code:
-          "sample_rate = 0.03  # 3% of ordinary traffic, at random\n# plus: 100% of anything tagged high_risk = True",
+          "A monitoring rule crosses its threshold and pages the on-call engineer automatically, rather than waiting for a customer to report it.",
+        code: "PagerDuty: [API] error_rate 9.2% exceeds 5% threshold for 3 minutes\nassigned to: on-call engineer",
       },
       {
-        label: "Checking reviewers against each other",
+        label: "Rollback, not a live patch",
         body:
-          "The same conversation gets shown to two reviewers without either seeing the other's rating. If their scores mostly agree, the rubric is doing its job; if they routinely disagree, the criteria are too subjective to trust yet, and that gets fixed first.",
-        code:
-          "if reviewer_1_rating != reviewer_2_rating:\n    disagreements = disagreements + 1\nprint(f\"agreement rate: {agreed}/{total}\")",
+          "The on-call engineer chooses to roll back to v41 rather than push a hotfix, because v41 is already built and verified, and reverting takes seconds versus writing, testing, and shipping a fix under pressure.",
+        code: "$ kubectl rollout undo deployment/api\n> deployment \"api\" rolled back to revision 41\nerror_rate: 9.2% -> 0.2%",
       },
       {
-        label: "Feeding findings back into the eval suite",
+        label: "Root cause fixed forward",
         body:
-          "A tone problem a reviewer catches repeatedly stops being a one-off — it gets written up as a new labeled test case with an expected better answer, so future prompt changes get checked against it automatically, without needing a human to catch it again.",
-        code:
-          "test_cases.append({\n  \"input\": \"declining a refund politely\",\n  \"expected\": \"acknowledges the request before declining\"\n})",
+          "With production stable again, the team investigates offline, finds the pool size was misconfigured for the new traffic pattern, fixes it, and ships it through the full pipeline as v43 — not as a rushed patch to v42.",
+        code: "// config fix, tested, built, deployed as a new version\nconst pool = new Pool({ max: 50 }); // was 10\n$ kubectl set image deployment/api api=framis-api:v43",
       },
     ],
   },
   quizQuestion:
-    "A team's automated eval suite gives a new prompt a perfect 40/40, but a human reviewer's spot-check finds several replies are technically correct yet come across as rude. What does this reveal?",
-  quizCode:
-    "run_eval(new_prompt, test_cases)\n# result: 40/40 passed\n# reviewer notes: \"factually right, but rude tone\"",
+    "A new deploy starts causing 500 errors for 10% of users. The on-call engineer immediately rolls back to the previous version instead of trying to patch the bug live in production. Why is rolling back usually the safer first move?",
   quizOptions: [
     {
       key: "a",
       label:
-        "A pass rate only measures what the eval's checks actually test for — tone and rudeness weren't part of those checks, so a perfect score says nothing about qualities the eval was never built to catch",
+        "The previous version is already a built, tested image sitting in the registry, so reverting to it restores a known-good state almost instantly, buying time to diagnose the real bug without users actively suffering",
       correct: true,
     },
     {
       key: "b",
-      label: "The eval suite must be broken, since a real 40/40 score could never coexist with any quality problem",
+      label:
+        "Rolling back permanently fixes the underlying bug, so no further investigation or fix is needed afterward",
       correct: false,
     },
     {
       key: "c",
       label:
-        "The human reviewer must be mistaken, since a passing automated score always overrides a subjective human impression",
+        "A rollback works by rebuilding the previous version from source on the fly, which is inherently more reliable than patching the current code",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — the eval suite was testing facts and format, never tone, so 40/40 only proves the model got those specific things right; it was never capable of catching rudeness because nothing in it measured for that.",
+    "Right — the previous image never needs to be rebuilt, it already exists and already passed its own build and test gates, which is exactly why reverting to it is fast and low-risk compared to writing and shipping a fix under live pressure.",
   quizFeedbackIncorrect:
-    "Not quite — the eval isn't broken and the reviewer isn't wrong; the two are measuring different things entirely, and a perfect score on one tells you nothing about a quality the eval was never designed to check.",
+    "Not quite — a rollback doesn't fix the bug in v42 or rebuild anything; it works precisely because the previous image is already built and verified, so it can be restored instantly while the real fix gets made calmly, offline, and shipped forward as a new version.",
   takeaway:
-    "A perfect eval score only proves the model passed the specific checks you wrote — tone, judgment, and nuance often aren't in those checks at all, so human review stays necessary for exactly the qualities automated grading can't operationalize, and the patterns humans find are what turn into next quarter's new eval cases.",
+    "Rolling back isn't fixing the bug — it's restoring safety fast by returning to an image that's already proven to work, which buys the team time to diagnose and fix the real problem without users paying the cost of that investigation.",
 };
 
 export default content;

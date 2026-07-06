@@ -3,112 +3,113 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 10,
   orderIndex: 3,
-  phaseLabel: "DEBUGGING + LOGGING + MONITORING",
-  title: "Stack Traces: Reading the Crime Scene, Not the Headline",
-  minutes: 18,
+  phaseLabel: "FEATURE ENGINEERING + SELECTION",
+  title: "Min-Max Scaling: Putting Every Feature on the Same Scale",
+  minutes: 22,
   concept:
-    "A stack trace is not a wall of noise to skim past — it's an ordered map of exactly which function called which other function, all the way down to the line that actually failed. The first line is the headline: the error's type and message, telling you what kind of failure happened, like a null reference, a bad type conversion, or a timeout. Below that, each frame is one function call in the chain, listed most-recent-call-first, and every frame names a file and a line number, which is the single most useful piece of information on the entire trace. Most of those frames belong to libraries and frameworks you didn't write — React, Next.js, node_modules — so the real skill is scanning down until you hit the first frame that points at a file inside your own project; that's almost always where the fix belongs, even though the error technically surfaced a few frames higher, inside someone else's code.",
+    "Some algorithms compare rows by measuring distance between their feature values, or by taking gradient steps whose size depends on the scale of each input — k-nearest neighbors, k-means clustering, linear/logistic regression, and neural networks all fall into this bucket. If one feature ranges from 0 to 500 (a raw engagement score) and another ranges from 0 to 5 (a ratio), the big-range feature will dominate any distance calculation or gradient step purely because of its scale, not because it's actually more predictive. Min-max scaling fixes this by squeezing every feature into the same 0-to-1 range using the formula (x - min) / (max - min): the minimum value becomes 0, the maximum becomes 1, and everything else lands proportionally in between. Since there's no min()/max() builtin here, you build the running minimum and maximum yourself with a loop and two accumulator variables — exactly what you'd do in real Python before reaching for pandas' .min()/.max() or scikit-learn's MinMaxScaler(). Tree-based models (decision trees, random forests, gradient-boosted trees) don't need any of this — a tree splits each feature independently at a threshold (\"is engagement_score > 310?\"), and that threshold doesn't care whether the feature's original range was 0-500 or 0-1. One rule matters no matter which algorithm you use: compute the min and max from your training data only, then reuse those exact same numbers to scale every other dataset — validation, test, production. Recomputing min/max separately on new data silently changes what your scaled numbers mean, and it's a specific case of the data leakage problem you'll see formalized later in this phase.",
   conceptSimpler:
-    "A stack trace is like a chain of phone calls that ended in someone yelling — instead of panicking at the yelling, you trace the call back caller by caller until you find the person who actually caused the problem, who is rarely the last person who happened to be on the line.",
+    "Min-max scaling squeezes every feature onto the same 0-to-1 ruler so a huge-range feature doesn't automatically \"win\" just because its numbers are bigger. You measure that ruler once, using training data, and reuse the same ruler everywhere else — you don't get to redraw it for every new batch of data.",
   vizStages: [
     {
-      label: "1. Start at the very top line",
+      label: "1. Different features, wildly different scales",
       body:
-        "The first line names the error type and message. Read this first — it tells you the category of failure before you've even looked at where it happened.",
-      code: "TypeError: Cannot read properties of undefined (reading 'email')",
+        "A raw engagement_score might run from 0 to 500; a ratio feature like pages_per_minute might run from 0 to about 5. Feed both directly into a distance calculation and engagement_score's sheer size will dominate, regardless of which feature is actually more predictive.",
+      code: "engagement_score = 420\npages_per_minute = 2.5\nprint(engagement_score)\nprint(pages_per_minute)",
     },
     {
-      label: "2. Scan down through the frames",
+      label: "2. Build the running min and max by hand",
       body:
-        "Each \"at ...\" line below is one function call, most recent first. Several of these point straight into libraries you didn't write.",
+        "There's no max() builtin here, so you track the running minimum and maximum yourself: start both at the first value, then update them whenever you see a bigger or smaller number.",
       code:
-        "    at sendWelcomeEmail (/app/lib/mailer.ts:14:22)\n    at createUser (/app/lib/users.ts:41:9)\n    at async POST (/app/app/api/signup/route.ts:23:5)\n    at async node_modules/next/dist/server/route-handler.js:132:18",
+        "train_scores = [0, 250, 500]\ntrain_min = train_scores[0]\ntrain_max = train_scores[0]\nfor score in train_scores:\n    if score < train_min:\n        train_min = score\n    if score > train_max:\n        train_max = score\nprint(train_min)\nprint(train_max)",
     },
     {
-      label: "3. Find the first frame that's actually yours",
+      label: "3. Apply the min-max formula",
       body:
-        "Skip past the next/dist frame — that's just the framework routing the request — and stop at the first line pointing into your own project folder. Here, that's mailer.ts:14.",
-      code: "at sendWelcomeEmail (/app/lib/mailer.ts:14:22)   <- your code, start here",
+        "(x - min) / (max - min) maps the minimum value to 0, the maximum to 1, and everything else proportionally between. This sandbox doesn't support parentheses for grouping math, so compute the numerator and denominator as their own named steps.",
+      code:
+        "def scale(x, lo, hi):\n    numerator = x - lo\n    denominator = hi - lo\n    return numerator / denominator\n\nprint(scale(0, 0, 500))\nprint(scale(250, 0, 500))\nprint(scale(500, 0, 500))",
     },
     {
-      label: "4. Go read that exact line",
+      label: "4. Fit on train, apply everywhere — don't refit",
       body:
-        "Line 14 of mailer.ts is where the crash actually happened: some user object was undefined and the code tried to read .email off it. Everything above that frame is context, not the culprit.",
-      code: "// mailer.ts, line 14\nconst subject = `Welcome, ${user.email}`;",
+        "Scale test_scores using train's min/max and you get 0.25 / 0.6 / 0.75. Recompute min/max on test_scores alone instead, and the exact same three numbers scale to 0 / 0.7 / 1 — a different result for identical real-world values, purely because you measured the ruler twice. Always reuse the training set's min and max.",
+      code:
+        "train_scores = [0, 250, 500]\ntest_scores = [125, 300, 375]\n\ntrain_min = train_scores[0]\ntrain_max = train_scores[0]\nfor score in train_scores:\n    if score < train_min:\n        train_min = score\n    if score > train_max:\n        train_max = score\n\ndef scale(x, lo, hi):\n    numerator = x - lo\n    denominator = hi - lo\n    return numerator / denominator\n\nprint(\"scaled using train's min/max (correct):\")\nfor score in test_scores:\n    print(scale(score, train_min, train_max))\n\ntest_min = test_scores[0]\ntest_max = test_scores[0]\nfor score in test_scores:\n    if score < test_min:\n        test_min = score\n    if score > test_max:\n        test_max = score\n\nprint(\"scaled using test's own min/max (the bug):\")\nfor score in test_scores:\n    print(scale(score, test_min, test_max))",
     },
   ],
   realWorldIntro:
-    "Error-tracking tools like Sentry and Rollbar exist because reading raw stack traces at 2am is hard — they group thousands of crashes by their trace signature and jump straight to the first frame inside your own repository, saving an on-call engineer from having to scroll past dozens of framework frames by hand.",
+    "In real code, this is one call: scaler = MinMaxScaler(); scaler.fit(train_df[['engagement_score']]) computes the min/max exactly once from training data, and scaler.transform(...) applies that same stored min/max to any other dataset — which is exactly the discipline the fit/transform split is designed to enforce. pandas' own .min()/.max() would replace your running-min loop with one call each, but they'd still need to be computed on train only and reused, never recomputed per dataset.",
   realWorldCode:
-    "// Sentry groups these two crashes as \"the same issue\" because\n// they share the same first-party frame: mailer.ts:14",
+    "# hand-built:\ndef scale(x, lo, hi):\n    numerator = x - lo\n    denominator = hi - lo\n    return numerator / denominator\n\n# real scikit-learn (fit on train, transform everywhere):\n# from sklearn.preprocessing import MinMaxScaler\n# scaler = MinMaxScaler()\n# scaler.fit(train_df[[\"engagement_score\"]])              # learns min/max from train only\n# train_scaled = scaler.transform(train_df[[\"engagement_score\"]])\n# test_scaled = scaler.transform(test_df[[\"engagement_score\"]])  # reuses train's min/max",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each real-looking stack trace and figure out which single frame you'd open first to start debugging.",
-    stages: [
-      {
-        label: "A classic null/undefined crash",
-        body:
-          "The react-dom frame is a red herring — it's just the framework rendering the page. The actual bug is in cart.ts line 9, where cart turned out to be null before .items was read off it.",
-        code:
-          "TypeError: Cannot read properties of null (reading 'items')\n    at calculateCartTotal (/app/lib/cart.ts:9:18)\n    at CheckoutPage (/app/app/checkout/page.tsx:31:24)\n    at node_modules/react-dom/cjs/react-dom-server.node.development.js:2113:7",
-      },
-      {
-        label: "An error thrown three layers deep",
-        body:
-          "All three frames here belong to your own project, so read the topmost one first — parseDiscountCode at line 52 is exactly where the bad string-to-number conversion happens. applyDiscount and the route handler are just callers that eventually asked for this.",
-        code:
-          "ValueError: invalid literal for int() with base 10: 'N/A'\n    at parseDiscountCode (/app/lib/pricing.ts:52:11)\n    at applyDiscount (/app/lib/pricing.ts:18:9)\n    at POST (/app/app/api/checkout/route.ts:44:16)",
-      },
-      {
-        label: "Async stack traces skip around",
-        body:
-          "Async/await stacks include synthetic bookkeeping frames like \"async Promise.all (index 1)\" that don't map to any line in your code. Skip those and keep scanning for real file:line frames — here, payments.ts:77 is the one that matters.",
-        code:
-          "Error: Payment provider timed out\n    at chargeCard (/app/lib/payments.ts:77:13)\n    at async Promise.all (index 1)\n    at async processOrder (/app/lib/orders.ts:29:3)",
-      },
-      {
-        label: "When the message is generic but the location is specific",
-        body:
-          "\"Reading 'toFixed'\" alone doesn't say which product broke, but the file and line do: format.ts:6 is where a missing number caused the crash, and ProductCard.tsx:15 is the caller that passed it in without checking.",
-        code:
-          "TypeError: Cannot read properties of undefined (reading 'toFixed')\n    at formatPrice (/app/lib/format.ts:6:24)\n    at ProductCard (/app/components/ProductCard.tsx:15:19)",
-      },
-      {
-        label: "In production, minified code can hide the trail",
-        body:
-          "A minified build renames functions to single letters and collapses everything onto one line, so file:line alone stops being enough to find real bugs. This is exactly why teams upload source maps to tools like Sentry — so a trace like this one gets translated back into real file and function names automatically.",
-        code:
-          "TypeError: Cannot read properties of undefined (reading 'a')\n    at t (/app/.next/static/chunks/847.a1b2c3.js:1:4821)",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Given train_scores and test_scores, compute train's min and max with a loop (no max() builtin), write scale(x, lo, hi), and apply it — using train's min/max only — to both the train and test lists. Print all six scaled values.",
+    starterCode:
+      "train_scores = [0, 250, 500]\ntest_scores = [125, 300, 375]\n\ntrain_min = train_scores[0]\ntrain_max = train_scores[0]\nfor score in train_scores:\n    if score < train_min:\n        train_min = score\n    if score > train_max:\n        train_max = score\n\ndef scale(x, lo, hi):\n    numerator = x - lo\n    denominator = hi - lo\n    return numerator / denominator\n\nprint(\"train scaled:\")\nfor score in train_scores:\n    print(scale(score, train_min, train_max))\n\nprint(\"test scaled (using train's min/max):\")\nfor score in test_scores:\n    print(scale(score, train_min, train_max))",
   },
-  quizQuestion: "Given this stack trace, which frame should you open first to start debugging?",
+  quizQuestion:
+    "You trained min-max scaling using train_min=0 and train_max=500 from your training data. A new engagement score of 375 comes in from production. What does this code print, and what should you do?",
   quizCode:
-    "TypeError: Cannot read properties of undefined (reading 'total')\n    at printReceipt (/app/lib/receipt.ts:11:29)\n    at checkoutOrder (/app/lib/checkout.ts:47:5)\n    at node_modules/next/dist/server/api-utils/node.js:88:14",
+    "train_min = 0\ntrain_max = 500\n\ndef scale(x, lo, hi):\n    numerator = x - lo\n    denominator = hi - lo\n    return numerator / denominator\n\nnew_score = 375\nprint(scale(new_score, train_min, train_max))",
   quizOptions: [
     {
       key: "a",
-      label: "The node_modules/next/dist frame, since that's the framework code actually running the request",
-      correct: false,
-    },
-    {
-      key: "b",
-      label: "printReceipt at /app/lib/receipt.ts:11, since it's the first frame that points into your own project's code",
+      label:
+        "It prints 0.75 — reuse the training set's min and max on any new data point; recomputing min/max on the new data would give inconsistent scaling",
       correct: true,
     },
     {
+      key: "b",
+      label:
+        "It prints 0.75, but you should still recompute min and max on the new data first for the most accurate scaling",
+      correct: false,
+    },
+    {
       key: "c",
-      label: "checkoutOrder at /app/lib/checkout.ts:47, since it's listed lower and therefore closer to the true root cause",
+      label: "It raises an error, because 375 wasn't part of the original training set",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — printReceipt is the topmost frame that points at a file inside your own project, and that's exactly the line where the undefined value was accessed; the next/dist frame beneath it is just framework machinery that eventually called your code.",
+    "Right — scale() doesn't care where lo and hi came from, it just does the arithmetic, so it happily scales any new value against train's stored min/max. The discipline is entirely on you: keep reusing train's numbers so the same real-world score always maps to the same scaled value.",
   quizFeedbackIncorrect:
-    "Not quite — the crash happened inside printReceipt at receipt.ts:11, the first frame that's part of your own project; checkoutOrder just happened to call it, and the next/dist frame is framework internals, not a bug you wrote.",
+    "Not quite — recomputing min/max on new data is exactly the bug this lesson warns about. It would print 0.75 here, but the moment you start deriving min/max from whatever data happens to walk in, the same real-world score can map to a different scaled number depending on what else was in that batch — which is inconsistent and untrustworthy for a trained model.",
   takeaway:
-    "Read a stack trace top-down: the first line names what broke, and the fix almost always lives at the first frame below it that points into your own project's files, not into a library or framework you didn't write. Everything else in the trace is context for how execution got there, not the culprit itself.",
+    "Min-max scaling — (x - min) / (max - min) — puts every feature on the same 0-to-1 footing, which matters for distance- and gradient-based algorithms (k-NN, k-means, linear models, neural nets) but not for tree-based ones. Compute the min and max from training data only, then reuse those exact numbers everywhere else — recomputing them per dataset quietly changes what your scaled numbers mean, which is a form of data leakage.",
+  explainers: [
+    {
+      id: "what-is-normalization",
+      term: "What's Normalization (Min-Max Scaling)?",
+      emoji: "📐",
+      shortDef:
+        "Normalization rescales a feature so its values fall between 0 and 1, using (x - min) / (max - min).",
+      longDef:
+        "Min-max scaling (one common form of \"normalization\") takes a feature's minimum value and maps it to 0, takes its maximum value and maps it to 1, and places every other value proportionally in between. A value exactly at the minimum always becomes 0; a value exactly at the maximum always becomes 1; the midpoint of the range becomes 0.5, and so on. It doesn't change the relative order or spacing of your data — it just compresses or stretches the number line it lives on.",
+      whyMatters:
+        "Algorithms that measure distance or take gradient steps (k-NN, k-means, linear regression, neural networks) treat a feature's raw scale as meaningful. Without scaling, a feature that happens to range in the thousands can silently dominate one that ranges from 0 to 1, even if the smaller-range feature is more predictive.",
+      realWorldExample:
+        "Comparing \"income\" (tens of thousands) and \"years of experience\" (single digits) with raw distance math is like comparing two people's height in millimeters vs. their age in centuries — the units alone would make one number tower over the other for no meaningful reason.",
+      relatedTerms: ["what-is-data-leakage"],
+      expandedByDefault: true,
+    },
+    {
+      id: "what-is-data-leakage",
+      term: "What's Data Leakage (in Scaling)?",
+      emoji: "🚱",
+      shortDef:
+        "Data leakage happens when information from outside the training set sneaks into how you prepare your data, making results look better (or just different) than they really are.",
+      longDef:
+        "In the context of scaling, leakage happens the moment you compute min/max (or any other statistic) from data your model isn't supposed to have learned from yet — like test data, or a future production batch. Even though scaling itself isn't \"training\" in the usual sense, recomputing the min/max separately per dataset lets information about that dataset's distribution quietly influence your numbers, breaking the assumption that train and test are being treated identically.",
+      whyMatters:
+        "The fix is simple and easy to skip under deadline pressure: always fit your scaler (compute min/max) on training data only, and reuse those exact values everywhere else. This is a small preview of a much bigger data-leakage topic that comes up throughout this phase.",
+      realWorldExample:
+        "If you scale training data with its own min/max and test data with its own separate min/max, a test score of 375 might scale to 0.75 in one run and 0 in another, depending on what else happened to be in the batch — the model is now comparing numbers that don't mean the same thing.",
+      relatedTerms: ["what-is-normalization"],
+    },
+  ],
 };
 
 export default content;

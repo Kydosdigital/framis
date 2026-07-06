@@ -3,79 +3,97 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 13,
   orderIndex: 1,
-  phaseLabel: "LLM APIS + TOKENS + COST",
-  title: "The Meter That's Always Running: Tokens and Cost",
-  minutes: 20,
+  phaseLabel: "TESTING (UNIT/INTEGRATION/E2E)",
+  title: "Right Answer, Wrong Reason: The Test That Passed by Accident",
+  minutes: 22,
   concept:
-    "Large language models don't read your prompt as words — they break it into small chunks called tokens, and every token you send or receive costs money. You don't need a real tokenizer to get the idea across: a common rule of thumb is that one token is roughly four characters of English text, so you can estimate tokens with a tiny function like len(text) // 4. Once you know roughly how many tokens a request uses, cost is just multiplication — take the token count, divide by 1000, and multiply by whatever price the provider charges per 1000 tokens. Providers almost always price input tokens (what you send) and output tokens (what the model generates) separately, with output usually costing several times more, so a full estimate adds both pieces together. Modeling this as plain functions — text in, tokens out; tokens in, cents out — makes it obvious why a longer prompt or a longer answer directly increases the bill.",
+    "A test works by picking one specific input, working out the correct answer by hand ahead of time, and using assert to demand that the function's real output matches that exact number — if it doesn't, the program raises an AssertionError instead of quietly limping along with a wrong result. That single design choice is what makes tests powerful: unlike glancing at printed output and thinking \"yeah, that looks about right,\" an assert has no opinion and no mercy — it only knows whether two values are equal. But an assert is only as good as the input you chose for it. apply_discount(100, 10) happens to equal 90 whether the function does the math correctly or is badly broken, so a test built on that input would pass either way and hide a real bug. A well-chosen test picks numbers where the correct answer and a plausible buggy answer come out different, so the two behaviors can't be confused with each other. That's why writing good tests takes as much thought as writing the function itself — an assert only ever catches what its chosen input is capable of exposing. In a real project you don't run these asserts by hand one at a time — you wrap each one in its own function whose name starts with test_, save it in a file, and run the pytest command from the terminal. pytest automatically finds every function named test_* in the project, calls each one, and reports which passed and which raised an AssertionError, so \"testing the code\" becomes a single command instead of a manual ritual.",
   conceptSimpler:
-    "Tokens are like the minutes on a phone plan: the call itself doesn't cost anything until you multiply the number of minutes by the price per minute, and every extra minute — or token — adds straight to the bill.",
+    "An assert is a smoke detector, but only for the exact spot you wired it into — it won't warn you about a fire in the room next door.",
   vizStages: [
     {
-      label: "1. Characters become tokens",
+      label: "1. The function under test",
       body:
-        "We can't run a real tokenizer here, but the classic estimate — about 4 characters per token — is close enough to reason about cost. A single function turns any string into an estimated token count.",
-      code: "def estimate_tokens(text):\n    return len(text) // 4",
-    },
-    {
-      label: "2. Tokens have a price tag",
-      body:
-        "Providers charge per 1000 tokens, not per token, so the cost function divides by 1000 before multiplying by the price. Using integer division and prices in cents keeps every result a whole, exact number.",
-      code: "def cost_in_cents(tokens, price_per_1000):\n    return tokens * price_per_1000 // 1000",
-    },
-    {
-      label: "3. Run a real prompt through it",
-      body:
-        "A prompt is just a string. Feed it to estimate_tokens and you get a number you can immediately reason about before ever calling a real API.",
+        "apply_discount is supposed to take a price and a percent off, then return the price minus that percentage of itself.",
       code:
-        "prompt = \"Summarize this support ticket in two sentences.\"\ntokens = estimate_tokens(prompt)\nprint(tokens)",
+        "def apply_discount(price, percent):\n    discount = price * percent / 100\n    return price - discount",
     },
     {
-      label: "4. Same tokens, different price",
+      label: "2. A test that happens to pass",
       body:
-        "The token count doesn't change based on which model you call — only the price per 1000 tokens does. That's why picking a cheaper model can cut your bill without changing the prompt at all.",
-      code: "cheap = cost_in_cents(tokens, 2)\npremium = cost_in_cents(tokens, 30)\nprint(cheap, premium)",
+        "Testing with price=100 and percent=10 gives 90. But 100 - 10 also equals 90, so this particular input can't tell a correct function apart from one that just subtracts the percent number directly.",
+      code:
+        "result = apply_discount(100, 10)\nassert result == 90\nprint(\"passed:\", result)",
+    },
+    {
+      label: "3. The bug slips past",
+      body:
+        "Imagine apply_discount gets \"simplified\" to price - percent, skipping the percentage math entirely. The exact same test above still passes, because 100 - 10 is 90 either way — a real bug just hid behind a bad choice of test numbers.",
+      code:
+        "def apply_discount(price, percent):\n    return price - percent\n\nresult = apply_discount(100, 10)\nassert result == 90\nprint(\"still passes:\", result)",
+    },
+    {
+      label: "4. A sharper test catches it",
+      body:
+        "Testing with price=200 instead makes the two behaviors disagree: correct math gives 180, but the buggy shortcut gives 190. Now the assert finally has something real to catch.",
+      code:
+        "result = apply_discount(200, 10)\nassert result == 180, \"10% off $200 should be $180\"\n# AssertionError: 10% off $200 should be $180",
+    },
+    {
+      label: "5. Wrap it in a function pytest can find",
+      body:
+        "pytest doesn't scan for stray assert statements — it scans for functions whose name starts with test_. Put the sharp assert from stage 4 inside one of those, in a file, and pytest will discover and run it automatically.",
+      code:
+        "# tests/test_pricing.py\ndef test_ten_percent_discount():\n    result = apply_discount(200, 10)\n    assert result == 180, \"10% off $200 should be $180\"",
+    },
+    {
+      label: "6. Run pytest and read the result",
+      body:
+        "From the terminal, running pytest against that file executes every test_* function it finds and prints one line per test. A correct apply_discount reports PASSED; the broken price - percent version reports FAILED along with the exact assert that blew up.",
+      code:
+        "$ pytest tests/test_pricing.py -v\ntests/test_pricing.py::test_ten_percent_discount PASSED\n\n1 passed in 0.01s\n\n# if apply_discount were still the broken price - percent version:\n$ pytest tests/test_pricing.py -v\ntests/test_pricing.py::test_ten_percent_discount FAILED\n\nAssertionError: 10% off $200 should be $180\nassert 190 == 180\n\n1 failed in 0.01s",
     },
   ],
   realWorldIntro:
-    "Every real LLM API — OpenAI, Anthropic, and others — bills using exactly this input-tokens-times-price-plus-output-tokens-times-price formula, and output tokens are almost always priced several times higher than input tokens because generating text costs more than reading it.",
+    "In a real project this same test would live in a file pytest runs automatically on every push, and a CI pipeline like GitHub Actions turns the whole build red and blocks the merge the moment one assert fails.",
   realWorldCode:
-    "def total_cost_cents(input_tokens, output_tokens, input_price, output_price):\n    input_cost = input_tokens * input_price // 1000\n    output_cost = output_tokens * output_price // 1000\n    return input_cost + output_cost",
+    "# tests/test_pricing.py\ndef test_ten_percent_discount():\n    assert apply_discount(200, 10) == 180\n\n# .github/workflows/ci.yml\n# - run: pytest tests/\n#   (a failing assert here blocks the merge automatically)",
   sandbox: {
     kind: "code",
     challenge:
-      "Estimate input and output tokens for a prompt/reply pair, then print the total cost in cents under both a budget model price and a premium model price.",
+      "Fix apply_discount so it correctly computes the discount, making the assert below (which uses a sharp, non-coincidental input) pass.",
     starterCode:
-      "def estimate_tokens(text):\n    return len(text) // 4\n\ndef cost_in_cents(tokens, price_per_1000):\n    return tokens * price_per_1000 // 1000\n\nprompt = \"Write a short product description for a wireless keyboard with a long battery life.\"\nreply = \"The wireless keyboard delivers a full year of battery life, reliable Bluetooth pairing, and a compact design that fits any desk.\"\n\ninput_tokens = estimate_tokens(prompt)\noutput_tokens = estimate_tokens(reply)\ntotal_tokens = input_tokens + output_tokens\n\nprint(\"input tokens:\", input_tokens)\nprint(\"output tokens:\", output_tokens)\n\nbudget_price = 2\npremium_price = 30\n\nbudget_cost = cost_in_cents(total_tokens, budget_price)\npremium_cost = cost_in_cents(total_tokens, premium_price)\n\nprint(\"budget model cost (cents):\", budget_cost)\nprint(\"premium model cost (cents):\", premium_cost)\n\nif premium_cost > budget_cost * 5:\n    print(\"premium model costs more than 5x the budget model here\")\nelse:\n    print(\"premium model is not that much pricier here\")",
+      'def apply_discount(price, percent):\n    return price - percent\n\nresult = apply_discount(200, 10)\nassert result == 180, "10% off $200 should be $180"\nprint("Test passed! Price after discount:", result)',
   },
   quizQuestion:
-    "cost_in_cents(999, 5) returns 4, not 4.995. Why?",
-  quizCode:
-    "def cost_in_cents(tokens, price_per_1000):\n    return tokens * price_per_1000 // 1000\n\nresult = cost_in_cents(999, 5)\nprint(result)",
+    "The buggy apply_discount(price, percent) that just returns price - percent passes assert apply_discount(100, 10) == 90, but fails assert apply_discount(200, 10) == 180. What does this reveal about writing good tests?",
   quizOptions: [
     {
       key: "a",
-      label: "Because // is floor division, so it drops the fractional part of the result",
+      label:
+        "Some test inputs can accidentally match a buggy function's output, so picking inputs where correct and incorrect behavior actually diverge matters more than just having a test at all",
       correct: true,
     },
     {
       key: "b",
-      label: "Because 999 tokens automatically rounds up to 1000 before the math runs",
+      label:
+        "The function is actually correct, and the second assert must be wrong because 200 and 10 aren't valid arguments to pass together",
       correct: false,
     },
     {
       key: "c",
-      label: "Because price_per_1000 must always be a whole number of cents",
+      label:
+        "Once a test passes for one input, the function is guaranteed correct for every input, so the second assert was unnecessary",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — // is floor division, so 999 * 5 = 4995, and 4995 // 1000 floors to 4, throwing away the .995 remainder instead of rounding it.",
+    "Right — an assert can only expose a bug if the input you chose makes the correct and incorrect answers come out different; 100 and 10 happened to produce the same result either way, which hid the bug completely.",
   quizFeedbackIncorrect:
-    "Not quite — nothing rounds the token count itself; 999 * 5 = 4995, and // floors that to 4, discarding the .995 fraction rather than rounding it or requiring whole-cent prices.",
+    "Not quite — the function really is broken, and the second assert isn't wrong at all; 100 and 10 was just a coincidental input where the buggy math happened to match the correct math, and passing one test never guarantees correctness on every other input.",
   takeaway:
-    "Token counting and cost are just arithmetic: estimate tokens from character count, then multiply by a price-per-1000 rate for both input and output — do that, and you can predict an API bill before you ever make the call.",
-  nextUpLabel: "Embeddings + RAG + Vector Search",
+    "An assert only proves what its specific input is capable of proving — a test that happens to pass by coincidence gives false confidence, while a test built around inputs that make bugs and correct behavior disagree is what actually protects you. Good testing is as much about choosing sharp inputs as it is about writing the assert itself.",
+  nextUpLabel: "Debugging + Logging + Monitoring",
 };
 
 export default content;

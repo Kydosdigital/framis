@@ -3,91 +3,84 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 21,
   orderIndex: 4,
-  phaseLabel: "AGENTS + ORCHESTRATION",
-  title: "When the Loop Won't Stop: Failure Modes and Recovery",
+  phaseLabel: "PROBABILITY + STATISTICS",
+  title: "Same average, totally different wobble: standard deviation",
   minutes: 20,
   concept:
-    "Agent loops fail in a small number of recognizable ways, and each one has a matching guardrail. The most basic is the loop that simply never converges — max_steps stops it from running forever, but if the agent never gets closer to the goal, hitting that cap just means it fails loudly instead of quietly. A subtler failure is oscillation, where the agent alternates between two or three actions that undo each other — writing a file, then reverting it, then writing it again — burning steps without ever making net progress. Another common one is repeating an identical failing action, like calling the same broken tool with the same arguments a second and third time expecting a different result. The concrete fix for that one is the same retry-with-backoff loop Module 13 used for LLM rate limits — wrap the call in try/except, wait a little longer between attempts, and break the moment one succeeds — except here it wraps a single tool call inside the agent's loop (a database query that times out, a shell command that fails, a flaky internal API) rather than the LLM call itself, and it needs a hard cap on retries after which the loop stops retrying blindly and escalates instead of hanging the whole agent. Finally there's runaway cost or side effects, where each step is individually reasonable but the loop as a whole does something expensive or destructive many more times than intended — like sending the same email to a user on every retry. Good agent design treats all of these as expected failure modes to detect and handle, not edge cases to hope never happen.",
+    "Two datasets can have the exact same mean and still look completely different — one tightly clustered around that average, the other scattered wildly above and below it. Standard deviation is the number that captures this \"wobble\": roughly speaking, how far a typical value sits from the mean. Getting there starts with variance: for each value, subtract the mean to get its difference, then square that difference — squaring is the trick that turns every negative difference positive, so values below the mean and values above it don't cancel each other out to a misleading zero. Average all of those squared differences and you get the variance; standard deviation is just the square root of the variance, which brings the units back to something you can compare directly against the original data (since squaring a difference in milliseconds gives you \"squared milliseconds,\" which nobody can picture). We can't compute a square root directly here, but that's fine — the variance alone already tells you which of two datasets is more spread out, and you can reason about standard deviation as \"roughly the square root of this number.\"",
   conceptSimpler:
-    "It's like a GPS that keeps recalculating the same wrong turn — the fix isn't just \"eventually give up,\" it's noticing you're stuck in a loop and trying a genuinely different route, or asking the passenger for help. And if one turn-by-turn instruction just times out because of a bad signal, you don't abandon the trip — you wait a moment and ask again, a couple of times, before pulling over for good.",
+    "Picture two archers with the same average distance from the bullseye — one's arrows are all clustered tightly near that average, the other's are scattered all over the target. Standard deviation is the number that tells you which archer is consistent and which one is all over the place.",
   vizStages: [
     {
-      label: "Failure mode: max_steps exhausted with no progress",
+      label: "1. Two datasets, identical mean",
       body:
-        "The loop runs its full allotment of steps but the goal check never passes — progress stayed at 0 the entire time. Hitting the cap is working as designed, but silently returning as if nothing went wrong hides a real problem from whoever is relying on the result.",
-      code: "# step 0..4: progress stays at 0, goal never met\n# recovery: when max_steps is reached without success, raise or\n# return an explicit \"did not converge\" status instead of a silent stop",
-    },
-    {
-      label: "Failure mode: oscillation between two actions",
-      body:
-        "Two steps that individually make sense combine into a cycle that goes nowhere — write, then undo, then write, then undo. Progress at the end of the loop is identical to progress at the start, even though five steps of work happened.",
-      code: "# step 0: write_config()   -> progress 1\n# step 1: revert_config()  -> progress 0\n# step 2: write_config()   -> progress 1\n# step 3: revert_config()  -> progress 0\n# recovery: track the last N actions; if a short cycle repeats,\n# break the tie by escalating to a human or trying a third option",
-    },
-    {
-      label: "Failure mode: repeating an identical failing action",
-      body:
-        "The same tool call fails with the same error three times in a row. Retrying unchanged assumes the failure was random, but a config error or a missing permission won't fix itself just because the agent tries again.",
-      code: "# attempt 1: call_api(\"charge_card\") -> Error: invalid_api_key\n# attempt 2: call_api(\"charge_card\") -> Error: invalid_api_key\n# attempt 3: call_api(\"charge_card\") -> Error: invalid_api_key\n# recovery: after 2 identical failures, stop retrying blindly and\n# switch strategy (different tool, different args, or ask for help)",
-    },
-    {
-      label: "Recovery in code: retry a failing TOOL call with backoff",
-      body:
-        "Module 13 wrapped an LLM API call in try/except with a growing wait between retries. The exact same shape applies mid-agent-loop, but this time it's guarding one tool call, not the model call — a timed-out request is just as recoverable as a rate-limited one.",
+        "Set A: [8, 9, 10, 11, 12]. Set B: [2, 6, 10, 14, 18]. Sum each with a loop and divide by the count — both come out to a mean of exactly 10, even though B is visibly more spread out.",
       code:
-        "wait_seconds = 1\nfor attempt in range(max_retries):\n    try:\n        result = call_tool(request)\n        succeeded = True\n        break\n    except ToolTimeoutError as e:\n        print(f\"attempt {attempt}: {e}, backing off {wait_seconds}s\")\n        wait_seconds = wait_seconds * 2",
+        'a = [8, 9, 10, 11, 12]\nb = [2, 6, 10, 14, 18]\n\ntotal = 0\nfor x in a:\n    total = total + x\nmean_a = total / len(a)\nprint(mean_a)\n\n# 10 - and set b also averages to 10',
     },
     {
-      label: "Failure mode: runaway side effects",
+      label: "2. Plain differences from the mean always sum to zero",
       body:
-        "Every individual step looks reasonable in isolation, but the loop as a whole triggers a real-world action far more times than intended, because nothing is tracking cumulative side effects across steps.",
-      code: "# step 0: send_email(user) -- intended\n# step 1: goal check fails due to a bug, loop retries from step 0\n# step 2: send_email(user) -- duplicate!\n# step 3: send_email(user) -- duplicate!\n# recovery: make side-effecting steps idempotent (e.g. check\n# \"already sent\" before sending) so a retried step is a no-op",
+        "Subtract the mean from every value in set A: -2, -1, 0, 1, 2. Add those up and you get exactly 0 — the positive and negative differences always cancel perfectly, no matter how spread out the data is. That's why raw differences can't measure spread.",
+      code:
+        'total = 0\nfor x in a:\n    diff = x - mean_a\n    total = total + diff\nprint(total)\n\n# 0 - always zero, for any dataset, which is useless for measuring spread',
     },
     {
-      label: "Recovery pattern: escalate instead of looping forever",
+      label: "3. Squaring the differences fixes that",
       body:
-        "Across every failure mode above, the common fix isn't a smarter retry — it's detecting \"this isn't working\" early and handing control to something outside the loop: a human reviewer, a fallback tool, or a clear error the caller can act on.",
-      code: "if attempt_failed_twice_in_a_row(history):\n    print(\"escalating to human review instead of retrying again\")\nelse:\n    retry_with_same_action()",
+        "Square each difference before adding it up: (-2)^2, (-1)^2, 0^2, 1^2, 2^2 becomes 4, 1, 0, 1, 4 — all positive, so they no longer cancel. Average them and you get the variance.",
+      code:
+        'sum_squared = 0\nfor x in a:\n    diff = x - mean_a\n    sum_squared = sum_squared + diff * diff\nvariance_a = sum_squared / len(a)\nprint(variance_a)\n\n# 2',
+    },
+    {
+      label: "4. The wider dataset gets a much bigger variance",
+      body:
+        "Run the same calculation on set B: differences are -8, -4, 0, 4, 8; squared, they're 64, 16, 0, 16, 64, averaging to a variance of 32 — sixteen times bigger than set A's variance of 2. Standard deviation is the square root of each: roughly 1.4 for A, roughly 5.7 for B, meaning a typical value in B sits about four times farther from the mean than in A.",
+      code:
+        'sum_squared = 0\nfor x in b:\n    diff = x - mean_b\n    sum_squared = sum_squared + diff * diff\nvariance_b = sum_squared / len(b)\nprint(variance_b)\n\n# 32 - much wider spread than set a\'s variance of 2',
     },
   ],
   realWorldIntro:
-    "Production coding agents guard against exactly this: a well-known failure pattern is an agent that keeps \"fixing\" a test by editing it to match broken behavior instead of fixing the underlying code, oscillating between two states that both look like progress but never actually pass review. The same agents also wrap every individual tool call — reading a file, running a shell command, hitting an internal API — in a retry-with-backoff loop, so one timed-out call doesn't take down or silently hang the whole run, and cap consecutive identical failures to force a strategy change or human check-in.",
+    "This is why ML dashboards report standard deviation right alongside the average eval score: a model that scores consistently around 80% across test runs is far more trustworthy than one that swings between 60% and 100% while still averaging 80%, and standard deviation is the number that exposes that difference.",
+  realWorldCode:
+    'model_scores = [76, 78, 80, 82, 84]\n\ntotal = 0\nfor s in model_scores:\n    total = total + s\nmean = total / len(model_scores)\n\nsum_squared_diffs = 0\nfor s in model_scores:\n    diff = s - mean\n    sum_squared_diffs = sum_squared_diffs + diff * diff\n\nvariance = sum_squared_diffs / len(model_scores)\n\nprint(f"mean score: {mean}")\nprint(f"variance: {variance}")',
   sandbox: {
     kind: "code",
     challenge:
-      "Simulate a tool call that sometimes times out mid-agent-loop. Wrap it in try/except, back off a little longer between attempts, and either succeed or give up and escalate after a fixed number of retries — the same retry discipline as Module 13's rate-limit lesson, but guarding a single tool call instead of the LLM API itself.",
+      "This variance calculator is squaring each difference incorrectly — fix it so it actually multiplies each difference by itself, instead of just doubling it, so the variance stops printing 0 for data that clearly has spread.",
     starterCode:
-      "def call_tool(outcome):\n    if outcome == \"timeout\":\n        raise ToolTimeoutError(\"tool call timed out after 30s\")\n    return \"tool result: \" + outcome\n\nattempts = [\"timeout\", \"timeout\", \"ok\"]\nsucceeded = False\nattempt = 0\nwait_seconds = 1\n\nfor outcome in attempts:\n    attempt = attempt + 1\n    try:\n        result = call_tool(outcome)\n        succeeded = True\n        print(f\"attempt {attempt}: tool call succeeded -> {result}\")\n        break\n    except ToolTimeoutError as e:\n        print(f\"attempt {attempt}: {e}, backing off {wait_seconds}s before retrying\")\n        wait_seconds = wait_seconds * 2\n\nif succeeded:\n    print(f\"done after {attempt} attempt(s)\")\nelse:\n    print(\"tool call never succeeded, escalating instead of retrying forever\")",
+      'scores = [60, 70, 80, 90, 100]\n\ntotal = 0\nfor s in scores:\n    total = total + s\nmean = total / len(scores)\n\nsum_squared_diffs = 0\nfor s in scores:\n    diff = s - mean\n    squared = diff * 2\n    sum_squared_diffs = sum_squared_diffs + squared\n\nvariance = sum_squared_diffs / len(scores)\n\nprint(f"mean: {mean}")\nprint(f"variance: {variance}")',
   },
   quizQuestion:
-    "A tool call inside the agent loop times out with the exact same error on three consecutive attempts, each with a longer backoff in between. What's the best next move?",
+    "Dataset A and dataset B both have a mean of 50. Dataset A has a variance of 4, and dataset B has a variance of 400. What does this tell you?",
   quizCode:
-    "wait_seconds = 1\nfor attempt in range(5):\n    try:\n        result = call_tool(\"timeout\")\n        break\n    except ToolTimeoutError as e:\n        print(f\"attempt {attempt}: {e}\")\n        wait_seconds = wait_seconds * 2",
+    "variance_a = 4\nvariance_b = 400\n# both datasets have a mean of 50",
   quizOptions: [
     {
       key: "a",
       label:
-        "Keep retrying the identical call up to max_steps, since some failures are transient and will eventually succeed",
-      correct: false,
+        "Dataset B's values are far more spread out around the mean than A's — since standard deviation is roughly the square root of variance, B's typical distance from 50 is about 20, versus about 2 for A",
+      correct: true,
     },
     {
       key: "b",
       label:
-        "After the same failure repeats, stop retrying unchanged and switch strategy — try different arguments, a different tool, or escalate to a human",
-      correct: true,
+        "Dataset B must have a higher mean than dataset A, since its variance is so much larger",
+      correct: false,
     },
     {
       key: "c",
       label:
-        "Lower max_steps to 1 so the agent can never retry anything, regardless of whether the failure is transient or permanent",
+        "Variance only reflects how many data points are in a dataset, not how spread out the values are",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — a repeated identical timeout is usually a sign of a persistent problem (a dead endpoint, bad credentials, an unreachable service) rather than randomness, so blind retries with backoff alone waste time; detecting the repeat and changing approach or escalating is far more likely to actually resolve it.",
+    "Right — variance (and its square root, standard deviation) measures spread around the mean, not the mean itself; a variance 100 times bigger means values in B typically sit roughly 10 times farther from 50 than values in A do.",
   quizFeedbackIncorrect:
-    "Not quite — some failures are transient, but three identical timeouts in a row, even with growing backoff, is a strong signal the problem won't fix itself through repetition; and removing all retries (max_steps = 1) throws away the cases where a genuinely transient timeout would have succeeded on a second try. The better move is detecting the repeat and changing strategy.",
+    "Not quite — both datasets share the same mean of 50; variance says nothing about where the mean sits, only about how far the values typically stray from it, and B's much larger variance means its values are far more spread out.",
   takeaway:
-    "Agent loops fail in predictable ways — non-convergence, oscillation, repeated identical failures, and runaway side effects — and each has a matching guardrail. A failing tool call gets the same try/except-and-backoff treatment Module 13 used for rate limits, just aimed at the tool instead of the LLM. The common thread across every failure mode is detecting \"this isn't working\" early and escalating or changing strategy, rather than trusting the loop to eventually sort itself out.",
+    "Variance is the average of the squared differences from the mean — squaring keeps positive and negative differences from canceling out — and standard deviation is just its square root, back in the original units. Two datasets can share an identical mean and still tell very different stories about how consistent or scattered their values really are.",
 };
 
 export default content;

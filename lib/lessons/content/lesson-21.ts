@@ -3,82 +3,82 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 21,
   orderIndex: 1,
-  phaseLabel: "AGENTS + ORCHESTRATION",
-  title: "Plan, Act, Check, Repeat: The ReAct Pattern Behind Every Agent Loop",
+  phaseLabel: "PROBABILITY + STATISTICS",
+  title: "One roll lies, ten thousand rolls tell the truth",
   minutes: 20,
   concept:
-    "Every agent loop follows the same three-beat rhythm on each pass through a fixed number of steps, and that rhythm has a name: ReAct, short for Reason, Act, Observe. First the agent reasons about what to do next — the plan step, often an LLM call deciding which tool to call and with what arguments, structured exactly like Module 15's tool calls: a dict with a \"name\" field and an \"arguments\" field. Then it acts: that call gets routed through a dispatcher — the very same dispatch(call) pattern from Module 15 — which runs the real function behind the tool's name against the real world, like running a command or calling an API. Finally it observes: the tool's return value is read back and used to check whether the goal condition is now true before deciding whether there's anything left to do. Line up an agent loop's plan/act/check against ReAct's reason/act/observe and they match exactly. The whole thing lives inside a hard cap on iterations, usually called max_steps, because an agent that keeps reasoning and acting with no ceiling and no guaranteed convergence can burn time and money forever without ever finishing. Once the goal is met, break exits the loop immediately instead of quietly re-running tool calls on a job that's already done — re-running a finished task wastes resources and can even undo progress.",
+    "A fair six-sided die has an equal 1-in-6 chance of landing on each face, but that doesn't mean six rolls will give you exactly one of each — small samples are noisy and can look wildly uneven. The way you actually see the true 1-in-6 pattern emerge is to roll the die many times and tally each outcome into a dictionary that maps a face value to how often it came up. Early on, with only a handful of rolls, one face might show up three times as often as another purely by chance. But as the roll count grows into the hundreds and thousands, each face's share of the total creeps closer and closer to about 16.7% — this steady convergence toward the true probability as sample size grows is called the law of large numbers. A for-loop and a dict are the whole mechanism: loop over every recorded roll, and for each one, read that face's counter out of the dict, add one, and write it back in.",
   conceptSimpler:
-    "It's like giving someone at most 5 tries to solve a puzzle: each try they think about which move to make (reason), make it (act), then check if it's solved (observe) — the moment it's solved, they just sit still for whatever tries are left over.",
+    "It's like judging whether a coin is fair — flip it twice and you might get two heads and think it's rigged, but flip it two thousand times and the near-even split reveals the truth.",
   vizStages: [
     {
-      label: "1. ReAct: reason, act, observe",
+      label: "1. Six rolls, one lucky streak",
       body:
-        "Reasoning produces the same shape of call you saw in Module 15 — a dict with a name field (which tool) and an arguments field (what to run it with). This is the plan step, just named the way real agent frameworks name it.",
+        "You roll a die six times and log each result. Just by chance, face 4 shows up three times while 1 and 5 don't show up at all — nothing is wrong with the die, six rolls is simply too small a sample to reveal the true odds.",
       code:
-        "call = reason(state)\nprint(call[\"name\"])       # which tool to run\nprint(call[\"arguments\"])  # what to run it with",
+        'rolls = [4, 2, 4, 6, 4, 3]\ncounts = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0}\nfor r in rolls:\n    counts[r] = counts[r] + 1\nprint(counts)\n\n# {\'1\': 0, \'2\': 1, \'3\': 1, \'4\': 3, \'5\': 0, \'6\': 1}',
     },
     {
-      label: "2. Act means dispatching the call, same as Module 15",
+      label: "2. The dict is doing the counting",
       body:
-        "The act step doesn't invent new machinery — it reuses the exact dispatch(call) router from Module 15, matching call[\"name\"] against an if/elif chain of real functions and running the one that matches.",
-      code:
-        "def dispatch(call, state):\n    name = call[\"name\"]\n    if name == \"search\":\n        return search(state)\n    elif name == \"refine\":\n        return refine(state)\n    else:\n        raise ValueError(\"unknown tool\")",
+        "Each pass through the loop reads the current tally for that face out of the dict, adds one, and writes it back in — the same read-increment-write pattern you'd use to count anything: votes, page views, word frequencies.",
+      code: 'counts["4"] = counts["4"] + 1\n# read 2, add 1, store 3 back under key "4"',
     },
     {
-      label: "3. Wrap reason-act-observe in a bounded loop",
+      label: "3. A hundred rolls",
       body:
-        "That single reason/act/observe step repeats inside a for-loop capped at max_steps — a hard ceiling that guarantees the agent stops eventually even if it never reaches its goal.",
+        "Extend the same loop to a hundred recorded rolls instead of six, and the gaps shrink dramatically — every face lands somewhere around 15 to 18 times instead of some faces at zero and others tripled.",
       code:
-        "max_steps = 5\nfor step in range(max_steps):\n    call = reason(state)\n    result = dispatch(call, state)",
+        "# 100 rolls tallied by the same loop\n# {'1': 15, '2': 18, '3': 16, '4': 17, '5': 16, '6': 18}",
     },
     {
-      label: "4. break the moment observe confirms the goal",
+      label: "4. Ten thousand rolls: the law of large numbers",
       body:
-        "There's no reason to keep looping once observing the result shows the goal is already satisfied — break exits the for loop immediately, so steps 2, 3, and 4 never run at all, not even as a skipped no-op.",
+        "Push the roll count into the thousands and each face's share locks in tight around 16.7%. Individual rolls stay completely random, but the average behavior of a huge pile of them becomes almost perfectly predictable — that's the law of large numbers.",
       code:
-        "for step in range(max_steps):\n    call = reason(state)\n    result = dispatch(call, state)\n    if goal_met(state):\n        state[\"done\"] = True\n        break",
+        "# 10,000 rolls tallied by the same loop\n# {'1': 1668, '2': 1655, '3': 1682, '4': 1671, '5': 1649, '6': 1675}\n# each face lands between 16.4% and 16.8% - right around the true 1/6",
     },
   ],
   realWorldIntro:
-    "A coding agent iterating on a failing test suite runs exactly this ReAct loop: reason about a fix, act by dispatching a patch-tool call, observe whether tests now pass, and break the instant the check comes back green — capped at, say, 10 attempts so a stubborn bug can't spin the agent forever.",
+    "This is exactly why ML teams never trust a single eval run or one user's reaction to a new feature: one sample is as noisy as one die roll, so they average scores across thousands of test cases or thousands of users before believing a model or feature actually performs better.",
   realWorldCode:
-    "for attempt in range(max_attempts):\n    call = reason(state)\n    result = dispatch(call, state)\n    state[\"tests_pass\"] = run_tests()\n    if state[\"tests_pass\"]:\n        break",
+    'scores = [0.81, 0.77, 0.85, 0.79, 0.83, 0.80]\ntotal = 0\nfor s in scores:\n    total = total + s\naverage = total / len(scores)\nprint(f"average eval score across {len(scores)} runs: {average}")',
   sandbox: {
     kind: "code",
     challenge:
-      "Simulate a ReAct loop: reason about which tool to call, dispatch it (Module 15's pattern), observe the result, and check the goal each step — then break out of the loop the instant the goal is met.",
+      "This frequency counter crashes partway through the loop — fix the counts dictionary so every face from 1 to 6 is initialized to 0 before the loop runs, then rerun it to see all six tallies print cleanly.",
     starterCode:
-      "def search(state):\n    return 2\n\ndef refine(state):\n    return 1\n\ndef dispatch(call, state):\n    name = call[\"name\"]\n    if name == \"search\":\n        return search(state)\n    elif name == \"refine\":\n        return refine(state)\n    else:\n        raise ValueError(\"unknown tool\")\n\ndef reason(state):\n    if state[\"progress\"] == 0:\n        return {\"name\": \"search\", \"arguments\": {}}\n    else:\n        return {\"name\": \"refine\", \"arguments\": {}}\n\ndef goal_met(state):\n    return state[\"progress\"] >= state[\"target\"]\n\nstate = {\"progress\": 0, \"target\": 3}\nmax_steps = 5\n\nfor step in range(max_steps):\n    call = reason(state)\n    print(f\"step {step}: reason chose -> {call['name']}\")\n    gained = dispatch(call, state)\n    state[\"progress\"] = state[\"progress\"] + gained\n    print(f\"step {step}: act + observe done, progress is now {state['progress']}\")\n    if goal_met(state):\n        print(f\"step {step}: goal reached, stopping\")\n        break",
+      'rolls = [3, 1, 4, 6, 2, 5, 3, 3, 6, 1, 2, 4, 5, 6, 3, 2, 1, 4, 6, 3]\n\ncounts = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}\n\nfor r in rolls:\n    counts[r] = counts[r] + 1\n\ntotal = len(rolls)\n\nfor face in range(1, 7):\n    key = str(face)\n    count = counts[key]\n    pct = count * 100 / total\n    print(f"Face {face}: {count} rolls ({pct}%)")',
   },
   quizQuestion:
-    "This loop breaks the moment the goal is met. If that happens on step 1 (the second iteration, since step starts at 0), what happens on steps 2, 3, and 4?",
+    "You roll a die 6 times and one face comes up 4 times. After rolling it 6,000 times, that same face's share settles right around 16.7%. What does this demonstrate?",
   quizCode:
-    "for step in range(max_steps):\n    action = plan_step(state)\n    result = tool_step(action)\n    state[\"progress\"] = state[\"progress\"] + result\n    if goal_met(state):\n        print(f\"step {step}: done\")\n        break\n    print(f\"step {step}: not done yet\")",
+    "small = {\"4\": 4, \"1\": 1, \"2\": 1}\n# from 6 rolls\n\nlarge = {\"4\": 1013, \"1\": 987, \"2\": 998}\n# from 6,000 rolls",
   quizOptions: [
     {
       key: "a",
-      label: "They never run at all — break exits the loop entirely the moment the goal check passes on step 1",
+      label:
+        "The law of large numbers: small samples are noisy, but as the number of trials grows, the observed frequencies converge toward the true underlying probability",
       correct: true,
     },
     {
       key: "b",
-      label: "They still run, but plan_step and tool_step's results get thrown away",
+      label: "The die must have been slightly broken for the first six rolls and only started working correctly afterward",
       correct: false,
     },
     {
       key: "c",
-      label: "They run and print \"not done yet\" each time, since nothing tells the loop to stop early",
+      label: "Dictionaries automatically become more accurate the more times you read a value out of them",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — break exits the for loop immediately once the goal is met on step 1; range(max_steps) never gets to produce 2, 3, or 4, so nothing about those steps ever runs.",
+    "Right — six rolls is a tiny, noisy sample where one face can easily land four times by chance, but six thousand rolls average that randomness out, pulling each face's share close to its true 1-in-6 probability.",
   quizFeedbackIncorrect:
-    "Not quite — break doesn't just skip the remaining work, it exits the loop entirely. The instant goal_met(state) is true on step 1 and break runs, steps 2, 3, and 4 never happen at all.",
+    "Not quite — nothing changed about the die itself; a sample of six rolls is simply too small to reflect the true 1-in-6 odds, while thousands of rolls average that noise away until the real probability shows through.",
   takeaway:
-    "An agent loop is Reason, Act, Observe — ReAct for short — repeated inside a hard cap on iterations so it can never run forever, and broken out of immediately the moment the goal check passes instead of wasting further iterations on a job that's already done. Reason decides a tool call shaped just like Module 15's; act runs it through dispatch; observe reads the result back in to drive the next reason step.",
-  nextUpLabel: "Human-in-the-Loop + Guardrails",
+    "A for-loop and a dict turn raw rolls into a frequency count, and the law of large numbers says the more rolls you tally, the closer those counts settle toward the true underlying probability — small samples are noisy, big ones are not.",
+  nextUpLabel: "Linear Algebra Basics",
 };
 
 export default content;

@@ -101,7 +101,7 @@ export default function Roadmap() {
   return (
     <div className="max-w-[900px]">
       <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
-        THE ROUTE · 12 MONTHS · 6 PHASES · 24 MODULES
+        THE ROUTE · 16 MONTHS · 7 PHASES · 28 MODULES
       </div>
       <h1 className="mb-2.5 font-inter text-[30px] font-bold tracking-[-0.02em]">
         Your route to AI engineer

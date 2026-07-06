@@ -3,82 +3,105 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 15,
   orderIndex: 3,
-  phaseLabel: "STRUCTURED OUTPUTS + TOOL CALLING",
-  title: "One Model, Many Tools: Routing Between Three or More",
+  phaseLabel: "SECURITY + AUTH PATTERNS",
+  title: "Cookies, sessions, and JWTs: how the server remembers you're logged in",
   minutes: 20,
   concept:
-    "Real agents rarely get just one tool — you might hand the model a weather lookup, a web search, and a currency converter all at once, and let it decide which ones actually fit the user's request. A single response can come back with just one tool call, or several at once (e.g. get_weather for Tokyo and get_weather for Paris in the same turn) — either way, each individual call is still its own \"name\" and \"arguments\" dict. Your dispatcher's job barely changes from the one-tool case — it just needs one elif branch per tool you offered, and it loops over however many calls came back, dispatching each one independently. Because if/elif is exclusive, only the branch whose condition actually matches runs for a given call; the moment one condition is true, every other elif and the final else are skipped entirely, so there's no risk of two tools accidentally firing for the same call. The real discipline is bookkeeping: every tool you describe to the model needs a matching elif in your dispatcher, or a call the model was told it could make has nowhere real to go.",
+    "HTTP is stateless — every request arrives with no memory of the last one, so \"staying logged in\" has to be engineered on top of it. The classic approach is session-based auth: after login, the server creates a session record (in memory, Redis, or a database) containing the user's id, and sends the browser a random session id in a cookie; every later request includes that cookie, and the server looks up the matching session to know who's asking. The newer alternative is token-based auth, most commonly JSON Web Tokens (JWTs): instead of storing anything server-side, the server encodes the user's id and other claims directly into a signed token and hands the whole thing to the client, which sends it back on every request — the server just verifies the signature to trust the contents, with no database lookup required. That difference is the whole trade-off: sessions are easy to revoke (delete the row and the user is instantly logged out everywhere) but require server-side storage and a lookup on every request; JWTs scale beautifully across multiple servers with zero shared storage, but a JWT issued before you \"logged the user out\" is still valid and usable until it naturally expires, because there's no row to delete.",
   conceptSimpler:
-    "Giving a model three tools instead of one is like adding more drawers to the same filing cabinet — the clerk still only reads one label at a time and walks to exactly one drawer, it's just that now there are more drawers to keep labeled correctly.",
+    "A session is like a coat-check ticket — the numbered stub means nothing on its own, but the coat check counter has a record of exactly whose coat it points to, and can throw that record away anytime. A JWT is more like a sealed, signed ID badge — anyone who reads it can verify who issued it and what it says, but there's no front desk to revoke it early.",
   vizStages: [
     {
-      label: "1. The model can be offered many tools at once",
+      label: "1. Login creates a session",
       body:
-        "You describe three separate tools to the model in one request: get_weather, search_web, and convert_currency. It's free to pick whichever one actually matches what the user asked for.",
-      code:
-        "tools_offered = [\"get_weather\", \"search_web\", \"convert_currency\"]\nprint(f\"model was offered {len(tools_offered)} tools\")",
+        "The server verifies the password, then creates a session record in its own storage (Redis, a sessions table, etc.) keyed by a random, unguessable id, and sends that id to the browser as a cookie.",
+      code: "const sessionId = randomId();\nawait redis.set(sessionId, { userId: user.id }, { ex: 60 * 60 * 24 });\nres.cookie(\"sid\", sessionId, { httpOnly: true, secure: true });",
     },
     {
-      label: "2. Each call is still one name, one arguments dict",
+      label: "2. Every request proves who you are",
       body:
-        "Whether the model comes back with one tool call or three in the same turn, every individual call has the same shape: one name, one arguments object. Here it chose convert_currency because the user asked about money.",
-      code:
-        "tool_call = {\"name\": \"convert_currency\", \"arguments\": {\"amount\": 100, \"currency\": \"EUR\"}}\nprint(tool_call[\"name\"])",
+        "The browser automatically attaches the cookie to every subsequent request. The server takes that id, looks it up in storage, and finds the associated user — no password is re-sent.",
+      code: "const sessionId = req.cookies.sid;\nconst session = await redis.get(sessionId);\nconst user = session ? await db.users.findById(session.userId) : null;",
     },
     {
-      label: "3. if/elif routes to exactly one branch",
+      label: "3. A token carries its own proof",
       body:
-        "Each tool gets its own elif, checking name against that tool's exact string. As soon as one matches, its body runs and every remaining elif is skipped — there's no fallthrough.",
-      code:
-        "def dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"get_weather\":\n        return get_weather(args[\"city\"])\n    elif name == \"search_web\":\n        return search_web(args[\"query\"])\n    elif name == \"convert_currency\":\n        return convert_currency(args[\"amount\"], args[\"currency\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")",
+        "With JWTs, login instead signs a payload containing the user's id and an expiry, using a secret only the server knows. The token is handed to the client and stored there — the server keeps no record of having issued it.",
+      code: "const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: \"1h\" });\n// client stores this token and sends it as: Authorization: Bearer <token>",
     },
     {
-      label: "4. Each tool still only gets its own arguments",
+      label: "4. Verifying a token needs no database at all",
       body:
-        "get_weather never sees amount or currency, and convert_currency never sees city — each branch reaches into args for only the keys that specific tool actually needs.",
-      code:
-        "result = dispatch(tool_call)\nprint(result)",
+        "To check a request, the server just re-verifies the signature with its secret — if it's valid and unexpired, the claims inside are trusted as-is. This is what makes JWTs attractive for APIs spread across many servers with no shared session store.",
+      code: "const payload = jwt.verify(token, SECRET);\n// payload = { userId: 482, exp: 1735689600 }\n// no lookup needed — the signature IS the proof",
     },
   ],
   realWorldIntro:
-    "A customer-support agent might be offered look_up_order, issue_refund, and search_faq in the same request — the model picks exactly one per turn based on what the customer just typed, and your dispatcher needs a ready branch for every single one you declared to it.",
+    "A recurring class of real-world JWT bugs comes from implementations that trust the token's own header — including the notorious \"alg: none\" attack, where a token claiming to use no signature algorithm was accepted as valid by careless libraries, letting anyone forge arbitrary claims; it's a reminder that a token's power is only as strong as how strictly the server verifies it.",
   realWorldCode:
-    "def dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"look_up_order\":\n        return look_up_order(args[\"order_id\"])\n    elif name == \"issue_refund\":\n        return issue_refund(args[\"order_id\"], args[\"amount\"])\n    elif name == \"search_faq\":\n        return search_faq(args[\"query\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")",
+    "// vulnerable verification some libraries historically allowed:\nconst payload = jwt.decode(token); // decodes WITHOUT checking the signature at all\n// safe verification actually checks the signature and rejects tampered tokens:\nconst payload = jwt.verify(token, SECRET);",
   sandbox: {
-    kind: "code",
-    challenge:
-      "Add a third tool, convert_currency(amount, currency), to a dispatcher that already knows get_weather and search_web, then route a batch of three different tool calls through it and print each tool's name next to its result.",
-    starterCode:
-      "def get_weather(city):\n    if city == \"Tokyo\":\n        return \"22C and clear\"\n    elif city == \"Paris\":\n        return \"15C and rainy\"\n    else:\n        return \"unknown city\"\n\ndef search_web(query):\n    return f\"3 results for {query}\"\n\ndef convert_currency(amount, currency):\n    if currency == \"EUR\":\n        return amount * 0.92\n    elif currency == \"GBP\":\n        return amount * 0.79\n    else:\n        return amount\n\ndef dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"get_weather\":\n        return get_weather(args[\"city\"])\n    elif name == \"search_web\":\n        return search_web(args[\"query\"])\n    elif name == \"convert_currency\":\n        return convert_currency(args[\"amount\"], args[\"currency\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")\n\ncalls = []\ncalls.append({\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}})\ncalls.append({\"name\": \"search_web\", \"arguments\": {\"query\": \"best ramen in Tokyo\"}})\ncalls.append({\"name\": \"convert_currency\", \"arguments\": {\"amount\": 100, \"currency\": \"EUR\"}})\n\nfor call in calls:\n    result = dispatch(call)\n    print(call[\"name\"], \"->\", result)",
+    kind: "explore",
+    instructions:
+      "Click through each stage to compare how sessions and JWTs behave for the same three situations: logging in, making a request, and logging out.",
+    stages: [
+      {
+        label: "Session: where the truth lives",
+        body:
+          "The session id in the cookie is meaningless by itself — it's just a lookup key. The actual truth about who's logged in lives in server-side storage, which the server fully controls.",
+        code: "// cookie sent to browser:\nsid=8f2a9c1e...\n// server-side record it points to:\n{ userId: 482, createdAt: \"2026-07-01T10:00:00Z\" }",
+      },
+      {
+        label: "JWT: where the truth lives",
+        body:
+          "The JWT itself contains the claims (who the user is) plus a cryptographic signature. Anyone can read the payload (it's just base64, not encrypted), but only the server's secret can produce a signature that verifies as valid.",
+        code: "// header.payload.signature, decoded payload:\n{ \"userId\": 482, \"role\": \"member\", \"exp\": 1735689600 }\n// signature proves the server issued it unmodified — it does not hide the contents",
+      },
+      {
+        label: "Revoking access: sessions",
+        body:
+          "To force a logout — say, a user reports their account stolen — you delete the session record. The very next request with that cookie fails the lookup and is rejected immediately.",
+        code: "await redis.del(sessionId);\n// any request using this session id from now on gets: 401 Unauthorized",
+      },
+      {
+        label: "Revoking access: JWTs",
+        body:
+          "There's no row to delete — the token is self-contained and valid until it expires. Real systems work around this with short expiries plus a small server-side \"blocklist\" of revoked token ids, which brings back some of the lookup cost JWTs were meant to avoid.",
+        code: "// even after you \"log the user out\" client-side, this JWT verifies as valid\n// until its exp timestamp passes, unless you check a revocation list on every request",
+      },
+      {
+        label: "Where each is stored on the client",
+        body:
+          "Session cookies are typically set httpOnly, so client-side JavaScript can't read them at all, which blunts token theft via XSS. JWTs are often stored in localStorage for convenience, but that makes them directly readable by any script running on the page — including an injected malicious one.",
+        code: "// session cookie: inaccessible to JS\ndocument.cookie // does not include httpOnly cookies\n\n// JWT in localStorage: fully readable by any script on the page\nlocalStorage.getItem(\"token\") // \"eyJhbGciOiJIUzI1NiIs...\"",
+      },
+    ],
   },
   quizQuestion:
-    "Which branch of this if/elif chain actually runs for this call, and what happens to the other two?",
-  quizCode:
-    "def get_weather(city):\n    return f\"{city}: 22C\"\n\ndef convert_currency(amount, currency):\n    return amount * 0.92\n\ndef search_web(query):\n    return f\"3 results for {query}\"\n\ndef dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"get_weather\":\n        return get_weather(args[\"city\"])\n    elif name == \"convert_currency\":\n        return convert_currency(args[\"amount\"], args[\"currency\"])\n    elif name == \"search_web\":\n        return search_web(args[\"query\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")\n\ncall = {\"name\": \"search_web\", \"arguments\": {\"query\": \"best ramen\"}}\nresult = dispatch(call)\nprint(result)",
+    "A user reports their account was compromised and you need to immediately invalidate their current login, everywhere, right now. Which auth approach makes this trivial by default?",
   quizOptions: [
     {
       key: "a",
-      label:
-        "Only the search_web branch runs and returns; get_weather and convert_currency never execute at all for this call",
+      label: "Session-based auth, because deleting the server-side session record instantly invalidates the cookie",
       correct: true,
     },
     {
       key: "b",
-      label: "All three branches run in order, but only the last one's return value is kept",
+      label: "JWT-based auth, because the token can be recalled from the client the moment you decide to log them out",
       correct: false,
     },
     {
       key: "c",
-      label: "None of the branches run, since search_web is checked last, so it falls through to else and raises",
+      label: "Both are equally instant, since the server always controls whether a login is valid",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — an if/elif chain stops at the first branch whose condition is true. name == \"search_web\" matches the third branch, so only search_web(...) runs; get_weather and convert_currency are never reached at all for this particular call.",
+    "Right — because a session's truth lives entirely in server-side storage, deleting that one record instantly invalidates it on the very next request, no matter how many devices or tabs are using it.",
   quizFeedbackIncorrect:
-    "Not quite — if/elif is exclusive, not run-everything-in-sequence: as soon as one branch's condition matches, its body runs and every remaining elif and the else are skipped, so only the search_web branch executes here.",
+    "Not quite — a JWT is self-contained and stays valid until it expires, since there's no server-side record to delete; sessions are the approach where revocation is a simple, instant delete.",
   takeaway:
-    "Offering the model more tools doesn't change the shape of what comes back — it's still one name and one arguments dict per call. Scaling to many tools just means one elif per tool, each reaching into arguments for only the keys that tool needs.",
+    "Sessions store the truth on the server and can be revoked instantly by deleting a record; JWTs carry the truth with them and scale without lookups, but that same portability makes early revocation hard — pick based on which trade-off your app can live with.",
 };
 
 export default content;

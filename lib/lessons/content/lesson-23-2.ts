@@ -3,111 +3,81 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 23,
   orderIndex: 2,
-  phaseLabel: "OBSERVABILITY + COST CONTROLS",
-  title: "One Request, Five Services, One Trace ID",
-  minutes: 18,
+  phaseLabel: "TRANSFORMERS + ATTENTION",
+  title: "Query, key, value: the question every word asks the sentence",
+  minutes: 22,
   concept:
-    "A single user action almost never touches just one piece of your system — it hits an API gateway, gets checked by an auth service, gets orchestrated by your application server, waits on a model API call, and finally gets logged to a database. A single \"total latency: 810ms\" number tells you the request was slow, but not which of those five stops actually caused it. Distributed tracing fixes this by stamping the request with one shared trace_id the instant it arrives, and passing that same ID along to every downstream call it makes. Each service records its own span — a start time, an end time, and the trace_id it belongs to — without needing to know anything about the other services in the chain. Only afterward, when a tracing backend collects every span that shares a trace_id, do those disconnected timings reassemble into one waterfall showing exactly which hop ate the time.",
+    "Take \"The trophy didn't fit in the suitcase because it was too big.\" The word \"it\" has no fixed meaning on its own — it could point to the trophy or the suitcase — so the model needs a way to let \"it\" gather information from whichever other words actually resolve the ambiguity. Attention does this by giving every token three different vectors, each built for a different job. The Query is what a token is looking for (\"it\" is looking for whatever explains what \"it\" refers to). The Key is what each token offers up for others to match against (\"trophy\" offers a key that effectively says \"I'm a physical object that can be big or small\"). The Value is the actual content a token contributes if it gets picked (the substance of \"trophy\" that should flow into \"it\"'s new representation). In a real transformer, all three come from the same input vector multiplied by three separate learned weight matrices — literally the matrix multiplication from the previous module, applied three times per token with three different matrices. A sandbox can't train real weight matrices, so here we'll hand-pick small toy Query/Key/Value vectors that stand in for what training would have produced, and then do the exact same arithmetic a transformer does: take \"it\"'s Query vector and compute its dot product against every other token's Key vector. That dot product is the raw attention score — a bigger number means the query and that key point in a more aligned direction, i.e. that token is more relevant to what \"it\" is looking for.",
   conceptSimpler:
-    "It's like a package with one tracking number that gets scanned at every depot along its route — no single depot knows the whole journey, but once you look up that tracking number, every scan lines up into one timeline you can actually read.",
+    "It's like \"it\" holding up a question card (Query) and every other word holding up an answer card (Key) — whichever answer card lines up best with the question gets treated as most relevant, and that word's actual content (Value) is what eventually gets pulled in.",
   vizStages: [
     {
-      label: "1. A single number hides the journey",
+      label: "1. Three vectors, three jobs",
       body:
-        "The dashboard says this request took 810ms. That's true, but it's also useless for deciding what to fix — 810ms could be one slow hop or five medium ones.",
-      code: "request abc123: total_latency = 810ms",
-    },
-    {
-      label: "2. One request, several services",
-      body:
-        "Behind that number, the request actually passed through a gateway, an auth check, an application server, a model API call, and a database write — five separate services, each with its own clock.",
-      code: "gateway -> auth -> app server -> model API -> database",
-    },
-    {
-      label: "3. Every hop stamps the same trace_id",
-      body:
-        "As the request moves, each service reads the trace_id it was handed, records its own span with that same ID, and passes the ID along to whatever it calls next. No service needs to know the full chain — it only needs to forward the ID.",
+        "For our toy example, \"it\" gets a Query vector, and \"trophy,\" \"big,\" and \"suitcase\" each get a Key vector (their Value vectors come in a later lesson). These are small, hand-picked numbers standing in for what a trained model would produce — every entry is just a made-up feature, not a real learned weight.",
       code:
-        "span: {\"trace_id\": \"abc123\", \"service\": \"auth\", \"start_ms\": 6, \"end_ms\": 20}",
+        "query_it     = [2, 1, 1, 0]\nkey_trophy   = [1, 1, 1, 0]\nkey_big      = [1, 1, 0, 1]\nkey_suitcase = [0, 1, 0, 0]",
     },
     {
-      label: "4. Collected together, it's a waterfall",
+      label: "2. The dot product turns \"alignment\" into a number",
       body:
-        "A tracing backend gathers every span sharing trace_id \"abc123\" and lines them up by time. Now the 810ms isn't a mystery — you can see that one hop, the model API call, ate nearly all of it.",
+        "Straight from Module 18: multiply matching positions, then add up the products. query_it dotted with key_trophy is (2×1) + (1×1) + (1×1) + (0×0) = 2 + 1 + 1 + 0 = 4.",
       code:
-        "gateway     [==] 6ms\nauth        [====] 14ms\napp server  [======] 20ms\nmodel API   [==============================] 730ms\ndatabase    [=====] 18ms\n-> total: 810ms, 90% spent waiting on the model API",
+        "query_it   = [2, 1, 1, 0]\nkey_trophy = [1, 1, 1, 0]\n\nscore = 2*1 + 1*1 + 1*1 + 0*0\n# score = 4",
+    },
+    {
+      label: "3. Every key gets scored the same way",
+      body:
+        "Run the same dot product against every candidate key. \"Trophy\" scores highest, \"big\" comes in second, and \"suitcase\" trails behind — these raw numbers are already ranking relevance correctly.",
+      code:
+        "it -> trophy   : dot_product([2,1,1,0], [1,1,1,0]) = 4\nit -> big      : dot_product([2,1,1,0], [1,1,0,1]) = 3\nit -> suitcase : dot_product([2,1,1,0], [0,1,0,0]) = 1",
+    },
+    {
+      label: "4. Raw scores rank relevance, but they're not done yet",
+      body:
+        "4, 3, and 1 correctly say \"trophy matters most,\" but they're not a probability distribution — they don't sum to 1, they aren't bounded, and in a bigger real model they could easily be negative. The next lesson turns these raw scores into real attention weights.",
+      code: "raw scores: trophy=4, big=3, suitcase=1  -- ranked correctly, not yet usable as weights",
     },
   ],
   realWorldIntro:
-    "This is the exact waterfall view a distributed tracing tool like Datadog APM, Honeycomb, or Jaeger renders when you click into a single slow request — colored bars stacked by service, sized by duration, all sharing one trace ID.",
+    "Every attention head in a model like GPT computes exactly this: three learned projections per token (Query, Key, Value), then a dot product between one token's query and every token's key — done all at once via matrix multiplication across thousands of tokens and dozens of dimensions per head, instead of one pair at a time like we just did by hand.",
   realWorldCode:
-    "trace_id: abc123\n  gateway     6ms\n  auth        14ms\n  app-server  20ms\n  model-api   730ms   <- longest bar in the waterfall\n  database    18ms",
+    "query_it = matrix_multiply(W_query, embedding_of(\"it\"))\nkey_trophy = matrix_multiply(W_key, embedding_of(\"trophy\"))\nscore = dot_product(query_it, key_trophy)  # same operation, real learned numbers",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each hop below to watch the same trace_id ride along with the request and see where the 398ms actually goes.",
-    stages: [
-      {
-        label: "Hop 1 — API Gateway",
-        body:
-          "The request first hits the gateway, which generates a brand-new trace_id and attaches it before forwarding the request onward. This hop is just routing, so it's fast.",
-        code: "trace_id \"req-9f2\" created\nspan: gateway   start=0ms  end=6ms   (6ms)",
-      },
-      {
-        label: "Hop 2 — Auth Service",
-        body:
-          "The gateway forwards the request, trace_id and all, to the auth service, which validates the token. It records its own span under the same trace_id and hands the request back.",
-        code: "span: auth      start=6ms  end=20ms  (14ms)",
-      },
-      {
-        label: "Hop 3 — Application Server",
-        body:
-          "The app server receives the authenticated request and orchestrates the actual work: deciding to call the model API and, afterward, log the result. Its own overhead is small.",
-        code: "span: app-server  start=20ms  end=40ms  (20ms)",
-      },
-      {
-        label: "Hop 4 — Model API Call",
-        body:
-          "The app server calls out to the model API and waits for a response. This span dwarfs every other hop — it's where almost the entire 398ms is spent.",
-        code: "span: model-api  start=40ms  end=380ms  (340ms)",
-      },
-      {
-        label: "Hop 5 — Database Write",
-        body:
-          "Once the model responds, the app server logs the interaction (cost, latency, tokens) to the database before returning to the user. All five spans share trace_id \"req-9f2\", so a tracing tool can stitch them into one 398ms waterfall.",
-        code:
-          "span: database   start=380ms  end=398ms  (18ms)\n\ntotal: 398ms  |  model-api alone = 85% of it",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "Write dot_product(vec_a, vec_b), then use it to score how relevant \"trophy,\" \"big,\" and \"suitcase\" are to \"it\" by computing query_it's dot product against each of their toy Key vectors.",
+    starterCode:
+      "def dot_product(vec_a, vec_b):\n    total = 0\n    for i in range(len(vec_a)):\n        total = total + vec_a[i] * vec_b[i]\n    return total\n\nquery_it = [2, 1, 1, 0]\n\nkey_trophy = [1, 1, 1, 0]\nkey_big = [1, 1, 0, 1]\nkey_suitcase = [0, 1, 0, 0]\n\nscore_trophy = dot_product(query_it, key_trophy)\nscore_big = dot_product(query_it, key_big)\nscore_suitcase = dot_product(query_it, key_suitcase)\n\nprint(f\"raw score: it -> trophy   = {score_trophy}\")\nprint(f\"raw score: it -> big      = {score_big}\")\nprint(f\"raw score: it -> suitcase = {score_suitcase}\")",
   },
   quizQuestion:
-    "Given the five spans traced above (gateway 6ms, auth 14ms, app-server 20ms, model-api 340ms, database 18ms, total 398ms), which service should the team investigate first to bring down latency?",
+    "Using query_it = [2, 1, 1, 0] and a new key for the word \"because\", key_because = [0, 0, 0, 1], what raw score does dot_product(query_it, key_because) produce?",
   quizCode:
-    "gateway     6ms\nauth        14ms\napp-server  20ms\nmodel-api   340ms\ndatabase    18ms\ntotal       398ms",
+    "query_it = [2, 1, 1, 0]\nkey_because = [0, 0, 0, 1]\nscore_because = dot_product(query_it, key_because)\nprint(score_because)",
   quizOptions: [
     {
       key: "a",
-      label: "The auth service, since checking a token is extra work that could be skipped",
-      correct: false,
-    },
-    {
-      key: "b",
       label:
-        "The model API call, since it accounts for roughly 85% of the total request time and shrinking it would move the total the most",
+        "0 — every position where query_it has a nonzero value, key_because has a 0 (and vice versa), so every product in the dot product is 0",
       correct: true,
     },
     {
+      key: "b",
+      label: "4 — the score should match the highest score from the sentence regardless of which key is used",
+      correct: false,
+    },
+    {
       key: "c",
-      label: "All five services equally, since the total is what matters and each hop contributed something to it",
+      label: "2 — because dot products always return the number of dimensions the vectors share",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — a trace's whole value is showing you that time isn't spent evenly: model-api's 340ms is roughly 85% of the 398ms total, so even a large improvement to auth or the gateway would barely move the number, while shaving the model call helps immediately.",
+    "Right — (2×0) + (1×0) + (1×0) + (0×1) = 0. \"Because\" and \"it\" share no overlapping nonzero dimensions in this toy example, so the query and key don't align at all, and the raw score correctly comes out to zero relevance.",
   quizFeedbackIncorrect:
-    "Not quite — the point of a trace waterfall is that hops rarely contribute equally; here model-api alone is 340 of the 398ms total, so it's overwhelmingly the place to focus rather than spreading effort evenly across all five spans.",
+    "Not quite — walk through it position by position: (2×0) + (1×0) + (1×0) + (0×1) = 0. Every product is zero because query_it and key_because never have a nonzero value in the same position, so there's no alignment for the dot product to pick up.",
   takeaway:
-    "A trace_id is what turns a pile of disconnected per-service logs into one coherent timeline — without it, every service only knows its own slice, and you're left guessing which of five hops actually caused the slow request.",
+    "Query, Key, and Value are three views of the same token built for three different jobs, and the dot product between a Query and a Key is the real arithmetic that measures how relevant one token is to another — the next lesson turns those raw scores into an actual probability distribution.",
 };
 
 export default content;

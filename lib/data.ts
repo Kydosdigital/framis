@@ -6,11 +6,12 @@ export const TICKER_ITEMS = [
 
 export const PHASES = [
   { num: "1", delay: 0, weeks: "WEEKS 1–8", title: "Programming foundations", desc: "Terminal, Git, Python, data structures, debugging.", capstone: "Capstone: CLI expense tracker" },
-  { num: "2", delay: 0.07, weeks: "WEEKS 9–16", title: "Web + full-stack basics", desc: "HTML/CSS/JS, React, APIs, Python backend + Postgres.", capstone: "Capstone: Notes app with login" },
-  { num: "3", delay: 0.14, weeks: "WEEKS 17–24", title: "Engineering discipline", desc: "Testing, logging, security, CI/CD, Docker.", capstone: "Capstone: Tested app with CI pipeline" },
-  { num: "4", delay: 0.21, weeks: "WEEKS 25–32", title: "AI application engineering", desc: "LLM APIs, RAG, tool calling, evals and guardrails.", capstone: "Capstone: AI Q&A system with citations" },
-  { num: "5", delay: 0.28, weeks: "WEEKS 33–40", title: "ML fundamentals", desc: "Stats intuition, linear algebra, transformers, fine-tuning.", capstone: "Capstone: Train + deploy a classifier" },
-  { num: "6", delay: 0.35, weeks: "WEEKS 41–48", title: "Production AI systems", desc: "Agents, human-in-the-loop, observability, cost control.", capstone: "Capstone: Production AI system" },
+  { num: "2", delay: 0.06, weeks: "WEEKS 9–16", title: "Web + full-stack basics", desc: "HTML/CSS/JS, React, APIs, Python backend + Postgres.", capstone: "Capstone: Notes app with login" },
+  { num: "3", delay: 0.12, weeks: "WEEKS 17–32", title: "Data + classical ML", desc: "Pandas, feature engineering, decision trees, model evaluation.", capstone: "Capstone: Classical ML model comparison" },
+  { num: "4", delay: 0.18, weeks: "WEEKS 33–40", title: "Engineering discipline", desc: "Testing, logging, security, CI/CD, Docker.", capstone: "Capstone: Tested app with CI pipeline" },
+  { num: "5", delay: 0.24, weeks: "WEEKS 41–48", title: "AI application engineering", desc: "LLM APIs, RAG, tool calling, evals and guardrails.", capstone: "Capstone: AI Q&A system with citations" },
+  { num: "6", delay: 0.30, weeks: "WEEKS 49–56", title: "ML fundamentals", desc: "Stats intuition, linear algebra, transformers, fine-tuning.", capstone: "Capstone: Train + deploy a classifier" },
+  { num: "7", delay: 0.35, weeks: "WEEKS 57–64", title: "Production AI systems", desc: "Agents, human-in-the-loop, observability, cost control.", capstone: "Capstone: Production AI system" },
 ];
 
 export const ROADMAP_MODULES: { phase: number; num: number; title: string }[] = [
@@ -22,29 +23,33 @@ export const ROADMAP_MODULES: { phase: number; num: number; title: string }[] = 
   { phase: 2, num: 6, title: "React Basics + Components" },
   { phase: 2, num: 7, title: "APIs + HTTP + JSON" },
   { phase: 2, num: 8, title: "Backend: Python + Postgres" },
-  { phase: 3, num: 9, title: "Testing (unit/integration/e2e)" },
-  { phase: 3, num: 10, title: "Debugging + Logging + Monitoring" },
-  { phase: 3, num: 11, title: "Security + Auth Patterns" },
-  { phase: 3, num: 12, title: "CI/CD + Docker + Deployment" },
-  { phase: 4, num: 13, title: "LLM APIs + Tokens + Cost" },
-  { phase: 4, num: 14, title: "Embeddings + RAG + Vector Search" },
-  { phase: 4, num: 15, title: "Structured Outputs + Tool Calling" },
-  { phase: 4, num: 16, title: "Evals + Safety + Guardrails" },
-  { phase: 5, num: 17, title: "Probability + Statistics" },
-  { phase: 5, num: 18, title: "Linear Algebra Basics" },
-  { phase: 5, num: 19, title: "Transformers + Attention" },
-  { phase: 5, num: 20, title: "Fine-tuning + Dataset Quality" },
-  { phase: 6, num: 21, title: "Agents + Orchestration" },
-  { phase: 6, num: 22, title: "Human-in-the-Loop + Guardrails" },
-  { phase: 6, num: 23, title: "Observability + Cost Controls" },
-  { phase: 6, num: 24, title: "AI Product Design + Edge Cases" },
+  { phase: 3, num: 9, title: "Pandas + Data Wrangling" },
+  { phase: 3, num: 10, title: "Feature Engineering + Selection" },
+  { phase: 3, num: 11, title: "Classical Machine Learning" },
+  { phase: 3, num: 12, title: "Model Evaluation + Cross-Validation" },
+  { phase: 4, num: 13, title: "Testing (unit/integration/e2e)" },
+  { phase: 4, num: 14, title: "Debugging + Logging + Monitoring" },
+  { phase: 4, num: 15, title: "Security + Auth Patterns" },
+  { phase: 4, num: 16, title: "CI/CD + Docker + Deployment" },
+  { phase: 5, num: 17, title: "LLM APIs + Tokens + Cost" },
+  { phase: 5, num: 18, title: "Embeddings + RAG + Vector Search" },
+  { phase: 5, num: 19, title: "Structured Outputs + Tool Calling" },
+  { phase: 5, num: 20, title: "Evals + Safety + Guardrails" },
+  { phase: 6, num: 21, title: "Probability + Statistics" },
+  { phase: 6, num: 22, title: "Linear Algebra Basics" },
+  { phase: 6, num: 23, title: "Transformers + Attention" },
+  { phase: 6, num: 24, title: "Fine-tuning + Dataset Quality" },
+  { phase: 7, num: 25, title: "Agents + Orchestration" },
+  { phase: 7, num: 26, title: "Human-in-the-Loop + Guardrails" },
+  { phase: 7, num: 27, title: "Observability + Cost Controls" },
+  { phase: 7, num: 28, title: "AI Product Design + Edge Cases" },
 ];
 
 // Modules with a real, built lesson. Everything else in ROADMAP_MODULES is
 // browsable but shows an honest "not published yet" state when opened.
 export const LESSON_CONTENT: Record<number, { key: "variables" | "rag"; title: string; minutes: number }> = {
   2: { key: "variables", title: "Variables — storing information", minutes: 25 },
-  14: { key: "rag", title: "RAG — teaching an LLM to cite its sources", minutes: 25 },
+  18: { key: "rag", title: "RAG — teaching an LLM to cite its sources", minutes: 25 },
 };
 
 export const OB_QUESTIONS: {
@@ -114,7 +119,7 @@ export const REVIEW_ROWS: { key: "crit" | "read" | "tests" | "deploy" | "readme"
 ];
 
 export type CapstoneData = {
-  phaseIndex: number; // 0-5, matches PHASES array index
+  phaseIndex: number; // 0-6, matches PHASES array index
   slug: string; // matches supabase projects.slug
   title: string;
   metaTags: string; // e.g. "INTERMEDIATE · 2-3 WEEKS · SOLO"
@@ -165,7 +170,7 @@ export const CAPSTONES: CapstoneData[] = [
     bugCodeAfter: `\n        return make_token(user)\n    return None`,
     bugNote: "← plain-text compare?",
     reviewFlagCopy: "You flagged the plain-text password compare. That’s exactly the judgment Framis is built to train.",
-    shippedHeadline: "Shipped. That’s project 2 of 6.",
+    shippedHeadline: "Shipped. That’s project 2 of 7.",
     autoCheckLine: "Auto-checks passed: repo public · README found · no secrets detected · 12/12 tests green.",
   },
   {
@@ -199,11 +204,11 @@ export const CAPSTONES: CapstoneData[] = [
     bugCodeAfter: `\n    return round(total, 2)`,
     bugNote: "← still a string?",
     reviewFlagCopy: "You flagged the amount getting summed as a raw string instead of a float. That’s exactly the judgment Framis is built to train.",
-    shippedHeadline: "Shipped. That’s project 1 of 6.",
+    shippedHeadline: "Shipped. That’s project 1 of 7.",
     autoCheckLine: "Auto-checks passed: repo public · README found · no secrets detected · 8/8 tests green.",
   },
   {
-    phaseIndex: 4,
+    phaseIndex: 5,
     slug: "train-deploy-classifier",
     title: "Spam-or-not classifier, trained and deployed for real",
     metaTags: "ADVANCED · 2–3 WEEKS · SOLO",
@@ -232,11 +237,11 @@ export const CAPSTONES: CapstoneData[] = [
     bugCodeAfter: `\nprint(f"Model accuracy: {accuracy:.2%}")`,
     bugNote: "← same data it trained on?",
     reviewFlagCopy: "You flagged the model being scored on the same data it trained on instead of the held-out test set. That’s exactly the judgment Framis is built to train.",
-    shippedHeadline: "Shipped. That’s project 5 of 6.",
+    shippedHeadline: "Shipped. That’s project 6 of 7.",
     autoCheckLine: "Auto-checks passed: repo public · README found · held-out test evaluation detected · API responds with valid predictions · no train/test leakage flagged.",
   },
   {
-    phaseIndex: 2,
+    phaseIndex: 3,
     slug: "tested-app-with-ci",
     title: "A URL shortener with a real CI pipeline",
     metaTags: "INTERMEDIATE · 2–3 WEEKS · SOLO",
@@ -265,11 +270,11 @@ export const CAPSTONES: CapstoneData[] = [
     bugCodeAfter: `\n      - run: docker build -t url-shortener .`,
     bugNote: "← always exits 0, even when tests fail",
     reviewFlagCopy: "You flagged the `|| true` that lets the pipeline pass even when tests fail. That’s exactly the judgment Framis is built to train.",
-    shippedHeadline: "Shipped. That’s project 3 of 6.",
+    shippedHeadline: "Shipped. That’s project 4 of 7.",
     autoCheckLine: "Auto-checks passed: repo public · README found · Dockerfile builds · CI pipeline green on latest commit · coverage 83% (≥80% threshold).",
   },
   {
-    phaseIndex: 5,
+    phaseIndex: 6,
     slug: "production-ai-system",
     title: "A production-grade support agent with a kill switch",
     metaTags: "ADVANCED · 3–4 WEEKS · SOLO OR PAIR",
@@ -299,11 +304,11 @@ export const CAPSTONES: CapstoneData[] = [
     bugCodeAfter: `\n\ndef handle_ticket(ticket):\n    if not AI_ENABLED:\n        return route_to_human(ticket)\n    response = agent.run(ticket)\n    return response`,
     bugNote: "← cached at import — flipping this in prod does nothing until restart",
     reviewFlagCopy: "You flagged the kill switch reading its config once at import instead of on every request. That’s exactly the judgment Framis is built to train.",
-    shippedHeadline: "Shipped. That’s project 6 of 6 — the whole route, done.",
+    shippedHeadline: "Shipped. That’s project 7 of 7 — the whole route, done.",
     autoCheckLine: "Auto-checks passed: repo public · README found · no secrets detected · eval suite 47/50 passing · kill switch verified live.",
   },
   {
-    phaseIndex: 3,
+    phaseIndex: 4,
     slug: "ai-qa-with-citations",
     title: "Ask-your-docs Q&A bot with real citations",
     metaTags: "INTERMEDIATE · 2–3 WEEKS · SOLO OR PAIR",
@@ -332,8 +337,42 @@ export const CAPSTONES: CapstoneData[] = [
     bugCodeAfter: `\n    response = llm.chat(prompt)\n    return response`,
     bugNote: "← where’d chunks go?",
     reviewFlagCopy: "You flagged the prompt that never includes the retrieved chunks — the model was answering from its own training data, not your documents. That’s exactly the judgment Framis is built to train.",
-    shippedHeadline: "Shipped. That’s project 4 of 6.",
+    shippedHeadline: "Shipped. That’s project 5 of 7.",
     autoCheckLine: "Auto-checks passed: repo public · README found · no hardcoded keys detected · 13/15 test questions answered with correct citations.",
+  },
+  {
+    phaseIndex: 2,
+    slug: "classical-ml-model-comparison",
+    title: "Classical ML model comparison — pick the right tool, not just any tool",
+    metaTags: "INTERMEDIATE · 2–3 WEEKS · SOLO",
+    description:
+      "You’re picking a real, messy dataset — a Kaggle competition, a UCI repository set, whatever you can defend — cleaning it, engineering features from it, and training three different classical models (a decision tree, a random forest, and a logistic regression or SVM) to solve the same classification problem. Instead of picking a winner by gut feeling, you compare all three with a proper train/validation/test split and more than one metric, document why the best one actually won, and publish it with a model card a stranger could read and trust.",
+    criteria: [
+      "Uses a real, non-synthetic dataset that required genuine cleaning (missing values, duplicates, or outliers handled and documented)",
+      "Engineers at least 3 features beyond the raw columns (e.g. encodings, ratios, bucketed values) with a stated reason for each",
+      "Trains at least 3 different classical algorithms on the same problem (e.g. decision tree, random forest, logistic regression or SVM)",
+      "Splits data into train, validation, and test sets before any fitting happens — encoders and scalers fit on train only",
+      "Compares all 3 models with more than accuracy (precision, recall, F1, or a confusion matrix)",
+      "Documents which model won and why in a model card, including its weaknesses",
+      "Deployed somewhere reachable — a Hugging Face Space, or an API endpoint — not just a local notebook",
+      "README explains the dataset, the cleaning decisions, and the feature choices",
+    ],
+    hints: [
+      "Do the messy, unglamorous data cleaning and exploration first — plot distributions, check for missing values and duplicates, and understand the class balance before you train anything.",
+      "Fit every scaler, encoder, and imputer on the training set only, then apply (never re-fit) the same transformation to validation and test — fitting on the full dataset first is the single most common leakage bug in classical ML.",
+      "Pick a naive baseline (always guess the majority class) before comparing your 3 real models — if a model can't beat the baseline by a meaningful margin, that's worth reporting honestly, not hiding.",
+    ],
+    repoBadgeLabel: "github.com/•••/ml-model-comparison",
+    liveBadgeLabel: "ml-comparison.hf.space ✓ live",
+    coverageLabel: "best model F1: 0.88",
+    bugFilename: "prepare_data.py",
+    bugCodeBefore: `scaler = StandardScaler()\n`,
+    bugCodeLine: "X_scaled = scaler.fit_transform(X)",
+    bugCodeAfter: `\n\nX_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2)`,
+    bugNote: "← scaled before the split?",
+    reviewFlagCopy: "You flagged the scaler being fit on the full dataset before the train/test split — that's data leakage, since the test set's statistics quietly influenced the scaling of the training data. That’s exactly the judgment Framis is built to train.",
+    shippedHeadline: "Shipped. That’s project 3 of 7.",
+    autoCheckLine: "Auto-checks passed: repo public · README found · train/val/test split detected before fitting · model card present · deployed endpoint responds.",
   },
 ];
 

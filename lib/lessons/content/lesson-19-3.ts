@@ -3,78 +3,82 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 19,
   orderIndex: 3,
-  phaseLabel: "TRANSFORMERS + ATTENTION",
-  title: "Raw scores aren't probabilities yet: scaling and softmax",
-  minutes: 22,
+  phaseLabel: "STRUCTURED OUTPUTS + TOOL CALLING",
+  title: "One Model, Many Tools: Routing Between Three or More",
+  minutes: 20,
   concept:
-    "The raw scores from the last lesson — trophy: 4, big: 3, suitcase: 1 — already rank relevance correctly, but they're not usable as attention weights yet, for two related reasons. First, dot products grow with the number of dimensions being multiplied and summed: our toy 4-dimensional vectors produce modest scores, but real attention heads often use 64 or more dimensions per vector, so their raw dot products can land in the dozens or hundreds. Second, and more subtly, once scores get fed into softmax — the function that turns a list of numbers into a genuine probability distribution, one that's all positive and sums to exactly 1, via score -> exp(score) / sum of exp(all scores) — larger raw scores get pushed apart more aggressively, because exp() grows extremely fast for bigger inputs. Big enough raw scores make softmax nearly one-hot: one token gets almost all the weight and everyone else gets a weight so close to zero that, during training, the gradient flowing back through those near-zero connections vanishes and the model stops learning from them. The fix is to divide every score by the square root of d_k (the dimensionality of the Query/Key vectors) before softmax ever sees them — scaling scores down in proportion to how many dimensions produced them, so softmax stays in a range where every token still gets a meaningful, learnable gradient. Our sandbox has no exp() or sqrt() built in, so we build both from scratch: a whole-number square root by testing guesses (the same brute-force trick from the vector magnitude lesson in Module 18, since our toy d_k of 4 is a perfect square), and exp(x) from its own mathematical definition — the series 1 + x + x²/2! + x³/3! + ... converges to the real value of e^x, so a loop that adds up enough of those terms gives a genuine, if approximate, exponential, and from there a real softmax.",
+    "Real agents rarely get just one tool — you might hand the model a weather lookup, a web search, and a currency converter all at once, and let it decide which ones actually fit the user's request. A single response can come back with just one tool call, or several at once (e.g. get_weather for Tokyo and get_weather for Paris in the same turn) — either way, each individual call is still its own \"name\" and \"arguments\" dict. Your dispatcher's job barely changes from the one-tool case — it just needs one elif branch per tool you offered, and it loops over however many calls came back, dispatching each one independently. Because if/elif is exclusive, only the branch whose condition actually matches runs for a given call; the moment one condition is true, every other elif and the final else are skipped entirely, so there's no risk of two tools accidentally firing for the same call. The real discipline is bookkeeping: every tool you describe to the model needs a matching elif in your dispatcher, or a call the model was told it could make has nowhere real to go.",
   conceptSimpler:
-    "It's like turning down the contrast on a photo before you compare it to others — raw scores already show which token matters more, but scaling (and the softmax that follows) is what keeps that contrast from blowing out into pure black-and-white before you've had a fair look.",
+    "Giving a model three tools instead of one is like adding more drawers to the same filing cabinet — the clerk still only reads one label at a time and walks to exactly one drawer, it's just that now there are more drawers to keep labeled correctly.",
   vizStages: [
     {
-      label: "1. Why divide by √d_k at all",
+      label: "1. The model can be offered many tools at once",
       body:
-        "The more dimensions two vectors have, the more terms get added into their dot product, so scores naturally grow just from vector length, not from genuine relevance. Dividing every score by √d_k undoes that growth in a way that scales consistently regardless of how many dimensions a head uses.",
-      code: "d_k = 4 (our toy dimension)   ->   scale = sqrt(4) = 2\nreal transformer d_k = 64     ->   scale = sqrt(64) = 8",
-    },
-    {
-      label: "2. Softmax's real formula, and why we need our own exp()",
-      body:
-        "Real softmax is score -> exp(score) / sum of exp(all scores). Our mini-language has no exp() or math module, so we hand-build one from the Taylor series definition of e^x — a loop that keeps adding smaller and smaller terms until the sum is a very close approximation of the true value.",
+        "You describe three separate tools to the model in one request: get_weather, search_web, and convert_currency. It's free to pick whichever one actually matches what the user asked for.",
       code:
-        "def exp_approx(x):\n    result = 1\n    term = 1\n    for i in range(1, 20):\n        term = term * x / i\n        result = result + term\n    return result\n# this is a real approximation of e^x, not a simplified stand-in formula",
+        "tools_offered = [\"get_weather\", \"search_web\", \"convert_currency\"]\nprint(f\"model was offered {len(tools_offered)} tools\")",
     },
     {
-      label: "3. Unscaled vs. scaled: watch the distribution soften",
+      label: "2. Each call is still one name, one arguments dict",
       body:
-        "Run softmax on the raw scores (4, 3, 1) and trophy grabs about 70% of the weight, with suitcase down near 4%. Scale those same scores by √4 = 2 first (2, 1.5, 0.5), and trophy drops to about 55% while suitcase rises to about 12% — a softer, more balanced distribution.",
+        "Whether the model comes back with one tool call or three in the same turn, every individual call has the same shape: one name, one arguments object. Here it chose convert_currency because the user asked about money.",
       code:
-        "UNSCALED softmax: trophy=0.705, big=0.259, suitcase=0.035\nSCALED softmax:   trophy=0.547, big=0.331, suitcase=0.122",
+        "tool_call = {\"name\": \"convert_currency\", \"arguments\": {\"amount\": 100, \"currency\": \"EUR\"}}\nprint(tool_call[\"name\"])",
     },
     {
-      label: "4. Scaling doesn't change the ranking, just the sharpness",
+      label: "3. if/elif routes to exactly one branch",
       body:
-        "Trophy still wins the most attention either way — scaling never flips which token matters most. What it changes is how extreme the gap is: without it, \"big\" and \"suitcase\" would get starved of almost any gradient signal during training; with it, they stay meaningfully in the mix.",
-      code: "trophy > big > suitcase in both cases -- scaling changes the spread, not the winner",
+        "Each tool gets its own elif, checking name against that tool's exact string. As soon as one matches, its body runs and every remaining elif is skipped — there's no fallthrough.",
+      code:
+        "def dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"get_weather\":\n        return get_weather(args[\"city\"])\n    elif name == \"search_web\":\n        return search_web(args[\"query\"])\n    elif name == \"convert_currency\":\n        return convert_currency(args[\"amount\"], args[\"currency\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")",
+    },
+    {
+      label: "4. Each tool still only gets its own arguments",
+      body:
+        "get_weather never sees amount or currency, and convert_currency never sees city — each branch reaches into args for only the keys that specific tool actually needs.",
+      code:
+        "result = dispatch(tool_call)\nprint(result)",
     },
   ],
   realWorldIntro:
-    "PyTorch's built-in scaled_dot_product_attention divides by exactly this — the square root of the Query/Key dimension — before softmax, for exactly this reason. Real models tend to pick d_k so the scale factor is a clean small number (64 dimensions per head is common, giving a scale of 8); our toy example uses d_k = 4 for the same reason, so √d_k comes out to a clean 2.",
+    "A customer-support agent might be offered look_up_order, issue_refund, and search_faq in the same request — the model picks exactly one per turn based on what the customer just typed, and your dispatcher needs a ready branch for every single one you declared to it.",
+  realWorldCode:
+    "def dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"look_up_order\":\n        return look_up_order(args[\"order_id\"])\n    elif name == \"issue_refund\":\n        return issue_refund(args[\"order_id\"], args[\"amount\"])\n    elif name == \"search_faq\":\n        return search_faq(args[\"query\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")",
   sandbox: {
     kind: "code",
     challenge:
-      "Implement sqrt_whole(n) and exp_approx(x) from scratch, then use them to compute softmax on the raw attention scores both with and without scaling by √d_k, and compare the two weight distributions.",
+      "Add a third tool, convert_currency(amount, currency), to a dispatcher that already knows get_weather and search_web, then route a batch of three different tool calls through it and print each tool's name next to its result.",
     starterCode:
-      "def sqrt_whole(n):\n    for guess in range(0, n + 1):\n        if guess * guess == n:\n            return guess\n    return -1\n\ndef exp_approx(x):\n    result = 1\n    term = 1\n    for i in range(1, 20):\n        term = term * x / i\n        result = result + term\n    return result\n\nd_k = 4\nscale = sqrt_whole(d_k)\nprint(f\"scale factor = sqrt({d_k}) = {scale}\")\n\nscore_trophy = 4\nscore_big = 3\nscore_suitcase = 1\n\n# softmax WITHOUT scaling\nexp_t_raw = exp_approx(score_trophy)\nexp_b_raw = exp_approx(score_big)\nexp_s_raw = exp_approx(score_suitcase)\ntotal_raw = exp_t_raw + exp_b_raw + exp_s_raw\nprint(f\"UNSCALED weights: trophy={exp_t_raw / total_raw}, big={exp_b_raw / total_raw}, suitcase={exp_s_raw / total_raw}\")\n\n# softmax WITH scaling\nscaled_trophy = score_trophy / scale\nscaled_big = score_big / scale\nscaled_suitcase = score_suitcase / scale\n\nexp_t = exp_approx(scaled_trophy)\nexp_b = exp_approx(scaled_big)\nexp_s = exp_approx(scaled_suitcase)\ntotal = exp_t + exp_b + exp_s\nprint(f\"SCALED weights:   trophy={exp_t / total}, big={exp_b / total}, suitcase={exp_s / total}\")",
+      "def get_weather(city):\n    if city == \"Tokyo\":\n        return \"22C and clear\"\n    elif city == \"Paris\":\n        return \"15C and rainy\"\n    else:\n        return \"unknown city\"\n\ndef search_web(query):\n    return f\"3 results for {query}\"\n\ndef convert_currency(amount, currency):\n    if currency == \"EUR\":\n        return amount * 0.92\n    elif currency == \"GBP\":\n        return amount * 0.79\n    else:\n        return amount\n\ndef dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"get_weather\":\n        return get_weather(args[\"city\"])\n    elif name == \"search_web\":\n        return search_web(args[\"query\"])\n    elif name == \"convert_currency\":\n        return convert_currency(args[\"amount\"], args[\"currency\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")\n\ncalls = []\ncalls.append({\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}})\ncalls.append({\"name\": \"search_web\", \"arguments\": {\"query\": \"best ramen in Tokyo\"}})\ncalls.append({\"name\": \"convert_currency\", \"arguments\": {\"amount\": 100, \"currency\": \"EUR\"}})\n\nfor call in calls:\n    result = dispatch(call)\n    print(call[\"name\"], \"->\", result)",
   },
   quizQuestion:
-    "If you skip the ÷√d_k step and run softmax directly on the raw scores (4, 3, 1), roughly what weight does \"trophy\" end up with, and why does that matter?",
+    "Which branch of this if/elif chain actually runs for this call, and what happens to the other two?",
   quizCode:
-    "score_trophy = 4\nscore_big = 3\nscore_suitcase = 1\nexp_t = exp_approx(score_trophy)\nexp_b = exp_approx(score_big)\nexp_s = exp_approx(score_suitcase)\ntotal = exp_t + exp_b + exp_s\nprint(exp_t / total)",
+    "def get_weather(city):\n    return f\"{city}: 22C\"\n\ndef convert_currency(amount, currency):\n    return amount * 0.92\n\ndef search_web(query):\n    return f\"3 results for {query}\"\n\ndef dispatch(call):\n    name = call[\"name\"]\n    args = call[\"arguments\"]\n    if name == \"get_weather\":\n        return get_weather(args[\"city\"])\n    elif name == \"convert_currency\":\n        return convert_currency(args[\"amount\"], args[\"currency\"])\n    elif name == \"search_web\":\n        return search_web(args[\"query\"])\n    else:\n        raise ValueError(f\"unknown tool: {name}\")\n\ncall = {\"name\": \"search_web\", \"arguments\": {\"query\": \"best ramen\"}}\nresult = dispatch(call)\nprint(result)",
   quizOptions: [
     {
       key: "a",
       label:
-        "About 0.71 — noticeably more extreme than the ~0.55 you get after scaling, which is exactly the vanishing-gradient risk scaling is meant to prevent",
+        "Only the search_web branch runs and returns; get_weather and convert_currency never execute at all for this call",
       correct: true,
     },
     {
       key: "b",
-      label: "About 0.55 — scaling doesn't actually change softmax's output, it's a purely cosmetic step",
+      label: "All three branches run in order, but only the last one's return value is kept",
       correct: false,
     },
     {
       key: "c",
-      label: "About 0.33 — softmax always splits weight evenly across however many scores it's given",
+      label: "None of the branches run, since search_web is checked last, so it falls through to else and raises",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — unscaled softmax on (4, 3, 1) gives trophy about 70.5% of the weight, versus about 54.7% once the scores are scaled down by √d_k first. That extra sharpness is exactly what makes low-scoring tokens' gradients vanish once real models push dot products into much larger ranges.",
+    "Right — an if/elif chain stops at the first branch whose condition is true. name == \"search_web\" matches the third branch, so only search_web(...) runs; get_weather and convert_currency are never reached at all for this particular call.",
   quizFeedbackIncorrect:
-    "Not quite — scaling absolutely changes softmax's output (it doesn't just relabel the same numbers), and softmax never splits weight evenly; it's driven entirely by how far apart the input scores are, and unscaled scores here push trophy up to about 70.5%, versus about 54.7% scaled.",
+    "Not quite — if/elif is exclusive, not run-everything-in-sequence: as soon as one branch's condition matches, its body runs and every remaining elif and the else are skipped, so only the search_web branch executes here.",
   takeaway:
-    "Scaling by √d_k keeps dot products from ballooning as dimensionality grows, and softmax turns those tamed scores into a genuine probability distribution over which tokens matter — together they're what makes raw relevance scores usable and trainable.",
+    "Offering the model more tools doesn't change the shape of what comes back — it's still one name and one arguments dict per call. Scaling to many tools just means one elif per tool, each reaching into arguments for only the keys that tool needs.",
 };
 
 export default content;

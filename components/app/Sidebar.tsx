@@ -125,7 +125,7 @@ export default function Sidebar() {
               <div className="font-inter text-[13px] font-semibold text-white">
                 {displayName}
               </div>
-              <div className="text-[11px] text-slateink-400">Week {stats?.weekNumber ?? 1} of 48</div>
+              <div className="text-[11px] text-slateink-400">Week {stats?.weekNumber ?? 1} of 64</div>
             </div>
           </div>
         </div>

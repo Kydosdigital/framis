@@ -129,6 +129,32 @@ function splitTopLevel(s: string, seps: string[]): string[] {
   return parts;
 }
 
+// True when s is wrapped in exactly one matching pair of parens spanning the
+// whole string, e.g. "(a + b)" or "((a+b))", but not "(a+b)*(c+d)" (the first
+// "(" closes before the end) or "(a+b)+c" (same).
+function isFullyParenthesized(s: string): boolean {
+  if (!s.startsWith("(") || !s.endsWith(")")) return false;
+  let depth = 0;
+  let q: string | null = null;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) {
+      if (ch === q && s[i - 1] !== "\\") q = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      q = ch;
+      continue;
+    }
+    if ("([{".includes(ch)) depth++;
+    else if (")]}".includes(ch)) {
+      depth--;
+      if (depth === 0 && i !== s.length - 1) return false;
+    }
+  }
+  return true;
+}
+
 type Scope = Record<string, Value>;
 
 function truthy(v: Value): boolean {
@@ -376,6 +402,10 @@ class Interpreter {
   evalExpr(expr: string, scope: Scope, lineNo: number): Value {
     const e = expr.trim();
 
+    if (isFullyParenthesized(e)) {
+      return this.evalExpr(e.slice(1, -1), scope, lineNo);
+    }
+
     // or / and (lowest precedence)
     let parts = splitTopLevel(e, [" or "]);
     if (parts.length > 1) return parts.some((p) => truthy(this.evalExpr(p, scope, lineNo)));
@@ -423,6 +453,15 @@ class Interpreter {
       // splitTopLevel doesn't tell us which operator matched at each split;
       // re-scan manually for correctness with mixed * / // %.
       return this.evalMulChain(e, scope, lineNo);
+    }
+
+    // Unary minus on a single term (e.g. "-z", "-foo(x)") — only when the
+    // remainder has no top-level +/- of its own, so ambiguous multi-term
+    // chains like "-3-4" fall through to the (pre-existing) binary handling
+    // above instead of being misparsed here.
+    if (e.startsWith("-") && !/^-?\d+(\.\d+)?$/.test(e) && splitTopLevel(e.slice(1), ["+", "-"]).length === 1) {
+      const inner = this.evalExpr(e.slice(1), scope, lineNo);
+      if (typeof inner === "number") return -inner;
     }
 
     if ((m = e.match(/^f(["'])([\s\S]*)\1$/))) {

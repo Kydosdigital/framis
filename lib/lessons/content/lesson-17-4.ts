@@ -3,84 +3,76 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 17,
   orderIndex: 4,
-  phaseLabel: "PROBABILITY + STATISTICS",
-  title: "Same average, totally different wobble: standard deviation",
+  phaseLabel: "LLM APIS + TOKENS + COST",
+  title: "Try, Try Again: Surviving Rate Limits in Production",
   minutes: 20,
   concept:
-    "Two datasets can have the exact same mean and still look completely different — one tightly clustered around that average, the other scattered wildly above and below it. Standard deviation is the number that captures this \"wobble\": roughly speaking, how far a typical value sits from the mean. Getting there starts with variance: for each value, subtract the mean to get its difference, then square that difference — squaring is the trick that turns every negative difference positive, so values below the mean and values above it don't cancel each other out to a misleading zero. Average all of those squared differences and you get the variance; standard deviation is just the square root of the variance, which brings the units back to something you can compare directly against the original data (since squaring a difference in milliseconds gives you \"squared milliseconds,\" which nobody can picture). We can't compute a square root directly here, but that's fine — the variance alone already tells you which of two datasets is more spread out, and you can reason about standard deviation as \"roughly the square root of this number.\"",
+    "Every LLM API caps how many requests (or tokens) you can send in a given window, and once you cross that cap the provider doesn't process your request — it rejects it with a rate-limit error and expects you to slow down. A production integration can't just crash the first time that happens; it needs to catch the error and retry, usually waiting a little longer before each subsequent attempt so it doesn't immediately hit the same wall again, an approach called exponential backoff. The retry loop itself needs a way to stop trying once a call finally succeeds — break exits the loop the instant one attempt works, so you're not burning further attempts (or further waiting) on a problem that's already solved. It's still worth keeping a succeeded flag alongside the break, flipped to True right before it, so that after the loop ends you have a clean answer to \"did it eventually work, or did every attempt fail?\" Wrapping the actual call in try/except lets you catch the specific error type the provider raises, log or count the failure, and let the loop move on to the next attempt instead of crashing the whole program.",
   conceptSimpler:
-    "Picture two archers with the same average distance from the bullseye — one's arrows are all clustered tightly near that average, the other's are scattered all over the target. Standard deviation is the number that tells you which archer is consistent and which one is all over the place.",
+    "Retrying a rate-limited API is like redialing a phone number that's busy — you don't slam the phone down after one busy signal, you hang up, wait a bit, and try again, giving up only after a reasonable number of attempts.",
   vizStages: [
     {
-      label: "1. Two datasets, identical mean",
+      label: "1. The provider says \"slow down\"",
       body:
-        "Set A: [8, 9, 10, 11, 12]. Set B: [2, 6, 10, 14, 18]. Sum each with a loop and divide by the count — both come out to a mean of exactly 10, even though B is visibly more spread out.",
-      code:
-        'a = [8, 9, 10, 11, 12]\nb = [2, 6, 10, 14, 18]\n\ntotal = 0\nfor x in a:\n    total = total + x\nmean_a = total / len(a)\nprint(mean_a)\n\n# 10 - and set b also averages to 10',
+        "Cross the rate limit and the API doesn't return a normal response — it returns an error signaling you sent too many requests too fast.",
+      code: "raise RateLimitError(\"429: too many requests\")",
     },
     {
-      label: "2. Plain differences from the mean always sum to zero",
+      label: "2. Catch it instead of crashing",
       body:
-        "Subtract the mean from every value in set A: -2, -1, 0, 1, 2. Add those up and you get exactly 0 — the positive and negative differences always cancel perfectly, no matter how spread out the data is. That's why raw differences can't measure spread.",
-      code:
-        'total = 0\nfor x in a:\n    diff = x - mean_a\n    total = total + diff\nprint(total)\n\n# 0 - always zero, for any dataset, which is useless for measuring spread',
+        "Wrapping the call in try/except means a rate-limit error gets handled in code, not by crashing the whole program.",
+      code: "try:\n    response = call_api(request)\nexcept RateLimitError as e:\n    print(\"rate limited:\", e)",
     },
     {
-      label: "3. Squaring the differences fixes that",
+      label: "3. break out of the loop the moment a call succeeds",
       body:
-        "Square each difference before adding it up: (-2)^2, (-1)^2, 0^2, 1^2, 2^2 becomes 4, 1, 0, 1, 4 — all positive, so they no longer cancel. Average them and you get the variance.",
-      code:
-        'sum_squared = 0\nfor x in a:\n    diff = x - mean_a\n    sum_squared = sum_squared + diff * diff\nvariance_a = sum_squared / len(a)\nprint(variance_a)\n\n# 2',
+        "Once a call actually works, there's no reason to keep retrying — break exits the loop immediately, before it ever reaches the remaining attempts. Flipping succeeded to True right before the break still gives you a clean record to check once the loop is over.",
+      code: "succeeded = False\nfor attempt in attempts:\n    try:\n        response = call_api(attempt)\n        succeeded = True\n        break\n    except RateLimitError as e:\n        print(\"retrying after\", e)",
     },
     {
-      label: "4. The wider dataset gets a much bigger variance",
+      label: "4. Back off a little longer each time",
       body:
-        "Run the same calculation on set B: differences are -8, -4, 0, 4, 8; squared, they're 64, 16, 0, 16, 64, averaging to a variance of 32 — sixteen times bigger than set A's variance of 2. Standard deviation is the square root of each: roughly 1.4 for A, roughly 5.7 for B, meaning a typical value in B sits about four times farther from the mean than in A.",
-      code:
-        'sum_squared = 0\nfor x in b:\n    diff = x - mean_b\n    sum_squared = sum_squared + diff * diff\nvariance_b = sum_squared / len(b)\nprint(variance_b)\n\n# 32 - much wider spread than set a\'s variance of 2',
+        "Real systems don't retry instantly — they wait longer after each failure (1 second, then 2, then 4...) so a struggling API isn't immediately hit with the exact same burst of traffic again.",
+      code: "wait_seconds = 2 ** tries\nprint(f\"waiting {wait_seconds}s before retrying\")",
     },
   ],
   realWorldIntro:
-    "This is why ML dashboards report standard deviation right alongside the average eval score: a model that scores consistently around 80% across test runs is far more trustworthy than one that swings between 60% and 100% while still averaging 80%, and standard deviation is the number that exposes that difference.",
-  realWorldCode:
-    'model_scores = [76, 78, 80, 82, 84]\n\ntotal = 0\nfor s in model_scores:\n    total = total + s\nmean = total / len(model_scores)\n\nsum_squared_diffs = 0\nfor s in model_scores:\n    diff = s - mean\n    sum_squared_diffs = sum_squared_diffs + diff * diff\n\nvariance = sum_squared_diffs / len(model_scores)\n\nprint(f"mean score: {mean}")\nprint(f"variance: {variance}")',
+    "Both the OpenAI and Anthropic SDKs retry rate-limit and server errors automatically with exponential backoff by default, and production code that calls these APIs directly (or through a custom client) needs the same try/except-and-retry pattern to stay reliable under load.",
   sandbox: {
     kind: "code",
     challenge:
-      "This variance calculator is squaring each difference incorrectly — fix it so it actually multiplies each difference by itself, instead of just doubling it, so the variance stops printing 0 for data that clearly has spread.",
+      "Simulate calling a flaky API across a fixed list of attempt outcomes, retrying with try/except until one succeeds, then break out of the loop the instant it does.",
     starterCode:
-      'scores = [60, 70, 80, 90, 100]\n\ntotal = 0\nfor s in scores:\n    total = total + s\nmean = total / len(scores)\n\nsum_squared_diffs = 0\nfor s in scores:\n    diff = s - mean\n    squared = diff * 2\n    sum_squared_diffs = sum_squared_diffs + squared\n\nvariance = sum_squared_diffs / len(scores)\n\nprint(f"mean: {mean}")\nprint(f"variance: {variance}")',
+      "def call_api(result):\n    if result == \"error\":\n        raise RateLimitError(\"429: too many requests\")\n    return \"ok: \" + result\n\nattempts = [\"error\", \"error\", \"success\"]\nsucceeded = False\ntries = 0\n\nfor result in attempts:\n    tries = tries + 1\n    try:\n        response = call_api(result)\n        succeeded = True\n        print(f\"try {tries} succeeded: {response}\")\n        break\n    except RateLimitError as e:\n        print(f\"try {tries} failed: {e}\")\n\nif succeeded:\n    print(f\"done after {tries} attempt(s)\")\nelse:\n    print(\"all retries exhausted, giving up\")",
   },
   quizQuestion:
-    "Dataset A and dataset B both have a mean of 50. Dataset A has a variance of 4, and dataset B has a variance of 400. What does this tell you?",
+    "This retry loop runs over a fixed list of attempt outcomes. How many times does tries get incremented, and what happens to the loop once a call succeeds?",
   quizCode:
-    "variance_a = 4\nvariance_b = 400\n# both datasets have a mean of 50",
+    "def call_api(result):\n    if result == \"error\":\n        raise RateLimitError(\"429\")\n    return \"ok\"\n\nattempts = [\"error\", \"success\", \"success\"]\nsucceeded = False\ntries = 0\n\nfor result in attempts:\n    tries = tries + 1\n    try:\n        response = call_api(result)\n        succeeded = True\n        break\n    except RateLimitError as e:\n        print(f\"retrying after {e}\")\n\nprint(tries)",
   quizOptions: [
     {
       key: "a",
       label:
-        "Dataset B's values are far more spread out around the mean than A's — since standard deviation is roughly the square root of variance, B's typical distance from 50 is about 20, versus about 2 for A",
+        "2 — the first attempt fails and the second succeeds, then break exits the loop immediately, so the third \"success\" in the list is never even visited",
       correct: true,
     },
     {
       key: "b",
-      label:
-        "Dataset B must have a higher mean than dataset A, since its variance is so much larger",
+      label: "3 — tries increments once for every item in attempts regardless of whether a call already succeeded",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "Variance only reflects how many data points are in a dataset, not how spread out the values are",
+      label: "1 — the loop stops after the very first attempt, since call_api raises an error immediately",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — variance (and its square root, standard deviation) measures spread around the mean, not the mean itself; a variance 100 times bigger means values in B typically sit roughly 10 times farther from 50 than values in A do.",
+    "Right — the first attempt raises and is caught (tries becomes 1), the second attempt succeeds (tries becomes 2) and immediately hits break, which exits the loop right there — the third \"success\" later in the list is never even reached.",
   quizFeedbackIncorrect:
-    "Not quite — both datasets share the same mean of 50; variance says nothing about where the mean sits, only about how far the values typically stray from it, and B's much larger variance means its values are far more spread out.",
+    "Not quite — walk it through: the first attempt raises and is caught (tries becomes 1), the second attempt succeeds (tries becomes 2) and then hits break, which exits the loop immediately — the third item in attempts is never visited at all, so tries stops at 2.",
   takeaway:
-    "Variance is the average of the squared differences from the mean — squaring keeps positive and negative differences from canceling out — and standard deviation is just its square root, back in the original units. Two datasets can share an identical mean and still tell very different stories about how consistent or scattered their values really are.",
+    "Handling rate limits in production means catching the specific error with try/except, retrying with a growing delay between attempts, and breaking out of the retry loop the instant a call finally succeeds instead of wasting further attempts on a problem that's already solved.",
 };
 
 export default content;

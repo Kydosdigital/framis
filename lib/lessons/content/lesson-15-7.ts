@@ -1,7 +1,7 @@
 import type { LessonData } from "../types";
 
 const content: LessonData = {
-  num: 11,
+  num: 15,
   orderIndex: 7,
   phaseLabel: "SECURITY + AUTH PATTERNS",
   title: "Logged in isn't the same as allowed: authorization and RBAC",

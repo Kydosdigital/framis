@@ -3,114 +3,128 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 12,
   orderIndex: 2,
-  phaseLabel: "CI/CD + DOCKER + DEPLOYMENT",
-  title: "Containers: why \"it works on my machine\" stops being an excuse",
-  minutes: 20,
+  phaseLabel: "MODEL EVALUATION + CROSS-VALIDATION",
+  title: "Metrics That Actually Matter: Precision, Recall, F1",
+  minutes: 22,
   concept:
-    "A container packages your application together with the exact runtime, libraries, and system dependencies it needs to run, sealed into one artifact called an image. That image is built once from a Dockerfile — a list of instructions like \"start from Node 20, copy in these files, install these exact dependency versions\" — and then that same, unchanging image is what runs on your laptop, in CI, and in production. This is different from a virtual machine, which emulates entire hardware and boots a full separate operating system; a container instead shares the host machine's kernel and just isolates the process, its filesystem, and its dependencies, which is why containers start in milliseconds instead of minutes. Because the image is frozen at build time, there's no longer a gap between \"the version of Node/Python/OpenSSL installed on my laptop\" and \"the version installed on the server\" — the image carries its own copy of all of that, so it behaves identically no matter where it's run. That's the whole point: bugs caused by environment drift, like a library version mismatch, simply can't happen anymore, because everyone is running the literal same bytes. Under the hood, an image is built as a stack of layers, one per instruction in the Dockerfile, and Docker caches each layer so an unchanged instruction is reused instead of re-run on every rebuild — which means the order instructions appear in matters just as much as what they say. A multi-stage build takes this further: one throwaway image with compilers and build tools produces the app, and a second, minimal image ships only the finished result, so build-time tooling never bloats what actually runs in production.",
+    "Accuracy — the percent of predictions a model got right — feels like the obvious way to grade a classifier, but it can be dangerously misleading whenever one outcome is much rarer than the other. To see why, you need to break predictions into four buckets by comparing what the model predicted against what actually happened: a true positive (predicted yes, actually yes), a false positive (predicted yes, actually no), a true negative (predicted no, actually no), and a false negative (predicted no, actually yes). Arrange those four counts in a grid and you get a confusion matrix — the raw material every other metric is built from. Accuracy is (TP + TN) divided by everything. Precision asks \"of the times the model said yes, how often was it actually right?\" — TP over (TP + FP) — and matters when false alarms are expensive. Recall asks \"of all the actual yeses, how many did the model catch?\" — TP over (TP + FN) — and matters when a missed case is expensive, like a disease that goes undetected. F1 is the harmonic mean of precision and recall, a single number that stays low if either one is bad, so a model can't hide a terrible recall behind a great precision. This whole lesson is fully real arithmetic — just division on counts you tally by looping — no shortcuts or simplifications needed here.",
   conceptSimpler:
-    "A container is like a shipping container for your code: it doesn't matter what's packed inside or which ship, crane, or truck moves it — the container's fixed shape means every piece of infrastructure handles it exactly the same way.",
+    "Accuracy is like grading a fire alarm only on how often it's silent when there's no fire — it'll look great even if it never once rings during an actual fire. Precision and recall grade the two ways it can fail separately: false alarms, and fires it missed.",
   vizStages: [
     {
-      label: "1. The classic bug",
+      label: "1. Predicted vs. actual, side by side",
       body:
-        "A developer's laptop has Node 18 installed globally. Their code runs perfectly. A teammate with Node 20 pulls the same commit and gets a crash — same code, different environment, different result.",
-      code: "# Dev A's machine\n$ node -v\nv18.19.0\n$ npm start\n> Server running on port 3000\n\n# Dev B's machine\n$ node -v\nv20.11.0\n$ npm start\n> TypeError: structuredClone is not a function",
+        "A spam filter checked 12 emails. predicted[i] is what the filter said; actual[i] is the truth. Line them up by index to compare, one email at a time.",
+      code:
+        "predicted = [1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]\nactual =    [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]\nprint(f\"checked {len(actual)} emails\")",
     },
     {
-      label: "2. What was actually different",
+      label: "2. Loop once, count all four buckets",
       body:
-        "Nothing in the source code changed. What differed was the installed Node version, some OS-level library, and possibly a global package version — none of which are tracked by git, so nobody noticed the drift until it broke.",
-      code: "// same file, same commit hash\n// different Node version underneath it\n// = different behavior at runtime",
+        "One pass through the list sorts every prediction into exactly one of four buckets: true positive, false positive, true negative, or false negative.",
+      code:
+        "tp = 0\nfp = 0\ntn = 0\nfn = 0\nfor i in range(len(actual)):\n    p = predicted[i]\n    a = actual[i]\n    if p == 1 and a == 1:\n        tp = tp + 1\n    elif p == 1 and a == 0:\n        fp = fp + 1\n    elif p == 0 and a == 0:\n        tn = tn + 1\n    elif p == 0 and a == 1:\n        fn = fn + 1\n\nprint(f\"TP={tp} FP={fp} TN={tn} FN={fn}\")",
     },
     {
-      label: "3. A Dockerfile freezes the environment",
+      label: "3. Accuracy, precision, recall, F1 — all just division",
       body:
-        "The Dockerfile pins the exact base image and installs dependencies from a lockfile, so the runtime is no longer \"whatever happens to be on this machine\" — it's specified, in writing, as part of the codebase. Notice it copies package.json and runs the install before copying the rest of the source: Docker caches each instruction as its own layer, so that (usually slow) install step is reused on every rebuild unless package.json itself changes, instead of reinstalling every dependency just because a source file was edited.",
-      code: "FROM node:20.11.0-slim\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nCMD [\"npm\", \"start\"]",
+        "Every one of these comes straight out of the four counts above. Precision only looks at what happens when the model said yes; recall only looks at what happens to the actual yeses.",
+      code:
+        "total = len(actual)\ncorrect = tp + tn\naccuracy = correct / total\n\nprecision_denom = tp + fp\nprecision = tp / precision_denom\n\nrecall_denom = tp + fn\nrecall = tp / recall_denom\n\nf1_denom = precision + recall\nf1 = 2 * precision * recall / f1_denom\n\nprint(f\"accuracy: {accuracy}\")\nprint(f\"precision: {precision}\")\nprint(f\"recall: {recall}\")\nprint(f\"f1: {f1}\")",
     },
     {
-      label: "4. Build once, run anywhere",
+      label: "4. The trap: 95% accuracy, 0% recall",
       body:
-        "docker build turns that Dockerfile into an image. Every machine — a laptop, a CI runner, a production server — runs that exact image instead of installing things fresh, so \"it works on my machine\" is no longer a meaningful distinction.",
-      code: "$ docker build -t framis-api:a1b2c3 .\n$ docker run framis-api:a1b2c3\n> Server running on port 3000\n# identical result, any host",
-    },
-    {
-      label: "5. More than one container: docker-compose",
-      body:
-        "A single Dockerfile packages one container, but a real app is rarely just one — this API also needs a Postgres database running alongside it. docker-compose describes every service and how they connect in one YAML file, so the whole stack comes up together with a single command instead of hand-running a separate docker run for each piece.",
-      code: "# docker-compose.yml\nservices:\n  api:\n    build: .\n    ports:\n      - \"3000:3000\"\n    environment:\n      DATABASE_URL: postgres://db:5432/app\n    depends_on:\n      - db\n  db:\n    image: postgres:16\n    environment:\n      POSTGRES_PASSWORD: devpassword\n\n$ docker compose up\n> Creating framis_db_1 ... done\n> Creating framis_api_1 ... done",
+        "A rare-disease screening set: 95 healthy patients, 5 sick ones. A lazy \"model\" that always predicts \"healthy\" never has to be right about a sick patient to rack up a great-looking accuracy score.",
+      code:
+        "actual = []\nfor i in range(95):\n    actual.append(0)\nfor i in range(5):\n    actual.append(1)\n\npredicted = []\nfor i in range(100):\n    predicted.append(0)\n\n# same counting loop as before, then accuracy vs. recall\n# accuracy: 0.95   recall: 0.0",
     },
   ],
   realWorldIntro:
-    "Framis keeps a single Dockerfile in the repo root, and CI builds one image from it that gets deployed unchanged to staging and then to production — nobody re-installs dependencies by hand on a server ever again.",
+    "Every ML framework computes these same four counts under the hood — scikit-learn's confusion_matrix and classification_report just do the looping and division for you at a scale that would be painful by hand.",
   realWorldCode:
-    "FROM node:20.11.0-slim\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --omit=dev\nCOPY . .\nRUN npm run build\nCMD [\"npm\", \"run\", \"start\"]",
+    "from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score\n\ntn, fp, fn, tp = confusion_matrix(y_actual, y_predicted).ravel()\nprecision = precision_score(y_actual, y_predicted)\nrecall = recall_score(y_actual, y_predicted)\nf1 = f1_score(y_actual, y_predicted)\n# scikit-learn also warns and defaults to 0 when a denominator is 0,\n# exactly like the guard clauses below",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each stage to see the same bug appear locally, then get eliminated once the app is containerized.",
-    stages: [
-      {
-        label: "Local machine, no container",
-        body:
-          "A developer installs a package globally and writes code that depends on a specific patch version of a system library. It runs fine for them, because their machine happens to already have what's needed.",
-        code: "$ npm install -g sharp@0.32.0\n$ node resize.js\n> resized image: ok",
-      },
-      {
-        label: "A teammate's machine, no container",
-        body:
-          "A second developer pulls the same commit onto a machine with a different OS and a different globally installed version of the same library. The exact same source file now fails.",
-        code: "$ node resize.js\n> Error: libvips version mismatch (needs 8.14, found 8.9)",
-      },
-      {
-        label: "Writing the Dockerfile",
-        body:
-          "Instead of relying on whatever happens to be installed on a given machine, the Dockerfile specifies the base image and installs dependencies inside the container itself, as a repeatable, scripted step.",
-        code: "FROM node:20-slim\nRUN apt-get update && apt-get install -y libvips-dev\nCOPY package*.json ./\nRUN npm ci",
-      },
-      {
-        label: "Building the image",
-        body:
-          "docker build executes every instruction in the Dockerfile in order and produces a single image containing the app plus the correct library versions, already installed and verified to work together.",
-        code: "$ docker build -t resize-tool .\n> Successfully built 7f3e9c1\n> Successfully tagged resize-tool:latest",
-      },
-      {
-        label: "Running the container anywhere",
-        body:
-          "Both developers now run the same image instead of running node directly on their own machines. The library version question is settled inside the image, so the bug can't resurface on either laptop.",
-        code: "$ docker run resize-tool node resize.js\n> resized image: ok\n# same result on both machines",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "A disease-screening model always predicts \"healthy\" (0) on 100 patients, 5 of whom are actually sick. Compute TP/FP/TN/FN by looping, then compute accuracy, precision, recall, and F1 — using a guard clause so dividing by zero doesn't crash the program.",
+    starterCode:
+      "actual = []\nfor i in range(95):\n    actual.append(0)\nfor i in range(5):\n    actual.append(1)\n\npredicted = []\nfor i in range(100):\n    predicted.append(0)\n\ntp = 0\nfp = 0\ntn = 0\nfn = 0\nfor i in range(len(actual)):\n    p = predicted[i]\n    a = actual[i]\n    if p == 1 and a == 1:\n        tp = tp + 1\n    elif p == 1 and a == 0:\n        fp = fp + 1\n    elif p == 0 and a == 0:\n        tn = tn + 1\n    elif p == 0 and a == 1:\n        fn = fn + 1\n\nprint(f\"TP={tp} FP={fp} TN={tn} FN={fn}\")\n\ntotal = len(actual)\ncorrect = tp + tn\naccuracy = correct / total\n\nprecision_denom = tp + fp\nif precision_denom == 0:\n    precision = 0\nelse:\n    precision = tp / precision_denom\n\nrecall_denom = tp + fn\nif recall_denom == 0:\n    recall = 0\nelse:\n    recall = tp / recall_denom\n\nf1_denom = precision + recall\nif f1_denom == 0:\n    f1 = 0\nelse:\n    f1 = 2 * precision * recall / f1_denom\n\nprint(f\"accuracy: {accuracy}\")\nprint(f\"precision: {precision}\")\nprint(f\"recall: {recall}\")\nprint(f\"f1: {f1}\")",
   },
   quizQuestion:
-    "Two engineers pull the exact same commit and get different behavior — one's code works, the other's crashes. What's the most likely cause, and how does a container actually fix it?",
+    "A cancer-screening model is evaluated on 200 patients: TP=8, FP=30, FN=2, TN=160. Missing an actual cancer case is far more costly than a false alarm that just leads to a follow-up test. Which metric best captures how good this model is at not missing real cases, and what does it score here?",
+  quizCode:
+    "tp = 8\nfp = 30\nfn = 2\ntn = 160\n\nrecall_denom = tp + fn\nrecall = tp / recall_denom\n\nprecision_denom = tp + fp\nprecision = tp / precision_denom\n\nprint(f\"recall: {recall}\")\nprint(f\"precision: {precision}\")",
   quizOptions: [
     {
       key: "a",
       label:
-        "Their machines have different installed runtime/library versions; a container bakes the exact runtime and dependencies into an image so both engineers run identical bytes instead of relying on what's installed locally",
+        "Recall = TP / (TP + FN) = 8 / 10 = 0.8 — it catches 80% of actual cancer cases, which is what matters when a miss is costly",
       correct: true,
     },
     {
       key: "b",
       label:
-        "Git must have silently applied the commit differently on each machine, so re-cloning the repository on both machines will resolve it",
+        "Precision = TP / (TP + FP) ≈ 0.21 — that's the number to focus on, since it's lower and lower always means worse",
       correct: false,
     },
     {
       key: "c",
-      label:
-        "Containers only change behavior in production, so this local discrepancy would exist with or without Docker",
+      label: "Accuracy = (TP + TN) / 200 = 0.84 — it's the single number that captures overall correctness best",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — the code was identical, so the difference had to be environmental (Node version, OS library, global package); a container removes that variable entirely by shipping the exact runtime and dependencies as part of the artifact both engineers run.",
+    "Right — recall = TP / (TP + FN) only looks at the actual positive cases and asks how many the model caught, which is exactly \"how many real cancers did we miss?\" With 8 caught out of 10 actual cases, recall is 0.8. This model does trigger a lot of false alarms (precision is low, about 0.21), but that's a separate, less costly problem in this scenario.",
   quizFeedbackIncorrect:
-    "Not quite — git tracks source code, not what's installed on a machine, so an identical commit can still behave differently across machines with different runtimes; a container fixes exactly this by freezing the runtime and dependencies into one image both machines run unchanged.",
+    "Not quite — precision (about 0.21) measures how often a positive prediction was correct, which describes the false-alarm rate, not missed cases. And accuracy blends everything together, so it can't tell you specifically how many real cancer cases slipped through. Recall = TP / (TP + FN) = 8 / 10 = 0.8 is the metric that isolates \"how many actual positives did we catch.\"",
   takeaway:
-    "A container turns \"make sure your machine matches mine\" into \"run this image\" — the runtime, libraries, and OS dependencies are frozen inside the artifact itself, so environment drift stops being a source of bugs.",
+    "Accuracy alone can hide a model that's completely useless at the one thing you actually need it to do. Break predictions into TP/FP/TN/FN, then reach for precision when false alarms are the expensive mistake and recall when missed cases are — a model can look great on accuracy and still score 0% on the metric that actually matters for your problem.",
+  explainers: [
+    {
+      id: "what-is-confusion-matrix",
+      term: "What's a Confusion Matrix?",
+      emoji: "🔲",
+      shortDef:
+        "A grid that sorts every prediction into one of four buckets: true positive, false positive, true negative, false negative.",
+      longDef:
+        "A confusion matrix is the raw count data behind every classification metric. Instead of collapsing performance into a single accuracy number, it keeps the four outcomes separate — correct yeses, incorrect yeses, correct nos, and incorrect nos — so you can see exactly which kind of mistake a model is making, not just how often it's wrong overall.",
+      whyMatters:
+        "Two models can have the identical accuracy while making completely different kinds of mistakes — one all false alarms, one all missed cases. The confusion matrix is what reveals that difference; accuracy alone hides it.",
+      realWorldExample:
+        "It's like a scoreboard for a spam filter that separately tracks \"real emails wrongly flagged as spam\" versus \"actual spam that got through\" — two very different problems that a single \"percent correct\" number would blur together.",
+      relatedTerms: ["what-is-precision", "what-is-recall"],
+      expandedByDefault: true,
+    },
+    {
+      id: "what-is-precision",
+      term: "What's Precision?",
+      emoji: "🎯",
+      shortDef:
+        "Of everything the model flagged as positive, what fraction was actually positive? TP / (TP + FP).",
+      longDef:
+        "Precision only looks at the times the model said \"yes.\" It answers: when this model raises its hand, how often is it actually right? A model with low precision cries wolf a lot — it makes plenty of positive predictions, but many of them are false alarms.",
+      whyMatters:
+        "Precision matters most when a false positive is costly or annoying — flagging a legitimate transaction as fraud, or a healthy patient as sick, both waste time and erode trust even though nothing was technically missed.",
+      realWorldExample:
+        "A metal detector that beeps at every belt buckle and coin in someone's pocket has low precision — most of its \"alerts\" aren't actually threats, even if it never misses a real one.",
+      relatedTerms: ["what-is-recall", "what-is-confusion-matrix"],
+    },
+    {
+      id: "what-is-recall",
+      term: "What's Recall?",
+      emoji: "🕸️",
+      shortDef:
+        "Of everything that was actually positive, what fraction did the model catch? TP / (TP + FN).",
+      longDef:
+        "Recall only looks at the actual positive cases in your data. It answers: of everything that was really true, how much did the model find? A model with low recall lets a lot of real positives slip through undetected, even if it's very careful about the positives it does flag.",
+      whyMatters:
+        "Recall matters most when a false negative — a miss — is the expensive or dangerous outcome, like a fraud transaction that goes through unflagged or a disease that goes undiagnosed.",
+      realWorldExample:
+        "A smoke detector that only goes off for large, obvious fires has low recall — it's letting a lot of real early-stage fires go undetected, which is exactly the failure mode you can't afford in a smoke detector.",
+      relatedTerms: ["what-is-precision", "what-is-confusion-matrix"],
+    },
+  ],
 };
 
 export default content;

@@ -56,7 +56,7 @@ function LessonBrowser({ onOpen }: { onOpen: (module: number) => void }) {
   return (
     <div>
       <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
-        ALL LESSONS · 24 MODULES
+        ALL LESSONS · 28 MODULES
       </div>
       <h1 className="mb-2.5 font-inter text-[27px] font-bold tracking-[-0.02em]">
         Pick any lesson
@@ -129,6 +129,7 @@ export default function Lesson() {
   const { module, lessonIndex } = active;
   const ref = resolveLesson(module, lessonIndex);
   const totalLessons = moduleLessonList(module).length;
+  const moduleMeta = ROADMAP_MODULES.find((m) => m.num === module);
 
   return (
     <div className="max-w-[780px]">
@@ -143,6 +144,17 @@ export default function Lesson() {
           totalLessons={totalLessons}
           nextUpLabel={nextLessonLabel(module, lessonIndex)}
         />
+      )}
+      {!ref && (
+        <div className="rounded-[12px] border border-line bg-card px-7 py-10 text-center">
+          <div className="mb-2 font-inter text-[18px] font-bold">
+            {moduleMeta?.title ?? "This module"} isn’t published yet
+          </div>
+          <p className="mx-auto max-w-[440px] text-[14.5px]/[1.6] text-ink-500">
+            We’re still building this lesson out. Check back soon, or jump to
+            another module in the meantime.
+          </p>
+        </div>
       )}
     </div>
   );

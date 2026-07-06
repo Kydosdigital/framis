@@ -3,81 +3,92 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 18,
   orderIndex: 2,
-  phaseLabel: "LINEAR ALGEBRA BASICS",
-  title: "Vector magnitude: how \"long\" is a vector",
-  minutes: 15,
+  phaseLabel: "EMBEDDINGS + RAG",
+  title: "Meaning as coordinates: how embeddings turn words into vectors",
+  minutes: 22,
   concept:
-    "Every vector has a magnitude — a single number for how long it is, ignoring direction entirely. Picture a vector as an arrow drawn from the origin: its magnitude is just the straight-line distance from the tip of that arrow back to (0, 0), the same distance you'd get from the Pythagorean theorem. You compute it by squaring every entry, adding those squares together, and then taking the square root of that sum — squaring first because it turns negative entries positive (a vector pointing \"backwards\" is still just as long), and the sum-of-squares step is exactly the same loop you'd use to take a vector's dot product with itself. The square root is the part that turns \"sum of squares\" into an actual length, undoing the squaring so the units make sense again. Magnitude matters because it measures intensity or scale — a longer embedding vector isn't necessarily \"more similar\" to anything, it might just represent a longer document or a more emphatic signal, which is exactly the wrinkle the next lesson deals with.",
+    "An embedding is a list of numbers — a vector — assigned to a piece of text, where the numbers together stand in for its meaning. Real embedding models produce hundreds or thousands of these numbers per bit of text, learned automatically from patterns across huge amounts of writing, but the core idea shows up perfectly with just a handful of hand-picked numbers per word. Words with related meanings end up with similar vectors: \"cat\" and \"kitten\" land close together, while \"cat\" and \"car\" land far apart, even though they're spelled similarly. \"Similar\" here is a mathematical statement, not a vibe — comparing two vectors number by number, for example with a dot product, gives a higher score when the vectors share the same pattern of large and small values in the same positions. But a raw dot product has a blind spot: a longer or more repetitive piece of text tends to produce a vector with bigger numbers across the board, and those bigger numbers inflate its dot product with almost anything, whether or not the two pieces of text are actually about the same thing. The fix is cosine similarity — the exact same dot product, divided by the length (magnitude) of each vector — which cancels out size and leaves only the angle between them, i.e. how aligned their direction is. This is the piece that every semantic search, recommendation system, and retrieval step sits on top of: before you can find \"the most similar chunk of text,\" you first need a way to turn text into numbers where similar things actually land near each other, and a way to compare them that isn't secretly just measuring which one is longer.",
   conceptSimpler:
-    "It's the same math as figuring out how far a hiker ended up from camp after walking 3 miles east and 4 miles north — you don't add 3 and 4, you square them, add the squares, and find the straight-line distance, which turns out to be a clean 5 miles.",
+    "Imagine giving every word a spot on a map, but instead of latitude and longitude, the axes are things like \"animal-ness\" and \"size.\" Words with related meanings end up as neighboring dots on that map. But a long-winded note can rack up a big raw score just by being wordy — dividing by each note's own length (that's cosine similarity) keeps the comparison fair, so it measures direction, not size.",
   vizStages: [
     {
-      label: "1. A vector as a straight-line distance",
+      label: "1. A vector is just a list of numbers",
       body:
-        "The vector [3, 4] can be drawn as an arrow: 3 units right, 4 units up. Its magnitude is the length of the straight line from the origin to that point — not 3 + 4 = 7, but the diagonal distance, which the Pythagorean theorem says is the square root of 3² + 4².",
-      code: "vec = [3, 4]\n# straight-line distance from (0,0) to (3,4)\n# = square root of (3*3 + 4*4)",
+        "Here each word gets 3 hand-picked numbers along made-up axes: [animal-ness, size, vehicle-ness]. \"cat\" scores high on animal-ness, medium on size, and zero on vehicle-ness.",
+      code: 'cat = [8, 2, 0]\n# axes: [animal-ness, size, vehicle-ness]',
     },
     {
-      label: "2. Square every entry, then add",
+      label: "2. Similar meaning, similar numbers",
       body:
-        "The first half of the job is a for-loop nearly identical to the dot product's: square each entry and accumulate a running total. This sum-of-squares is the number that lives \"under\" the square root.",
-      code:
-        "def sum_of_squares(vec):\n    total = 0\n    for i in range(len(vec)):\n        total = total + vec[i] * vec[i]\n    return total\n\nprint(sum_of_squares([3, 4]))  # 9 + 16 = 25",
+        "\"kitten\" and \"dog\" score high on animal-ness too, so their vectors sit close to cat's. \"car\" scores zero on animal-ness and high on vehicle-ness instead — its vector points in a totally different direction.",
+      code: 'kitten = [7, 3, 0]\ndog    = [6, 2, 0]\ncar    = [0, 0, 9]',
     },
     {
-      label: "3. The square root undoes the squaring",
+      label: "3. Measuring closeness with a dot product",
       body:
-        "Magnitude is technically the square root of that sum — but our mini-language has no sqrt(). When the numbers are chosen so the sum of squares is a perfect square, we can find that root by brute force: just test small whole numbers until one, squared, matches.",
+        "A dot product multiplies each matching pair of numbers and adds the results. Vectors that are large in the same positions produce a big dot product; vectors pointing in unrelated directions produce a small one, near zero.",
       code:
-        "def magnitude(vec):\n    target = sum_of_squares(vec)\n    for guess in range(0, target + 1):\n        if guess * guess == target:\n            return guess\n    return -1\n\nprint(magnitude([3, 4]))  # 25 -> guess 5, since 5*5 == 25",
+        "def dot(a, b):\n    total = 0\n    for i in range(len(a)):\n        total = total + a[i] * b[i]\n    return total\n\nprint(dot(cat, kitten))\nprint(dot(cat, car))\n\n62\n0",
     },
     {
-      label: "4. Scaling a vector scales its magnitude",
+      label: "4. A raw dot product can be fooled by length",
       body:
-        "[6, 8] is just [3, 4] with every entry doubled. Its sum of squares is 36 + 64 = 100, and the whole number whose square is 100 is 10 — exactly double the original magnitude of 5. Stretching a vector's entries stretches its length by the same factor.",
+        "dot() only adds up matching products — it has no idea whether a big total means \"genuinely similar\" or just \"a long, wordy vector.\" verbose_doc = [10, 10, 10] scores high on every axis, including vehicle-ness, which cat has nothing to do with. Even so, its raw dot product with cat (100) beats kitten's (62), even though kitten is obviously the closer match in direction. A longer or more repetitive chunk of text can produce bigger embedding numbers across the board, and a plain dot product rewards that size difference whether or not it reflects real similarity.",
       code:
-        "print(magnitude([3, 4]))  # 5\nprint(magnitude([6, 8]))  # 10 -- same direction, double the length",
+        "verbose_doc = [10, 10, 10]\n# a long, rambling chunk that touches every axis a little, just by being wordy\n\nprint(dot(cat, kitten))\nprint(dot(cat, verbose_doc))\n\n62\n100",
+    },
+    {
+      label: "5. Cosine similarity divides out the length",
+      body:
+        "The fix: divide the dot product by the magnitude (length) of each vector — magnitude is just the square root of a vector's dot product with itself. That division rescales every vector down to the same effective length first, so what's left measures only the angle between them — direction, not size. Once you correct for length, kitten (cosine ≈ 0.99) is clearly the closer match to cat, and verbose_doc (cosine ≈ 0.70) drops back down where it belongs, reversing what the raw dot product said.",
+      code:
+        "import math\n\ndef magnitude(v):\n    return math.sqrt(dot(v, v))\n\ndef cosine(a, b):\n    return dot(a, b) / (magnitude(a) * magnitude(b))\n\nprint(cosine(cat, kitten))\nprint(cosine(cat, verbose_doc))\n\n0.987\n0.7",
+    },
+    {
+      label: "6. Real embeddings: same idea, far more numbers",
+      body:
+        "Production models like OpenAI's text-embedding-3 output over a thousand numbers per piece of text, and nobody hand-picks what each number means — the model learns them from patterns in language. But comparing two of those vectors uses the exact same math shown above: almost always cosine similarity, or a plain dot product against vectors the provider has already normalized to unit length, so the length bias never has a chance to sneak in.",
     },
   ],
   realWorldIntro:
-    "In embedding search, magnitude quietly represents \"how much\" — a long, keyword-stuffed document or a very confident signal often produces a vector with a bigger magnitude, even if it isn't actually the best match in meaning. Knowing how to measure magnitude is the missing piece needed to stop a dot product from being fooled by size alone, which the next lesson tackles head-on with cosine similarity.",
+    "Search engines, recommendation feeds, and the retrieval step of RAG all call an embedding model — like OpenAI's text-embedding-3-small — to turn any sentence into a vector. Almost all of them default to cosine similarity rather than a raw dot product, or store every embedding pre-normalized to unit length so an ordinary dot product already behaves like one — specifically to avoid the length bias a raw dot product has.",
   realWorldCode:
-    "doc_vec = embed(long_document)   # naturally larger magnitude, just from length\nquery_vec = embed(short_query)   # smaller magnitude\n# comparing raw dot products would unfairly favor doc_vec for its size, not its relevance",
+    'embedding = embed_text("How do I reset my password?")\n# embedding is a list of 1536 numbers\nbest_match = most_similar(embedding, document_embeddings, metric="cosine")',
   sandbox: {
     kind: "code",
     challenge:
-      "Write sum_of_squares(vec) and magnitude(vec) (using the brute-force guess loop), then print the magnitude of [3, 4] and [6, 8].",
+      "Raw dot product says verbose_doc (100) is a closer match to cat than kitten (62) — but verbose_doc is just a long, rambling vector with big numbers everywhere. Add an if/else below the existing prints that compares cosine(cat, kitten) to cosine(cat, verbose_doc) and prints which one is genuinely the closer match once vector length is divided out. (Our mini sandbox has no math module, so sqrt_approx below stands in for math.sqrt using a few rounds of Newton's method.)",
     starterCode:
-      "def sum_of_squares(vec):\n    total = 0\n    for i in range(len(vec)):\n        total = total + vec[i] * vec[i]\n    return total\n\ndef magnitude(vec):\n    target = sum_of_squares(vec)\n    for guess in range(0, target + 1):\n        if guess * guess == target:\n            return guess\n    return -1\n\na = [3, 4]\nb = [6, 8]\n\nprint(f\"sum of squares of {a}: {sum_of_squares(a)}\")\nprint(f\"magnitude of {a}: {magnitude(a)}\")\nprint(f\"sum of squares of {b}: {sum_of_squares(b)}\")\nprint(f\"magnitude of {b}: {magnitude(b)}\")",
+      'def dot(a, b):\n    total = 0\n    for i in range(len(a)):\n        total = total + a[i] * b[i]\n    return total\n\ndef sqrt_approx(n):\n    if n == 0:\n        return 0\n    guess = n\n    for i in range(20):\n        step = n / guess\n        sum_val = guess + step\n        guess = sum_val / 2\n    return guess\n\ndef magnitude(v):\n    return sqrt_approx(dot(v, v))\n\ndef cosine(a, b):\n    d = dot(a, b)\n    m = magnitude(a) * magnitude(b)\n    return d / m\n\ndef round3(x):\n    scaled = x * 1000\n    return int(scaled) / 1000\n\ncat = [8, 2, 0]\nkitten = [7, 3, 0]\nverbose_doc = [10, 10, 10]\n\nprint("raw dot product (bigger number wins, no correction for length):")\nprint("cat . kitten =", dot(cat, kitten))\nprint("cat . verbose_doc =", dot(cat, verbose_doc))\n\nprint("cosine similarity (corrected for length, 1.0 = same direction):")\nprint("cosine(cat, kitten) =", round3(cosine(cat, kitten)))\nprint("cosine(cat, verbose_doc) =", round3(cosine(cat, verbose_doc)))',
   },
   quizQuestion:
-    "vec_y is exactly vec_x with every entry multiplied by 3. If magnitude(vec_x) is 5, what should magnitude(vec_y) be?",
+    "a = [5, 0, 0], b = [4, 1, 0], c = [6, 6, 6]. The code below shows dot(a, b) = 20 and dot(a, c) = 30, so the raw dot product says c is the closer match to a. Once you divide out each vector's length — cosine(a, b) ≈ 0.97, cosine(a, c) ≈ 0.58 — which one is actually more similar in direction to a?",
   quizCode:
-    "vec_x = [3, 4]\nvec_y = [9, 12]\nprint(sum_of_squares(vec_x))\nprint(sum_of_squares(vec_y))",
+    "a = [5, 0, 0]\nb = [4, 1, 0]\nc = [6, 6, 6]\n\ndef dot(x, y):\n    total = 0\n    for i in range(len(x)):\n        total = total + x[i] * y[i]\n    return total\n\nprint(dot(a, b))\nprint(dot(a, c))",
   quizOptions: [
     {
       key: "a",
-      label:
-        "15 — multiplying every entry by 3 multiplies each squared term by 9, so the sum of squares grows by 9, and the square root undoes that back down to a factor of 3",
-      correct: true,
-    },
-    {
-      key: "b",
-      label: "5 — magnitude doesn't change just because the entries got bigger",
+      label: "c, because a higher raw dot product always means a better match, regardless of vector length",
       correct: false,
     },
     {
+      key: "b",
+      label:
+        "b, because cosine similarity divides out each vector's magnitude — c's dot product was only bigger because c is a much longer vector, not because it points in a more similar direction",
+      correct: true,
+    },
+    {
       key: "c",
-      label: "45 — since the entries were scaled by 3, the magnitude should scale by 3 squared (9) as well",
+      label: "They're equally similar, since both b and c share at least one large value with a",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — scaling a vector's entries by k multiplies its sum of squares by k² (225 = 9 × 25), and the square root exactly cancels that squaring, so the magnitude itself only scales by k (5 × 3 = 15).",
+    "Right — c = [6, 6, 6] has a bigger raw dot product with a purely because it's a much longer vector (magnitude ≈ 10.39, versus b's ≈ 4.12), not because it points in a more similar direction. Cosine similarity divides the dot product by both magnitudes, which is why cosine(a, b) ≈ 0.97 — nearly parallel — correctly beats cosine(a, c) ≈ 0.58, even though the raw dot product ranking said the opposite.",
   quizFeedbackIncorrect:
-    "Not quite — magnitude is directly tied to the size of the entries (bigger entries mean a longer vector), but it doesn't grow by the same k² factor the sum of squares does; the square root brings that squared growth back down to a plain factor of k.",
+    "Not quite — dot(a, c) = 30 beats dot(a, b) = 20 only because c = [6, 6, 6] is a much longer vector; its direction is actually less aligned with a. Dividing out each vector's magnitude reveals cosine(a, b) ≈ 0.97 versus cosine(a, c) ≈ 0.58 — b is the real closer match, and this exact bias is why real embedding comparisons use cosine similarity, or pre-normalize every vector, instead of trusting a raw dot product.",
   takeaway:
-    "Magnitude is \"square, sum, then undo the squaring\" — it tells you how long a vector is, completely separate from which direction it points, and that distinction is exactly what the next lesson needs.",
+    "Embeddings turn meaning into numbers, and cosine similarity — a dot product divided by both vectors' magnitudes — turns \"similar meaning\" into a comparable score that isn't skewed by how long or repetitive a piece of text happens to be. Every semantic search, recommendation system, and RAG retriever is built on exactly this idea — just with far more dimensions, learned automatically instead of hand-picked, and usually pre-normalized so the length bias never even comes up.",
 };
 
 export default content;

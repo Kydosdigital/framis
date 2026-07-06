@@ -3,81 +3,114 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 16,
   orderIndex: 2,
-  phaseLabel: "EVALS + SAFETY + GUARDRAILS",
-  title: "In and out: a guardrail that checks both ends of the conversation",
-  minutes: 18,
+  phaseLabel: "CI/CD + DOCKER + DEPLOYMENT",
+  title: "Containers: why \"it works on my machine\" stops being an excuse",
+  minutes: 20,
   concept:
-    "A guardrail is a plain function that runs alongside the model, not inside it — it checks a piece of text against a list of things you've decided are unsafe, and returns whether that text is allowed through. The same guardrail typically runs twice: once on the user's input before it ever reaches the model, and once on the model's output before it ever reaches the user, because a bad response can show up even from a completely innocent-looking prompt. The simplest version of this check is a blocklist: a list of exact words or phrases you consider unsafe, compared one at a time against every word in the text you're checking, with a flag that flips the moment any match is found. Because this comparison is exact matching rather than any real understanding of meaning, a blocklist guardrail is fast, cheap, and completely predictable — but it only catches the specific words you thought to list, so a synonym, a typo, or a clever rephrasing slides right through untouched. That's why guardrails get described as a floor, not a ceiling: they catch the obvious, known-bad cases for almost no cost, and everything subtler still needs a smarter classifier, a real eval, or a human.",
+    "A container packages your application together with the exact runtime, libraries, and system dependencies it needs to run, sealed into one artifact called an image. That image is built once from a Dockerfile — a list of instructions like \"start from Node 20, copy in these files, install these exact dependency versions\" — and then that same, unchanging image is what runs on your laptop, in CI, and in production. This is different from a virtual machine, which emulates entire hardware and boots a full separate operating system; a container instead shares the host machine's kernel and just isolates the process, its filesystem, and its dependencies, which is why containers start in milliseconds instead of minutes. Because the image is frozen at build time, there's no longer a gap between \"the version of Node/Python/OpenSSL installed on my laptop\" and \"the version installed on the server\" — the image carries its own copy of all of that, so it behaves identically no matter where it's run. That's the whole point: bugs caused by environment drift, like a library version mismatch, simply can't happen anymore, because everyone is running the literal same bytes. Under the hood, an image is built as a stack of layers, one per instruction in the Dockerfile, and Docker caches each layer so an unchanged instruction is reused instead of re-run on every rebuild — which means the order instructions appear in matters just as much as what they say. A multi-stage build takes this further: one throwaway image with compilers and build tools produces the app, and a second, minimal image ships only the finished result, so build-time tooling never bloats what actually runs in production.",
   conceptSimpler:
-    "It's the metal detector at a stadium gate: fast, and great at catching the exact things it was built to detect, but it does nothing at all against a threat it wasn't designed to recognize.",
+    "A container is like a shipping container for your code: it doesn't matter what's packed inside or which ship, crane, or truck moves it — the container's fixed shape means every piece of infrastructure handles it exactly the same way.",
   vizStages: [
     {
-      label: "1. Two checkpoints, not one",
+      label: "1. The classic bug",
       body:
-        "A guardrail sits at both ends of the pipeline — once between the user and the model, and once between the model and the user — because unsafe text can originate from either side.",
-      code:
-        "# user_input -> [guardrail] -> model -> [guardrail] -> user\nblocked_terms = [\"malware\", \"bomb\", \"ssn\"]",
+        "A developer's laptop has Node 18 installed globally. Their code runs perfectly. A teammate with Node 20 pulls the same commit and gets a crash — same code, different environment, different result.",
+      code: "# Dev A's machine\n$ node -v\nv18.19.0\n$ npm start\n> Server running on port 3000\n\n# Dev B's machine\n$ node -v\nv20.11.0\n$ npm start\n> TypeError: structuredClone is not a function",
     },
     {
-      label: "2. The blocklist is just a list",
+      label: "2. What was actually different",
       body:
-        "There's no cleverness here on purpose — it's a list of exact strings someone decided are never acceptable, kept separate from the checking logic so it can be updated without touching any code.",
-      code: "blocked_terms = [\"malware\", \"bomb\", \"ssn\", \"creditcard\"]",
+        "Nothing in the source code changed. What differed was the installed Node version, some OS-level library, and possibly a global package version — none of which are tracked by git, so nobody noticed the drift until it broke.",
+      code: "// same file, same commit hash\n// different Node version underneath it\n// = different behavior at runtime",
     },
     {
-      label: "3. Checking word by word with a flag",
+      label: "3. A Dockerfile freezes the environment",
       body:
-        "The checker walks every word in the text and compares it against every entry in the blocklist. The moment one matches, a boolean flag flips to unsafe — there's no partial credit and no early exit needed for correctness.",
-      code:
-        "def is_safe(words, blocked):\n    safe = True\n    for w in words:\n        for term in blocked:\n            if w == term:\n                safe = False\n    return safe",
+        "The Dockerfile pins the exact base image and installs dependencies from a lockfile, so the runtime is no longer \"whatever happens to be on this machine\" — it's specified, in writing, as part of the codebase. Notice it copies package.json and runs the install before copying the rest of the source: Docker caches each instruction as its own layer, so that (usually slow) install step is reused on every rebuild unless package.json itself changes, instead of reinstalling every dependency just because a source file was edited.",
+      code: "FROM node:20.11.0-slim\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nCMD [\"npm\", \"start\"]",
     },
     {
-      label: "4. Allow or block, nothing in between",
+      label: "4. Build once, run anywhere",
       body:
-        "The final decision is binary: if is_safe comes back True, the text moves on to the next stage of the pipeline; if it comes back False, it gets rejected or rewritten before it goes any further.",
-      code:
-        "if is_safe(reply_words, blocked_terms):\n    send_to_user(reply_words)\nelse:\n    print(\"BLOCKED: response withheld\")",
+        "docker build turns that Dockerfile into an image. Every machine — a laptop, a CI runner, a production server — runs that exact image instead of installing things fresh, so \"it works on my machine\" is no longer a meaningful distinction.",
+      code: "$ docker build -t framis-api:a1b2c3 .\n$ docker run framis-api:a1b2c3\n> Server running on port 3000\n# identical result, any host",
+    },
+    {
+      label: "5. More than one container: docker-compose",
+      body:
+        "A single Dockerfile packages one container, but a real app is rarely just one — this API also needs a Postgres database running alongside it. docker-compose describes every service and how they connect in one YAML file, so the whole stack comes up together with a single command instead of hand-running a separate docker run for each piece.",
+      code: "# docker-compose.yml\nservices:\n  api:\n    build: .\n    ports:\n      - \"3000:3000\"\n    environment:\n      DATABASE_URL: postgres://db:5432/app\n    depends_on:\n      - db\n  db:\n    image: postgres:16\n    environment:\n      POSTGRES_PASSWORD: devpassword\n\n$ docker compose up\n> Creating framis_db_1 ... done\n> Creating framis_api_1 ... done",
     },
   ],
   realWorldIntro:
-    "Many production assistants run a moderation check as a required pipeline step on every single request and every single response, rejecting or rewriting anything that trips it regardless of how the model itself would have handled it left alone.",
+    "Framis keeps a single Dockerfile in the repo root, and CI builds one image from it that gets deployed unchanged to staging and then to production — nobody re-installs dependencies by hand on a server ever again.",
   realWorldCode:
-    "if not is_safe(user_words, blocked_terms):\n    print(\"request blocked before reaching the model\")\nelif not is_safe(model_words, blocked_terms):\n    print(\"response blocked before reaching the user\")\nelse:\n    print(\"delivered\")",
+    "FROM node:20.11.0-slim\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --omit=dev\nCOPY . .\nRUN npm run build\nCMD [\"npm\", \"run\", \"start\"]",
   sandbox: {
-    kind: "code",
-    challenge:
-      "Trace the guardrail below: it checks a user message and a model reply against a shared blocklist and prints ALLOWED or BLOCKED for each.",
-    starterCode:
-      "blocked_terms = [\"bomb\", \"malware\", \"ssn\", \"creditcard\"]\n\ndef is_safe(words, blocked):\n    safe = True\n    for w in words:\n        for term in blocked:\n            if w == term:\n                safe = False\n    return safe\n\ndef check_and_report(label, words, blocked):\n    if is_safe(words, blocked):\n        print(f\"{label}: ALLOWED\", words)\n    else:\n        print(f\"{label}: BLOCKED\", words)\n\nuser_input = [\"explain\", \"how\", \"photosynthesis\", \"works\"]\nrisky_input = [\"give\", \"me\", \"a\", \"customer\", \"ssn\"]\n\nmodel_output = [\"the\", \"sun\", \"provides\", \"energy\"]\nrisky_output = [\"here\", \"is\", \"malware\", \"code\"]\n\ncheck_and_report(\"user_input\", user_input, blocked_terms)\ncheck_and_report(\"risky_input\", risky_input, blocked_terms)\ncheck_and_report(\"model_output\", model_output, blocked_terms)\ncheck_and_report(\"risky_output\", risky_output, blocked_terms)",
+    kind: "explore",
+    instructions:
+      "Click through each stage to see the same bug appear locally, then get eliminated once the app is containerized.",
+    stages: [
+      {
+        label: "Local machine, no container",
+        body:
+          "A developer installs a package globally and writes code that depends on a specific patch version of a system library. It runs fine for them, because their machine happens to already have what's needed.",
+        code: "$ npm install -g sharp@0.32.0\n$ node resize.js\n> resized image: ok",
+      },
+      {
+        label: "A teammate's machine, no container",
+        body:
+          "A second developer pulls the same commit onto a machine with a different OS and a different globally installed version of the same library. The exact same source file now fails.",
+        code: "$ node resize.js\n> Error: libvips version mismatch (needs 8.14, found 8.9)",
+      },
+      {
+        label: "Writing the Dockerfile",
+        body:
+          "Instead of relying on whatever happens to be installed on a given machine, the Dockerfile specifies the base image and installs dependencies inside the container itself, as a repeatable, scripted step.",
+        code: "FROM node:20-slim\nRUN apt-get update && apt-get install -y libvips-dev\nCOPY package*.json ./\nRUN npm ci",
+      },
+      {
+        label: "Building the image",
+        body:
+          "docker build executes every instruction in the Dockerfile in order and produces a single image containing the app plus the correct library versions, already installed and verified to work together.",
+        code: "$ docker build -t resize-tool .\n> Successfully built 7f3e9c1\n> Successfully tagged resize-tool:latest",
+      },
+      {
+        label: "Running the container anywhere",
+        body:
+          "Both developers now run the same image instead of running node directly on their own machines. The library version question is settled inside the image, so the bug can't resurface on either laptop.",
+        code: "$ docker run resize-tool node resize.js\n> resized image: ok\n# same result on both machines",
+      },
+    ],
   },
   quizQuestion:
-    "A team only runs their blocklist guardrail on the user's input, never on the model's output. Which scenario slips through anyway?",
-  quizCode:
-    "def is_safe(words, blocked):\n    safe = True\n    for w in words:\n        for term in blocked:\n            if w == term:\n                safe = False\n    return safe\n\nblocked_terms = [\"malware\"]\nuser_message = [\"please\", \"explain\", \"encryption\"]\nmodel_reply = [\"here\", \"is\", \"malware\", \"code\"]\n\nif is_safe(user_message, blocked_terms):\n    print(\"input check: ALLOWED - forwarding model reply to user\")\nprint(model_reply)",
+    "Two engineers pull the exact same commit and get different behavior — one's code works, the other's crashes. What's the most likely cause, and how does a container actually fix it?",
   quizOptions: [
     {
       key: "a",
       label:
-        "The model generates unsafe content in response to a totally benign-looking prompt, so nothing about the input would have tripped the filter — only checking the output would catch it",
+        "Their machines have different installed runtime/library versions; a container bakes the exact runtime and dependencies into an image so both engineers run identical bytes instead of relying on what's installed locally",
       correct: true,
     },
     {
       key: "b",
-      label: "The blocklist doesn't have enough words in it, which is the only reason anything unsafe could ever get through",
+      label:
+        "Git must have silently applied the commit differently on each machine, so re-cloning the repository on both machines will resolve it",
       correct: false,
     },
     {
       key: "c",
-      label: "Checking input alone is always sufficient, since a model can never produce unsafe text on its own",
+      label:
+        "Containers only change behavior in production, so this local discrepancy would exist with or without Docker",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — the quiz code shows exactly this: user_message passes the input check easily, but model_reply contains \"malware\" and is never checked at all, so it goes straight to the user unfiltered.",
+    "Right — the code was identical, so the difference had to be environmental (Node version, OS library, global package); a container removes that variable entirely by shipping the exact runtime and dependencies as part of the artifact both engineers run.",
   quizFeedbackIncorrect:
-    "Not quite — the list length isn't the issue here; even a perfect blocklist can't catch anything if it's only ever applied to the input side, and the model's own output was never run through it.",
+    "Not quite — git tracks source code, not what's installed on a machine, so an identical commit can still behave differently across machines with different runtimes; a container fixes exactly this by freezing the runtime and dependencies into one image both machines run unchanged.",
   takeaway:
-    "Guardrails are exact-match filters that should run on both the input reaching the model and the output leaving it, since an unsafe result can appear on either side — but because they only catch what's on the list, they're a cheap first line of defense, not a substitute for real evals or human review.",
+    "A container turns \"make sure your machine matches mine\" into \"run this image\" — the runtime, libraries, and OS dependencies are frozen inside the artifact itself, so environment drift stops being a source of bugs.",
 };
 
 export default content;

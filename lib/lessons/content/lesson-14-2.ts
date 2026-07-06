@@ -3,92 +3,81 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 14,
   orderIndex: 2,
-  phaseLabel: "EMBEDDINGS + RAG",
-  title: "Meaning as coordinates: how embeddings turn words into vectors",
-  minutes: 22,
+  phaseLabel: "DEBUGGING + LOGGING + MONITORING",
+  title: "Logging Levels: A Volume Knob for Your Print Statements",
+  minutes: 20,
   concept:
-    "An embedding is a list of numbers — a vector — assigned to a piece of text, where the numbers together stand in for its meaning. Real embedding models produce hundreds or thousands of these numbers per bit of text, learned automatically from patterns across huge amounts of writing, but the core idea shows up perfectly with just a handful of hand-picked numbers per word. Words with related meanings end up with similar vectors: \"cat\" and \"kitten\" land close together, while \"cat\" and \"car\" land far apart, even though they're spelled similarly. \"Similar\" here is a mathematical statement, not a vibe — comparing two vectors number by number, for example with a dot product, gives a higher score when the vectors share the same pattern of large and small values in the same positions. But a raw dot product has a blind spot: a longer or more repetitive piece of text tends to produce a vector with bigger numbers across the board, and those bigger numbers inflate its dot product with almost anything, whether or not the two pieces of text are actually about the same thing. The fix is cosine similarity — the exact same dot product, divided by the length (magnitude) of each vector — which cancels out size and leaves only the angle between them, i.e. how aligned their direction is. This is the piece that every semantic search, recommendation system, and retrieval step sits on top of: before you can find \"the most similar chunk of text,\" you first need a way to turn text into numbers where similar things actually land near each other, and a way to compare them that isn't secretly just measuring which one is longer.",
+    "Every log line has a severity attached to it, not just a message: DEBUG is granular detail useful only while you're actively chasing a bug, INFO is normal expected activity like \"user logged in\" or \"order placed\", WARNING is something surprising that the system noticed but recovered from on its own, and ERROR is something that actually failed. Instead of printing every single line all the time, real logging systems compare each line's severity against one configured threshold — usually called LOG_LEVEL — and only let messages at or above that threshold through. Set the threshold to INFO in production and the flood of DEBUG chatter disappears while you still see every login, checkout, and failure; drop it to DEBUG on your own machine while hunting a bug and every detail reappears, with zero code changes. This is the entire reason logging levels exist: the print statements stay in the code forever, and turning the noise up or down is just flipping one setting.",
   conceptSimpler:
-    "Imagine giving every word a spot on a map, but instead of latitude and longitude, the axes are things like \"animal-ness\" and \"size.\" Words with related meanings end up as neighboring dots on that map. But a long-winded note can rack up a big raw score just by being wordy — dividing by each note's own length (that's cosine similarity) keeps the comparison fair, so it measures direction, not size.",
+    "It's like a smoke detector with a sensitivity dial — crank it all the way up and it beeps at burnt toast, turn it down and it only goes off for an actual fire, but it's the exact same detector wired the exact same way the whole time.",
   vizStages: [
     {
-      label: "1. A vector is just a list of numbers",
+      label: "1. Four severities, four situations",
       body:
-        "Here each word gets 3 hand-picked numbers along made-up axes: [animal-ness, size, vehicle-ness]. \"cat\" scores high on animal-ness, medium on size, and zero on vehicle-ness.",
-      code: 'cat = [8, 2, 0]\n# axes: [animal-ness, size, vehicle-ness]',
-    },
-    {
-      label: "2. Similar meaning, similar numbers",
-      body:
-        "\"kitten\" and \"dog\" score high on animal-ness too, so their vectors sit close to cat's. \"car\" scores zero on animal-ness and high on vehicle-ness instead — its vector points in a totally different direction.",
-      code: 'kitten = [7, 3, 0]\ndog    = [6, 2, 0]\ncar    = [0, 0, 9]',
-    },
-    {
-      label: "3. Measuring closeness with a dot product",
-      body:
-        "A dot product multiplies each matching pair of numbers and adds the results. Vectors that are large in the same positions produce a big dot product; vectors pointing in unrelated directions produce a small one, near zero.",
+        "The same four calls exist in the code no matter what environment it runs in — DEBUG for step-by-step detail, INFO for routine events, WARNING for recovered hiccups, ERROR for real failures.",
       code:
-        "def dot(a, b):\n    total = 0\n    for i in range(len(a)):\n        total = total + a[i] * b[i]\n    return total\n\nprint(dot(cat, kitten))\nprint(dot(cat, car))\n\n62\n0",
+        "log(\"DEBUG\", \"cache miss for user 42\")\nlog(\"INFO\", \"user 42 logged in\")\nlog(\"WARNING\", \"payment retry attempt 2 of 3\")\nlog(\"ERROR\", \"payment gateway timeout\")",
     },
     {
-      label: "4. A raw dot product can be fooled by length",
+      label: "2. Every level gets a numeric rank",
       body:
-        "dot() only adds up matching products — it has no idea whether a big total means \"genuinely similar\" or just \"a long, wordy vector.\" verbose_doc = [10, 10, 10] scores high on every axis, including vehicle-ness, which cat has nothing to do with. Even so, its raw dot product with cat (100) beats kitten's (62), even though kitten is obviously the closer match in direction. A longer or more repetitive chunk of text can produce bigger embedding numbers across the board, and a plain dot product rewards that size difference whether or not it reflects real similarity.",
+        "To compare severities, each level name is mapped to a number. Higher number means more severe, so ERROR outranks WARNING, which outranks INFO, which outranks DEBUG.",
+      code: "LEVELS = {\"DEBUG\": 1, \"INFO\": 2, \"WARNING\": 3, \"ERROR\": 4}",
+    },
+    {
+      label: "3. The threshold decides what survives",
+      body:
+        "log() looks up the rank of the message's level and the rank of the configured LOG_LEVEL, and only prints if the message's rank is at or above the threshold's rank.",
       code:
-        "verbose_doc = [10, 10, 10]\n# a long, rambling chunk that touches every axis a little, just by being wordy\n\nprint(dot(cat, kitten))\nprint(dot(cat, verbose_doc))\n\n62\n100",
+        "LOG_LEVEL = \"INFO\"\nthreshold = LEVELS[LOG_LEVEL]\n\ndef log(level, message):\n    if LEVELS[level] >= threshold:\n        print(f\"[{level}] {message}\")",
     },
     {
-      label: "5. Cosine similarity divides out the length",
+      label: "4. Same four calls, different output per threshold",
       body:
-        "The fix: divide the dot product by the magnitude (length) of each vector — magnitude is just the square root of a vector's dot product with itself. That division rescales every vector down to the same effective length first, so what's left measures only the angle between them — direction, not size. Once you correct for length, kitten (cosine ≈ 0.99) is clearly the closer match to cat, and verbose_doc (cosine ≈ 0.70) drops back down where it belongs, reversing what the raw dot product said.",
+        "With LOG_LEVEL set to \"INFO\", the DEBUG line is silently dropped while INFO, WARNING, and ERROR all print. Raise it to \"ERROR\" and only the ERROR line survives — nothing else about the code changed.",
       code:
-        "import math\n\ndef magnitude(v):\n    return math.sqrt(dot(v, v))\n\ndef cosine(a, b):\n    return dot(a, b) / (magnitude(a) * magnitude(b))\n\nprint(cosine(cat, kitten))\nprint(cosine(cat, verbose_doc))\n\n0.987\n0.7",
-    },
-    {
-      label: "6. Real embeddings: same idea, far more numbers",
-      body:
-        "Production models like OpenAI's text-embedding-3 output over a thousand numbers per piece of text, and nobody hand-picks what each number means — the model learns them from patterns in language. But comparing two of those vectors uses the exact same math shown above: almost always cosine similarity, or a plain dot product against vectors the provider has already normalized to unit length, so the length bias never has a chance to sneak in.",
+        "# LOG_LEVEL = \"INFO\"  -> prints INFO, WARNING, ERROR\n# LOG_LEVEL = \"ERROR\" -> prints only ERROR",
     },
   ],
   realWorldIntro:
-    "Search engines, recommendation feeds, and the retrieval step of RAG all call an embedding model — like OpenAI's text-embedding-3-small — to turn any sentence into a vector. Almost all of them default to cosine similarity rather than a raw dot product, or store every embedding pre-normalized to unit length so an ordinary dot product already behaves like one — specifically to avoid the length bias a raw dot product has.",
+    "Python's built-in logging module and Node's pino both work exactly this way: engineers sprinkle debug(), info(), warning(), and error() calls throughout the codebase once, and a single LOG_LEVEL environment variable — often DEBUG on a laptop, WARNING or ERROR in production — decides which of those calls actually reach the terminal or a log aggregator like Datadog.",
   realWorldCode:
-    'embedding = embed_text("How do I reset my password?")\n# embedding is a list of 1536 numbers\nbest_match = most_similar(embedding, document_embeddings, metric="cosine")',
+    "LOG_LEVEL = \"WARNING\"  # DEBUG locally while developing, WARNING or ERROR once deployed",
   sandbox: {
     kind: "code",
     challenge:
-      "Raw dot product says verbose_doc (100) is a closer match to cat than kitten (62) — but verbose_doc is just a long, rambling vector with big numbers everywhere. Add an if/else below the existing prints that compares cosine(cat, kitten) to cosine(cat, verbose_doc) and prints which one is genuinely the closer match once vector length is divided out. (Our mini sandbox has no math module, so sqrt_approx below stands in for math.sqrt using a few rounds of Newton's method.)",
+      "This log() function should only print messages at or above the configured LOG_LEVEL threshold, but the comparison is backwards — find and fix the bug so DEBUG and INFO stop leaking through while ERROR stops getting swallowed.",
     starterCode:
-      'def dot(a, b):\n    total = 0\n    for i in range(len(a)):\n        total = total + a[i] * b[i]\n    return total\n\ndef sqrt_approx(n):\n    if n == 0:\n        return 0\n    guess = n\n    for i in range(20):\n        step = n / guess\n        sum_val = guess + step\n        guess = sum_val / 2\n    return guess\n\ndef magnitude(v):\n    return sqrt_approx(dot(v, v))\n\ndef cosine(a, b):\n    d = dot(a, b)\n    m = magnitude(a) * magnitude(b)\n    return d / m\n\ndef round3(x):\n    scaled = x * 1000\n    return int(scaled) / 1000\n\ncat = [8, 2, 0]\nkitten = [7, 3, 0]\nverbose_doc = [10, 10, 10]\n\nprint("raw dot product (bigger number wins, no correction for length):")\nprint("cat . kitten =", dot(cat, kitten))\nprint("cat . verbose_doc =", dot(cat, verbose_doc))\n\nprint("cosine similarity (corrected for length, 1.0 = same direction):")\nprint("cosine(cat, kitten) =", round3(cosine(cat, kitten)))\nprint("cosine(cat, verbose_doc) =", round3(cosine(cat, verbose_doc)))',
+      "LEVELS = {\"DEBUG\": 1, \"INFO\": 2, \"WARNING\": 3, \"ERROR\": 4}\nLOG_LEVEL = \"WARNING\"\n\ndef log(level, message):\n    threshold = LEVELS[LOG_LEVEL]\n    level_rank = LEVELS[level]\n    if level_rank <= threshold:\n        print(f\"[{level}] {message}\")\n\nlog(\"DEBUG\", \"cache miss for user 42\")\nlog(\"INFO\", \"user 42 logged in\")\nlog(\"WARNING\", \"payment retry attempt 2 of 3\")\nlog(\"ERROR\", \"payment gateway timeout\")",
   },
   quizQuestion:
-    "a = [5, 0, 0], b = [4, 1, 0], c = [6, 6, 6]. The code below shows dot(a, b) = 20 and dot(a, c) = 30, so the raw dot product says c is the closer match to a. Once you divide out each vector's length — cosine(a, b) ≈ 0.97, cosine(a, c) ≈ 0.58 — which one is actually more similar in direction to a?",
+    "With LOG_LEVEL set to \"ERROR\", what happens when this line runs?",
   quizCode:
-    "a = [5, 0, 0]\nb = [4, 1, 0]\nc = [6, 6, 6]\n\ndef dot(x, y):\n    total = 0\n    for i in range(len(x)):\n        total = total + x[i] * y[i]\n    return total\n\nprint(dot(a, b))\nprint(dot(a, c))",
+    "LEVELS = {\"DEBUG\": 1, \"INFO\": 2, \"WARNING\": 3, \"ERROR\": 4}\nLOG_LEVEL = \"ERROR\"\nthreshold = LEVELS[LOG_LEVEL]\n\ndef log(level, message):\n    if LEVELS[level] >= threshold:\n        print(f\"[{level}] {message}\")\n\nlog(\"WARNING\", \"disk usage at 85%\")",
   quizOptions: [
     {
       key: "a",
-      label: "c, because a higher raw dot product always means a better match, regardless of vector length",
+      label: "It prints, because WARNING is still a real problem worth surfacing no matter the threshold",
       correct: false,
     },
     {
       key: "b",
       label:
-        "b, because cosine similarity divides out each vector's magnitude — c's dot product was only bigger because c is a much longer vector, not because it points in a more similar direction",
+        "Nothing prints, because WARNING's rank (3) is lower than ERROR's rank (4), so it doesn't meet the threshold",
       correct: true,
     },
     {
       key: "c",
-      label: "They're equally similar, since both b and c share at least one large value with a",
+      label: "It crashes, because WARNING was never defined as a valid log level",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — c = [6, 6, 6] has a bigger raw dot product with a purely because it's a much longer vector (magnitude ≈ 10.39, versus b's ≈ 4.12), not because it points in a more similar direction. Cosine similarity divides the dot product by both magnitudes, which is why cosine(a, b) ≈ 0.97 — nearly parallel — correctly beats cosine(a, c) ≈ 0.58, even though the raw dot product ranking said the opposite.",
+    "Right — the threshold is the rank of ERROR (4), and WARNING only ranks 3, so 3 >= 4 is false and the message never reaches the print.",
   quizFeedbackIncorrect:
-    "Not quite — dot(a, c) = 30 beats dot(a, b) = 20 only because c = [6, 6, 6] is a much longer vector; its direction is actually less aligned with a. Dividing out each vector's magnitude reveals cosine(a, b) ≈ 0.97 versus cosine(a, c) ≈ 0.58 — b is the real closer match, and this exact bias is why real embedding comparisons use cosine similarity, or pre-normalize every vector, instead of trusting a raw dot product.",
+    "Not quite — WARNING is right there in the LEVELS dict, so nothing crashes; the actual outcome comes down to rank comparison: WARNING's rank (3) is less than the ERROR threshold's rank (4), so the >= check fails and it never prints.",
   takeaway:
-    "Embeddings turn meaning into numbers, and cosine similarity — a dot product divided by both vectors' magnitudes — turns \"similar meaning\" into a comparable score that isn't skewed by how long or repetitive a piece of text happens to be. Every semantic search, recommendation system, and RAG retriever is built on exactly this idea — just with far more dimensions, learned automatically instead of hand-picked, and usually pre-normalized so the length bias never even comes up.",
+    "Logging levels turn one static print() into a volume knob: rank every severity, compare it against one configured threshold, and the exact same code produces a quiet production log or a noisy debugging session depending on a single setting. Never delete your DEBUG logs — just raise the threshold and they go silent until the next time you need them.",
 };
 
 export default content;

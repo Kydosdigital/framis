@@ -3,109 +3,82 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 19,
   orderIndex: 5,
-  phaseLabel: "TRANSFORMERS + ATTENTION",
-  title: "Attention is one ingredient: residuals, layer norm, feed-forward, and masking",
-  minutes: 20,
+  phaseLabel: "STRUCTURED OUTPUTS + TOOL CALLING",
+  title: "Closing the Loop: Sending the Tool's Result Back to the Model",
+  minutes: 22,
   concept:
-    "Everything in the last three lessons happens inside a single sublayer of a single transformer block, and a real transformer wraps that sublayer in a few more pieces of machinery that are just as essential, even though they don't get the same spotlight. First, a residual connection: the block doesn't replace a token's incoming vector with attention's output, it adds them together — output = input + attention(input) — so the original signal always survives even if a particular layer's attention doesn't have much useful to contribute, which makes very deep stacks of layers dramatically easier to train. Second, layer normalization: right after that addition, every vector gets rescaled so its values sit in a consistent, well-behaved range, which keeps numbers from exploding or shrinking to nothing as they flow through dozens of stacked layers. Third, a feed-forward sublayer: after attention (and its own residual connection and layer norm) comes a small two-layer network applied independently to each token's vector — attention is the only place tokens exchange information with each other, so the feed-forward step is where the model gets extra, purely per-token nonlinear processing on whatever attention just handed it, wrapped in its own residual connection and layer norm too. Stack several of these blocks and you get a transformer's encoder — but not every transformer stack works the same way. An encoder (used for understanding a whole input at once, like translating a finished sentence) lets every position attend to every other position, forward and backward, since the entire input is already available. A decoder (used for generating text one token at a time) can only be allowed to attend to positions at or before the current one, because at real generation time the tokens after the current one don't exist yet. That restriction is enforced with causal masking: before softmax runs, every score for a \"future\" position gets forced down to a number so negative that exp() of it rounds to essentially zero, so those positions receive zero attention weight no matter what their Query/Key dot product said. Without causal masking, a decoder being trained to predict the next word could technically cheat by peeking at the answer sitting right there later in the same training sequence.",
+    "Every dispatcher you've built so far stops the instant it returns a Python value — but that return value never actually reaches the user, because the user never talks to your dispatcher, they talk to the model. A real tool-calling exchange is a loop, and the loop isn't done once you have a result; it's done once the model has seen that result and written a reply. Real chat APIs track the whole exchange as a growing list of messages, where each message is a dict with at least a \"role\" — \"user\" for what the human typed, \"assistant\" for what the model said, and \"tool\" for a result your code is handing back. The sequence looks like this: you send the messages list to the model; instead of replying in prose, the model's message asks to call a specific tool with specific arguments; your code actually runs that tool and gets a real result; you package that result as a brand-new message with role \"tool\" and append it to the same list — this is the step a plain dispatch() call never performs; then you send the whole list, now including the tool's result, back to the model one more time, and only now does it have enough information to write the natural-language answer the user actually asked for. Skip that middle step — forget to append the tool's result and call the model again — and the loop never closes: you're left holding a Python value nobody ever sees.",
   conceptSimpler:
-    "Think of a transformer block as a paragraph that gets edited by attention, but every edit is added as a note in the margin rather than overwriting the original (residual), the page gets re-leveled after every edit so it doesn't spiral out of control (layer norm), each sentence then gets its own independent proofread (feed-forward) — and if you're drafting the paragraph one sentence at a time, you're not allowed to peek at sentences you haven't written yet (causal masking).",
+    "It's a game of telephone with a receipt taped to the message: you ask a question, get handed instructions to go check something, actually go check it, tape the receipt onto the conversation so far, and hand the whole stack back — only then does the person on the other end have enough to give you a real answer.",
   vizStages: [
     {
-      label: "1. Residual connections: never fully overwrite the input",
+      label: "1. A conversation is just a growing list",
       body:
-        "If a token's incoming vector is [4, 2] and attention's output for it is [-1, 3], the block doesn't just keep [-1, 3] — it adds the two together, so the sublayer only has to learn a useful adjustment on top of what was already there, not reinvent the whole vector from scratch.",
-      code: "input = [4, 2]\nattention_output = [-1, 3]\nblock_output = input + attention_output = [3, 5]",
-    },
-    {
-      label: "2. Layer norm: keeping numbers from spiraling",
-      body:
-        "Stack enough layers without any correction and vectors can drift toward huge or tiny numbers purely from repeated addition, which makes training unstable. Layer norm re-centers and re-scales each vector right after the residual addition, so every layer's output starts from a similar, predictable range before it heads into the next block.",
-      code: "[3, 5]  --layer norm-->  re-centered, re-scaled version of [3, 5]\n(the shape survives; the raw scale gets standardized)",
-    },
-    {
-      label: "3. The feed-forward sublayer: per-token, not per-sentence",
-      body:
-        "Attention is the only place in a transformer block where tokens exchange information with each other. The feed-forward sublayer runs on each token's vector completely independently — it's extra nonlinear processing power, applied identically to every position, with no cross-token mixing at all.",
-      code: "feed_forward(token_vector)  -- runs once per position, never looks at any other position",
-    },
-    {
-      label: "4. Encoder vs. decoder, and the causal mask that separates them",
-      body:
-        "An encoder block lets every position see every other position — past and future — because the whole input is available at once (useful for tasks like translating an already-complete sentence). A decoder block masks out future positions before softmax, forcing each position to build its representation only from what came before it, which is what makes autoregressive text generation possible without cheating.",
+        "Nothing fancy here — messages starts as an empty list, and the user's turn is the first dict appended to it. role and content are the only two fields a plain message needs.",
       code:
-        "encoder: position 2 can attend to positions 1, 2, 3, 4 (everything)\ndecoder: position 2 can only attend to positions 1, 2 (itself and the past)",
+        "messages = []\nmessages.append({\"role\": \"user\", \"content\": \"What's the weather in Tokyo?\"})\nprint(messages)",
+    },
+    {
+      label: "2. The model's first reply isn't an answer — it's a request",
+      body:
+        "Instead of content with prose, this message carries a tool_call: a name and arguments, exactly like every dispatch() call you've built. Nothing has actually run yet.",
+      code:
+        "response = {\"role\": \"assistant\", \"tool_call\": {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}}}\nmessages.append(response)\ncall = response[\"tool_call\"]\nprint(call[\"name\"])",
+    },
+    {
+      label: "3. Your code runs the real tool and gets a real result",
+      body:
+        "This is the part every earlier lesson already covered — pull the arguments out and call the actual function. The new part is what happens to this result next.",
+      code:
+        "def get_weather(city):\n    if city == \"Tokyo\":\n        return \"22C and clear\"\n    else:\n        return \"unknown city\"\n\nargs = call[\"arguments\"]\nresult = get_weather(args[\"city\"])\nprint(result)",
+    },
+    {
+      label: "4. The result becomes a new message — only then does the model answer",
+      body:
+        "Append the result as a \"tool\" message, then hand the whole conversation back to the model. Now it has the number it needed, and it can finally write the reply the user is waiting for.",
+      code:
+        "messages.append({\"role\": \"tool\", \"content\": result})\nfinal = {\"role\": \"assistant\", \"content\": f\"It's {result} in Tokyo right now.\"}\nmessages.append(final)\nprint(final[\"content\"])",
     },
   ],
   realWorldIntro:
-    "GPT-style models are decoder-only: every block uses causal masking, which is exactly why they generate text left-to-right one token at a time. Models built for translation or classification often use an encoder (full visibility) whose output then feeds a decoder that generates the translated text with causal masking — the same attention math from this module, just wired up with a different masking rule depending on the job.",
+    "OpenAI's chat completions API represents exactly this with a message whose role is \"tool\", tied back to the assistant's tool_call by an id; Anthropic's Messages API does the same thing with a tool_result content block tied to the tool_use id from the model's previous turn. Either way, the API will not produce a final answer until you send a new request whose message list includes that tool result — homemade tool-calling code that looks like it \"hangs\" waiting for a real answer has almost always just skipped this step.",
+  realWorldCode:
+    "conversation = [\n  {\"role\": \"user\", \"content\": \"What's the weather in Tokyo?\"},\n  {\"role\": \"assistant\", \"tool_call\": {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}}},\n  {\"role\": \"tool\", \"content\": \"22C and clear\"},\n  {\"role\": \"assistant\", \"content\": \"It's 22C and clear in Tokyo right now.\"}\n]",
   sandbox: {
-    kind: "explore",
-    instructions:
-      "Click through each stage to see how a full transformer block fits together, and how causal masking changes which positions are allowed to see which.",
-    stages: [
-      {
-        label: "The full block, in order",
-        body:
-          "A real transformer block runs: attention -> add the residual -> layer norm -> feed-forward -> add that residual too -> layer norm again. Everything from the last three lessons (Query/Key/Value, scaling, softmax, weighted sum) is just the \"attention\" box in this chain.",
-        code:
-          "x -> attention(x) -> add residual -> layer norm -> feed-forward -> add residual -> layer norm -> next block",
-      },
-      {
-        label: "Residual connections in a deeper stack",
-        body:
-          "With 12, 24, or 96 stacked blocks (real model depths vary widely), residual connections give the original input a direct path all the way through the network. Even if one block's attention or feed-forward step learns something close to useless for a given token, that token's information isn't lost — it just passes through mostly unchanged.",
-        code: "block_1_output = x + sublayer_1(x)\nblock_2_output = block_1_output + sublayer_2(block_1_output)\n...",
-      },
-      {
-        label: "Encoder: full visibility",
-        body:
-          "In an encoder, position 2 (\"cat\" in \"the cat sat down\") can attend to every position in the sentence, including \"sat\" and \"down\" which come after it. This is fine because the encoder's job is to understand a complete input that's entirely available up front.",
-        code:
-          "sentence: the(1) cat(2) sat(3) down(4)\nposition 2 (\"cat\") attends to: 1, 2, 3, 4  -- everything, no restriction",
-      },
-      {
-        label: "Decoder: causal masking blocks the future",
-        body:
-          "In a decoder generating that same sentence one word at a time, position 2 (\"cat\") is only allowed to attend to positions 1 and 2. Positions 3 and 4 get their attention scores forced down to a huge negative number before softmax, so softmax turns them into a weight of essentially 0 — as if they weren't there at all.",
-        code:
-          "sentence: the(1) cat(2) sat(3) down(4)\nposition 2 (\"cat\") attends to: 1, 2\nposition 2's scores toward 3, 4: forced to -infinity-equivalent  -->  softmax weight ~= 0",
-      },
-      {
-        label: "Why this makes autoregressive generation honest",
-        body:
-          "During training, a decoder sees the whole sentence at once for efficiency, but causal masking makes sure position 2's prediction never actually uses information from positions 3 or 4 — the same restriction it will face later at real generation time, one token at a time, when those future tokens genuinely don't exist yet.",
-        code: "training: predict word 3 using only words 1-2, even though word 3 is sitting right there in the batch",
-      },
-    ],
+    kind: "code",
+    challenge:
+      "There's no real model available here, so write fake_model(messages), a stand-in that looks at the role of the last message in the list: on a \"user\" message it returns a tool_call for get_weather; on a \"tool\" message it returns a final natural-language answer built from that result. Then drive the full loop by hand — send the user's message, get the tool_call, run the real tool, send the result back, and print the model's final answer.",
+    starterCode:
+      "def get_weather(city):\n    if city == \"Tokyo\":\n        return \"22C and clear\"\n    else:\n        return \"unknown city\"\n\ndef fake_model(messages):\n    last_index = len(messages) - 1\n    last = messages[last_index]\n    role = last[\"role\"]\n    if role == \"user\":\n        return {\"role\": \"assistant\", \"tool_call\": {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}}}\n    elif role == \"tool\":\n        result_text = last[\"content\"]\n        return {\"role\": \"assistant\", \"content\": f\"It's {result_text} in Tokyo right now.\"}\n    else:\n        return {\"role\": \"assistant\", \"content\": \"I'm not sure what to do next.\"}\n\nmessages = []\nmessages.append({\"role\": \"user\", \"content\": \"What's the weather in Tokyo?\"})\n\nresponse = fake_model(messages)\nmessages.append(response)\n\ntry:\n    call = response[\"tool_call\"]\n    is_tool_call = True\nexcept KeyError:\n    is_tool_call = False\n\nif is_tool_call:\n    args = call[\"arguments\"]\n    city = args[\"city\"]\n    result = get_weather(city)\n    messages.append({\"role\": \"tool\", \"content\": result})\n\n    final = fake_model(messages)\n    messages.append(final)\n    print(final[\"content\"])\nelse:\n    print(response[\"content\"])\n\nprint(\"total messages in conversation:\", len(messages))",
   },
   quizQuestion:
-    "In a decoder generating text one token at a time, why must position 2 be prevented from attending to position 4, even during training when position 4's word is already sitting right there in the training sentence?",
+    "This second call to fake_model happens right after appending the assistant's tool_call message — but before running the real tool or appending a \"tool\" message. What does it print?",
+  quizCode:
+    "def fake_model(messages):\n    last_index = len(messages) - 1\n    last = messages[last_index]\n    role = last[\"role\"]\n    if role == \"user\":\n        return {\"role\": \"assistant\", \"tool_call\": {\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\"}}}\n    elif role == \"tool\":\n        result_text = last[\"content\"]\n        return {\"role\": \"assistant\", \"content\": f\"It's {result_text} in Tokyo right now.\"}\n    else:\n        return {\"role\": \"assistant\", \"content\": \"I'm not sure what to do next.\"}\n\nmessages = []\nmessages.append({\"role\": \"user\", \"content\": \"What's the weather in Tokyo?\"})\n\nresponse = fake_model(messages)\nmessages.append(response)\n\n# oops — forgot to run the tool and append its result here\n\nfinal = fake_model(messages)\nprint(final[\"content\"])",
   quizOptions: [
     {
       key: "a",
       label:
-        "Causal masking forces those future-position scores down to essentially -infinity before softmax, giving them ~0 weight, so training matches the real constraint that future tokens don't exist yet at generation time",
+        "\"I'm not sure what to do next.\" — the last message's role is still \"assistant\" (the tool_call itself), not \"tool\", so neither of fake_model's real branches matches",
       correct: true,
     },
     {
       key: "b",
-      label: "It's a hardware limitation — GPUs can only process a fixed number of positions per attention head",
+      label: "\"It's 22C and clear in Tokyo right now.\" — fake_model already knows the weather from the first call",
       correct: false,
     },
     {
       key: "c",
-      label: "The encoder already removed those future tokens from the sequence before the decoder ever sees it",
+      label: "A KeyError, because messages has no \"content\" field on its last entry",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — causal masking pushes the raw scores toward future positions down so far that softmax assigns them essentially zero weight, so the model is trained under the exact same information constraint it will face during real one-token-at-a-time generation.",
+    "Right — fake_model only ever looks at the role of the last message in the list. After appending the tool_call, that last message's role is still \"assistant\", not \"tool\", so it falls to the else branch. Nothing about calling fake_model a second time magically runs the tool or supplies a result — that only happens once a \"tool\" message with the real result is actually appended.",
   quizFeedbackIncorrect:
-    "Not quite — this isn't a hardware limit, and the encoder (when one exists at all) doesn't remove or alter the decoder's own sequence. The real reason is causal masking: it zeroes out attention to future positions before softmax so training never lets the model use information it wouldn't actually have yet during generation.",
+    "Not quite — fake_model doesn't remember anything between calls except what's sitting in the messages list. Since no \"tool\" message was ever appended, the last message's role is still \"assistant\" (the tool_call itself), which matches neither the \"user\" branch nor the \"tool\" branch, so it falls through to the else case instead.",
   takeaway:
-    "Attention is only one sublayer inside a transformer block — residual connections preserve the original signal, layer norm keeps the numbers well-behaved, a feed-forward step gives each token extra per-token processing, and causal masking is what turns a bidirectional encoder into an autoregressive decoder that can't peek at its own future output.",
-  nextUpLabel: "Fine-tuning + Dataset Quality",
+    "dispatch() returning a value is only half the loop. The other half is packaging that value as a new \"tool\" message, appending it to the conversation, and sending the whole thing back to the model so it can read the result and write the answer the user is actually waiting for — skip that step and the tool call happened for nothing.",
 };
 
 export default content;

@@ -3,109 +3,112 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 14,
   orderIndex: 3,
-  phaseLabel: "EMBEDDINGS + RAG",
-  title: "Cutting documents down to size: why chunking makes retrieval work",
+  phaseLabel: "DEBUGGING + LOGGING + MONITORING",
+  title: "Stack Traces: Reading the Crime Scene, Not the Headline",
   minutes: 18,
   concept:
-    "Before a document can be embedded and retrieved, it has to be split into pieces — that step is called chunking, and getting it wrong quietly breaks everything downstream. Embed an entire 60-page manual as a single vector and you get one blurry average of everything in it, so a question about page 2 and a question about page 45 both match the same undifferentiated chunk. Go too far the other way — one chunk per sentence — and each piece becomes too small to carry context on its own, so retrieval can find a technically related sentence with no surrounding information to actually answer the question. The fix real systems use is a middle ground: chunks of a few hundred tokens, often sliced with a sliding window that overlaps the previous chunk slightly, so a sentence sitting right on a chunk boundary still appears whole in at least one chunk instead of getting cut in half. Better splitters go further and respect the document's own structure — paragraph breaks, headings, list items — instead of blindly cutting every N characters regardless of what idea gets sliced through.",
+    "A stack trace is not a wall of noise to skim past — it's an ordered map of exactly which function called which other function, all the way down to the line that actually failed. The first line is the headline: the error's type and message, telling you what kind of failure happened, like a null reference, a bad type conversion, or a timeout. Below that, each frame is one function call in the chain, listed most-recent-call-first, and every frame names a file and a line number, which is the single most useful piece of information on the entire trace. Most of those frames belong to libraries and frameworks you didn't write — React, Next.js, node_modules — so the real skill is scanning down until you hit the first frame that points at a file inside your own project; that's almost always where the fix belongs, even though the error technically surfaced a few frames higher, inside someone else's code.",
   conceptSimpler:
-    "Chunking is like making index cards from a textbook: one card per idea, not one card per book and not one card per word. Cards that are too big blur every topic together; cards that are too small lose the sentence they came from.",
+    "A stack trace is like a chain of phone calls that ended in someone yelling — instead of panicking at the yelling, you trace the call back caller by caller until you find the person who actually caused the problem, who is rarely the last person who happened to be on the line.",
   vizStages: [
     {
-      label: "1. Chunking happens before anything else",
+      label: "1. Start at the very top line",
       body:
-        "A document ingestion pipeline breaks raw text into chunks first, before embedding or storage ever happen. Everything downstream — every embedding, every search — operates on those pieces, never on the whole document at once.",
-      code: "raw_text -> chunks -> embeddings -> vector database",
+        "The first line names the error type and message. Read this first — it tells you the category of failure before you've even looked at where it happened.",
+      code: "TypeError: Cannot read properties of undefined (reading 'email')",
     },
     {
-      label: "2. A search returns whole chunks, not snippets",
+      label: "2. Scan down through the frames",
       body:
-        "Retrieval hands back entire chunks, never a hand-picked excerpt from the middle of one. That means whatever size you chunked into becomes the smallest and largest unit that can ever come back as an answer.",
+        "Each \"at ...\" line below is one function call, most recent first. Several of these point straight into libraries you didn't write.",
+      code:
+        "    at sendWelcomeEmail (/app/lib/mailer.ts:14:22)\n    at createUser (/app/lib/users.ts:41:9)\n    at async POST (/app/app/api/signup/route.ts:23:5)\n    at async node_modules/next/dist/server/route-handler.js:132:18",
     },
     {
-      label: "3. Overlap protects information near the edges",
+      label: "3. Find the first frame that's actually yours",
       body:
-        "A sliding window that overlaps the previous chunk means a sentence sitting right at a boundary still appears fully intact in at least one chunk, instead of being severed between two chunks that each only have half of it.",
-      code: "chunk 1: \"...refunds are processed within 5-7\"\nchunk 2: \"within 5-7 business days of the return being received...\"",
+        "Skip past the next/dist frame — that's just the framework routing the request — and stop at the first line pointing into your own project folder. Here, that's mailer.ts:14.",
+      code: "at sendWelcomeEmail (/app/lib/mailer.ts:14:22)   <- your code, start here",
     },
     {
-      label: "4. There's no single 'right' chunk size",
+      label: "4. Go read that exact line",
       body:
-        "A legal contract's dense clauses often need larger chunks to preserve their meaning, while a FAQ's short question-answer pairs work better as small, tightly-scoped chunks. Real systems tune chunk size per document type rather than picking one number for everything.",
+        "Line 14 of mailer.ts is where the crash actually happened: some user object was undefined and the code tried to read .email off it. Everything above that frame is context, not the culprit.",
+      code: "// mailer.ts, line 14\nconst subject = `Welcome, ${user.email}`;",
     },
   ],
   realWorldIntro:
-    "Libraries like LangChain and LlamaIndex ship built-in \"text splitters\" that implement exactly this overlap-and-boundary logic, because getting chunk size wrong is one of the most common reasons a RAG system gives confident, wrong-sounding answers.",
+    "Error-tracking tools like Sentry and Rollbar exist because reading raw stack traces at 2am is hard — they group thousands of crashes by their trace signature and jump straight to the first frame inside your own repository, saving an on-call engineer from having to scroll past dozens of framework frames by hand.",
   realWorldCode:
-    "splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)\nchunks = splitter.split_text(document_text)",
+    "// Sentry groups these two crashes as \"the same issue\" because\n// they share the same first-party frame: mailer.ts:14",
   sandbox: {
     kind: "explore",
     instructions:
-      "Click through each stage to see what happens to retrieval quality as the same document gets split a different way.",
+      "Click through each real-looking stack trace and figure out which single frame you'd open first to start debugging.",
     stages: [
       {
-        label: "1. One giant chunk: too coarse",
+        label: "A classic null/undefined crash",
         body:
-          "Embedding an entire 40-page manual as a single vector produces one averaged-out representation of everything in it. A question about page 30 and a question about page 2 both match that same lone chunk, so retrieval can't tell you which part is actually relevant.",
-        code: 'chunk = read_whole_file("manual.pdf")\n# 40 pages -> one single vector',
+          "The react-dom frame is a red herring — it's just the framework rendering the page. The actual bug is in cart.ts line 9, where cart turned out to be null before .items was read off it.",
+        code:
+          "TypeError: Cannot read properties of null (reading 'items')\n    at calculateCartTotal (/app/lib/cart.ts:9:18)\n    at CheckoutPage (/app/app/checkout/page.tsx:31:24)\n    at node_modules/react-dom/cjs/react-dom-server.node.development.js:2113:7",
       },
       {
-        label: "2. One chunk per sentence: too fine",
+        label: "An error thrown three layers deep",
         body:
-          "Splitting on every period keeps each chunk razor-sharp but shreds the context around it. \"It requires the API key.\" on its own doesn't say which feature it belongs to, so retrieval can surface a technically matching sentence that has no way to actually answer the question.",
+          "All three frames here belong to your own project, so read the topmost one first — parseDiscountCode at line 52 is exactly where the bad string-to-number conversion happens. applyDiscount and the route handler are just callers that eventually asked for this.",
         code:
-          'chunks = split_by_sentence(document)\n# chunk 47: "It requires the API key."\n# chunk 48: "This step is optional for free-tier accounts."',
+          "ValueError: invalid literal for int() with base 10: 'N/A'\n    at parseDiscountCode (/app/lib/pricing.ts:52:11)\n    at applyDiscount (/app/lib/pricing.ts:18:9)\n    at POST (/app/app/api/checkout/route.ts:44:16)",
       },
       {
-        label: "3. Fixed-size windows with overlap",
+        label: "Async stack traces skip around",
         body:
-          "Most real systems settle on chunks of a few hundred tokens — roughly a few paragraphs — sliced with a window that overlaps the previous chunk by 10-20%. That overlap means a sentence that would otherwise get cut in half between two chunks still shows up whole in at least one of them.",
+          "Async/await stacks include synthetic bookkeeping frames like \"async Promise.all (index 1)\" that don't map to any line in your code. Skip those and keep scanning for real file:line frames — here, payments.ts:77 is the one that matters.",
         code:
-          "chunk_size = 400  # tokens\noverlap = 50      # tokens\n# chunk 1: tokens 0-400\n# chunk 2: tokens 350-750  <- overlaps chunk 1 by 50 tokens",
+          "Error: Payment provider timed out\n    at chargeCard (/app/lib/payments.ts:77:13)\n    at async Promise.all (index 1)\n    at async processOrder (/app/lib/orders.ts:29:3)",
       },
       {
-        label: "4. Splitting on natural boundaries",
+        label: "When the message is generic but the location is specific",
         body:
-          "Instead of blindly cutting every N characters, boundary-aware chunking respects the document's own structure — paragraph breaks, headings, list items — so a chunk never ends mid-thought just because a character counter happened to hit its limit.",
+          "\"Reading 'toFixed'\" alone doesn't say which product broke, but the file and line do: format.ts:6 is where a missing number caused the crash, and ProductCard.tsx:15 is the caller that passed it in without checking.",
         code:
-          "# naive: cut every 400 characters, ignoring structure\n# boundary-aware: cut at the nearest paragraph break before 400 characters",
+          "TypeError: Cannot read properties of undefined (reading 'toFixed')\n    at formatPrice (/app/lib/format.ts:6:24)\n    at ProductCard (/app/components/ProductCard.tsx:15:19)",
       },
       {
-        label: "5. Every chunk carries its own metadata",
+        label: "In production, minified code can hide the trail",
         body:
-          "A stored chunk isn't just raw text — it's tagged with metadata like the source document, section title, and page number. When it's retrieved later, that metadata is what lets the system (and the user) trace the answer back to exactly where it came from.",
+          "A minified build renames functions to single letters and collapses everything onto one line, so file:line alone stops being enough to find real bugs. This is exactly why teams upload source maps to tools like Sentry — so a trace like this one gets translated back into real file and function names automatically.",
         code:
-          '{"text": "Refunds are processed within 5-7 business days.", "source": "refund-policy.pdf", "page": 2}',
+          "TypeError: Cannot read properties of undefined (reading 'a')\n    at t (/app/.next/static/chunks/847.a1b2c3.js:1:4821)",
       },
     ],
   },
-  quizQuestion:
-    "A support team embeds their entire 60-page product manual as a single chunk. A user then asks a specific question about something on page 45. What's most likely to happen at retrieval time?",
+  quizQuestion: "Given this stack trace, which frame should you open first to start debugging?",
+  quizCode:
+    "TypeError: Cannot read properties of undefined (reading 'total')\n    at printReceipt (/app/lib/receipt.ts:11:29)\n    at checkoutOrder (/app/lib/checkout.ts:47:5)\n    at node_modules/next/dist/server/api-utils/node.js:88:14",
   quizOptions: [
     {
       key: "a",
-      label:
-        "Retrieval works fine — the whole manual is retrieved and the model reads through it to find page 45",
+      label: "The node_modules/next/dist frame, since that's the framework code actually running the request",
       correct: false,
     },
     {
       key: "b",
-      label:
-        "Retrieval keeps returning the same all-purpose chunk for nearly every question, since one vector for 60 pages can't distinguish what's on page 2 from what's on page 45",
+      label: "printReceipt at /app/lib/receipt.ts:11, since it's the first frame that points into your own project's code",
       correct: true,
     },
     {
       key: "c",
-      label: "Retrieval fails outright with an error, because a document that large can't be embedded",
+      label: "checkoutOrder at /app/lib/checkout.ts:47, since it's listed lower and therefore closer to the true root cause",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — a single embedding for 60 pages averages together everything the document contains, so it isn't distinctive enough to tell a question about page 2 apart from one about page 45; nearly every query ends up matching that same blurry chunk.",
+    "Right — printReceipt is the topmost frame that points at a file inside your own project, and that's exactly the line where the undefined value was accessed; the next/dist frame beneath it is just framework machinery that eventually called your code.",
   quizFeedbackIncorrect:
-    "Not quite — embedding models can technically accept long text without erroring, but the resulting vector is too averaged-out to be useful for retrieval: it can't tell a question about page 2 from one about page 45, so nearly every query retrieves the same undifferentiated chunk.",
+    "Not quite — the crash happened inside printReceipt at receipt.ts:11, the first frame that's part of your own project; checkoutOrder just happened to call it, and the next/dist frame is framework internals, not a bug you wrote.",
   takeaway:
-    "Chunk size is a tradeoff between too coarse (loses precision) and too fine (loses context) — overlap and boundary-aware splitting are how real systems land in between. Get chunking wrong, and no amount of embedding or search sophistication downstream can fix it.",
+    "Read a stack trace top-down: the first line names what broke, and the fix almost always lives at the first frame below it that points into your own project's files, not into a library or framework you didn't write. Everything else in the trace is context for how execution got there, not the culprit itself.",
 };
 
 export default content;

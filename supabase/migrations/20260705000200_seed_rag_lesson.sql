@@ -1,9 +1,11 @@
--- Second fully-authored lesson: RAG (Module 14), backing the RAG tab on the
--- Lesson screen. NOT YET APPLIED to the live project as of this commit —
--- the Supabase MCP connector was disconnected when this was written.
+-- Second fully-authored lesson: RAG (Module 18, renumbered from 14 when
+-- Phase 2.5 was inserted — see 20260705010000_insert_phase_2_5_data_classical_ml.sql),
+-- backing the RAG tab on the Lesson screen. NOT YET APPLIED to the live
+-- project as of this commit — the Supabase MCP connector was disconnected
+-- when this was written.
 
 insert into public.lessons (module_id, title, description, content, learning_outcomes, estimated_minutes, order_index, difficulty, published_at) values
-  ((select id from public.modules where module_number = 14),
+  ((select id from public.modules where module_number = 18),
    'RAG — teaching an LLM to cite its sources',
    'Retrieval-augmented generation: chunk, embed, retrieve, then answer from the retrieved text.',
    '{

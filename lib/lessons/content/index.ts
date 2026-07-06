@@ -35,7 +35,6 @@ import lesson09 from "./lesson-09";
 import lesson09_2 from "./lesson-09-2";
 import lesson09_3 from "./lesson-09-3";
 import lesson09_4 from "./lesson-09-4";
-import lesson09_5 from "./lesson-09-5";
 import lesson10 from "./lesson-10";
 import lesson10_2 from "./lesson-10-2";
 import lesson10_3 from "./lesson-10-3";
@@ -44,9 +43,6 @@ import lesson11 from "./lesson-11";
 import lesson11_2 from "./lesson-11-2";
 import lesson11_3 from "./lesson-11-3";
 import lesson11_4 from "./lesson-11-4";
-import lesson11_5 from "./lesson-11-5";
-import lesson11_6 from "./lesson-11-6";
-import lesson11_7 from "./lesson-11-7";
 import lesson12 from "./lesson-12";
 import lesson12_2 from "./lesson-12-2";
 import lesson12_3 from "./lesson-12-3";
@@ -55,6 +51,8 @@ import lesson13 from "./lesson-13";
 import lesson13_2 from "./lesson-13-2";
 import lesson13_3 from "./lesson-13-3";
 import lesson13_4 from "./lesson-13-4";
+import lesson13_5 from "./lesson-13-5";
+import lesson14 from "./lesson-14";
 import lesson14_2 from "./lesson-14-2";
 import lesson14_3 from "./lesson-14-3";
 import lesson14_4 from "./lesson-14-4";
@@ -64,6 +62,7 @@ import lesson15_3 from "./lesson-15-3";
 import lesson15_4 from "./lesson-15-4";
 import lesson15_5 from "./lesson-15-5";
 import lesson15_6 from "./lesson-15-6";
+import lesson15_7 from "./lesson-15-7";
 import lesson16 from "./lesson-16";
 import lesson16_2 from "./lesson-16-2";
 import lesson16_3 from "./lesson-16-3";
@@ -72,8 +71,6 @@ import lesson17 from "./lesson-17";
 import lesson17_2 from "./lesson-17-2";
 import lesson17_3 from "./lesson-17-3";
 import lesson17_4 from "./lesson-17-4";
-import lesson17_5 from "./lesson-17-5";
-import lesson18 from "./lesson-18";
 import lesson18_2 from "./lesson-18-2";
 import lesson18_3 from "./lesson-18-3";
 import lesson18_4 from "./lesson-18-4";
@@ -82,6 +79,7 @@ import lesson19_2 from "./lesson-19-2";
 import lesson19_3 from "./lesson-19-3";
 import lesson19_4 from "./lesson-19-4";
 import lesson19_5 from "./lesson-19-5";
+import lesson19_6 from "./lesson-19-6";
 import lesson20 from "./lesson-20";
 import lesson20_2 from "./lesson-20-2";
 import lesson20_3 from "./lesson-20-3";
@@ -90,22 +88,40 @@ import lesson21 from "./lesson-21";
 import lesson21_2 from "./lesson-21-2";
 import lesson21_3 from "./lesson-21-3";
 import lesson21_4 from "./lesson-21-4";
+import lesson21_5 from "./lesson-21-5";
 import lesson22 from "./lesson-22";
 import lesson22_2 from "./lesson-22-2";
 import lesson22_3 from "./lesson-22-3";
 import lesson22_4 from "./lesson-22-4";
-import lesson22_5 from "./lesson-22-5";
-import lesson22_6 from "./lesson-22-6";
 import lesson23 from "./lesson-23";
 import lesson23_2 from "./lesson-23-2";
 import lesson23_3 from "./lesson-23-3";
 import lesson23_4 from "./lesson-23-4";
 import lesson23_5 from "./lesson-23-5";
-import lesson23_6 from "./lesson-23-6";
 import lesson24 from "./lesson-24";
 import lesson24_2 from "./lesson-24-2";
 import lesson24_3 from "./lesson-24-3";
 import lesson24_4 from "./lesson-24-4";
+import lesson25 from "./lesson-25";
+import lesson25_2 from "./lesson-25-2";
+import lesson25_3 from "./lesson-25-3";
+import lesson25_4 from "./lesson-25-4";
+import lesson26 from "./lesson-26";
+import lesson26_2 from "./lesson-26-2";
+import lesson26_3 from "./lesson-26-3";
+import lesson26_4 from "./lesson-26-4";
+import lesson26_5 from "./lesson-26-5";
+import lesson26_6 from "./lesson-26-6";
+import lesson27 from "./lesson-27";
+import lesson27_2 from "./lesson-27-2";
+import lesson27_3 from "./lesson-27-3";
+import lesson27_4 from "./lesson-27-4";
+import lesson27_5 from "./lesson-27-5";
+import lesson27_6 from "./lesson-27-6";
+import lesson28 from "./lesson-28";
+import lesson28_2 from "./lesson-28-2";
+import lesson28_3 from "./lesson-28-3";
+import lesson28_4 from "./lesson-28-4";
 
 export const GENERIC_LESSONS: Record<number, LessonData[]> = {
   1: [lesson01, lesson01_2, lesson01_3, lesson01_4, lesson01_5],
@@ -116,20 +132,24 @@ export const GENERIC_LESSONS: Record<number, LessonData[]> = {
   6: [lesson06, lesson06_2, lesson06_3, lesson06_4],
   7: [lesson07, lesson07_2, lesson07_3, lesson07_4],
   8: [lesson08, lesson08_2, lesson08_3, lesson08_4],
-  9: [lesson09, lesson09_2, lesson09_3, lesson09_4, lesson09_5],
+  9: [lesson09, lesson09_2, lesson09_3, lesson09_4],
   10: [lesson10, lesson10_2, lesson10_3, lesson10_4],
-  11: [lesson11, lesson11_2, lesson11_3, lesson11_4, lesson11_5, lesson11_6, lesson11_7],
+  11: [lesson11, lesson11_2, lesson11_3, lesson11_4],
   12: [lesson12, lesson12_2, lesson12_3, lesson12_4],
-  13: [lesson13, lesson13_2, lesson13_3, lesson13_4],
-  14: [lesson14_2, lesson14_3, lesson14_4],
-  15: [lesson15, lesson15_2, lesson15_3, lesson15_4, lesson15_5, lesson15_6],
+  13: [lesson13, lesson13_2, lesson13_3, lesson13_4, lesson13_5],
+  14: [lesson14, lesson14_2, lesson14_3, lesson14_4],
+  15: [lesson15, lesson15_2, lesson15_3, lesson15_4, lesson15_5, lesson15_6, lesson15_7],
   16: [lesson16, lesson16_2, lesson16_3, lesson16_4],
-  17: [lesson17, lesson17_2, lesson17_3, lesson17_4, lesson17_5],
-  18: [lesson18, lesson18_2, lesson18_3, lesson18_4],
-  19: [lesson19, lesson19_2, lesson19_3, lesson19_4, lesson19_5],
+  17: [lesson17, lesson17_2, lesson17_3, lesson17_4],
+  18: [lesson18_2, lesson18_3, lesson18_4],
+  19: [lesson19, lesson19_2, lesson19_3, lesson19_4, lesson19_5, lesson19_6],
   20: [lesson20, lesson20_2, lesson20_3, lesson20_4],
-  21: [lesson21, lesson21_2, lesson21_3, lesson21_4],
-  22: [lesson22, lesson22_2, lesson22_3, lesson22_4, lesson22_5, lesson22_6],
-  23: [lesson23, lesson23_2, lesson23_3, lesson23_4, lesson23_5, lesson23_6],
+  21: [lesson21, lesson21_2, lesson21_3, lesson21_4, lesson21_5],
+  22: [lesson22, lesson22_2, lesson22_3, lesson22_4],
+  23: [lesson23, lesson23_2, lesson23_3, lesson23_4, lesson23_5],
   24: [lesson24, lesson24_2, lesson24_3, lesson24_4],
+  25: [lesson25, lesson25_2, lesson25_3, lesson25_4],
+  26: [lesson26, lesson26_2, lesson26_3, lesson26_4, lesson26_5, lesson26_6],
+  27: [lesson27, lesson27_2, lesson27_3, lesson27_4, lesson27_5, lesson27_6],
+  28: [lesson28, lesson28_2, lesson28_3, lesson28_4],
 };

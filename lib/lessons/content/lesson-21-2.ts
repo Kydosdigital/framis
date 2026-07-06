@@ -3,82 +3,84 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 21,
   orderIndex: 2,
-  phaseLabel: "AGENTS + ORCHESTRATION",
-  title: "Orchestration: The Supervisor That Routes Work to the Right Agent",
-  minutes: 20,
+  phaseLabel: "PROBABILITY + STATISTICS",
+  title: "The billionaire walks in: mean vs. median",
+  minutes: 18,
   concept:
-    "A single high-level goal like \"write a blog post about Denver's food scene\" is too vague for any one agent to handle end to end — some parts of the work call for very different skills. Orchestration starts with the same decomposition idea as any planning step: break the goal into an ordered list of subtasks. What makes it orchestration is the next decision — not just what to do, but which agent should do it. A research_agent gathers facts; a writer_agent turns facts into prose; neither one is good at the other's job. The piece of code that makes that decision is called a supervisor or coordinator, and it's structurally identical to Module 15's dispatch(call) — except instead of routing a tool name to a tool function, it routes a subtask's type to whichever agent is equipped to handle that kind of work. Once the supervisor has picked an agent for a subtask, execution is still a for-loop, walking through the subtask list in order, handing each one off, and recording the result before moving to the next. This matters because a single agent juggling every possible skill tends to do all of them a little worse, while a system of specialized agents plus a router that hands off cleanly between them tends to do each part better. In production you would rarely hand-write this router from scratch: frameworks like LangGraph and CrewAI exist specifically to manage multi-agent hand-off, shared state, and routing decisions off the shelf — but the underlying idea, a supervisor deciding who does what, is exactly what you're building a miniature version of here.",
+    "The mean (what people usually call \"the average\") is the sum of every value divided by how many values there are — a for-loop that adds each number to a running total, then one division at the end, gives you the mean directly. The median is a completely different idea: it's the value that sits exactly in the middle once every number is arranged from smallest to largest, so it's found by position, not by arithmetic on the values themselves. Because the mean adds up every value, one extreme number can drag it far from where most of the data actually sits; the median barely moves in that same situation, since one huge value just becomes the new largest item at the end of the line without disturbing the middle. This is exactly what \"outliers\" are — data points far outside where the rest of the data clusters — and mean vs. median is really a story about how differently two ordinary-sounding statistics react to them. Neither one is \"more correct\"; they answer different questions, and a good analyst reports both so a single freak value can't quietly distort the story.",
   conceptSimpler:
-    "It's like a manager assigning tasks to the right specialist on a team instead of asking one generalist to do everything — the researcher looks things up, the writer turns findings into prose, and the manager's whole job is deciding who gets which task.",
+    "It's like reporting the \"average\" wealth in a coffee shop — swap in one billionaire customer and the average shoots into the millions, but the median customer, the one literally in the middle of the line, is exactly as un-rich as before.",
   vizStages: [
     {
-      label: "1. One goal, several kinds of subtasks",
+      label: "1. Five response times, no drama",
       body:
-        "Decomposing the goal isn't just a flat list anymore — each subtask also carries a type, because different subtasks call for genuinely different skills, not just a different order.",
+        "Sum every value in a loop, then divide by the count — that's the mean. Here all five API response times are close together, so the mean lands right in the middle of the pack.",
       code:
-        "subtasks = []\nsubtasks.append({\"task\": \"research neighborhood food scenes\", \"type\": \"research\"})\nsubtasks.append({\"task\": \"write an engaging intro paragraph\", \"type\": \"writing\"})",
+        'times = [8, 9, 10, 11, 12]\n\ntotal = 0\nfor t in times:\n    total = total + t\nmean = total / len(times)\nprint(mean)\n\n# 10',
     },
     {
-      label: "2. A supervisor routes each subtask's type to an agent",
+      label: "2. The median: found by position, not addition",
       body:
-        "This is a dispatcher in every sense that matters — it just routes on subtask[\"type\"] to an agent function instead of routing a tool name to a tool function.",
+        "Because the list is already sorted smallest to largest, the median is just the item sitting at the halfway point — index len(times) // 2. No sum, no division by every value, just a lookup.",
       code:
-        "def supervisor(subtask):\n    kind = subtask[\"type\"]\n    if kind == \"research\":\n        return research_agent(subtask[\"task\"])\n    elif kind == \"writing\":\n        return writer_agent(subtask[\"task\"])\n    else:\n        raise ValueError(\"no agent for type: \" + kind)",
+        'middle_index = len(times) // 2\nmedian = times[middle_index]\nprint(median)\n\n# 10 - same as the mean, since this data has no outliers',
     },
     {
-      label: "3. Execution is still a for-loop, handing off one subtask at a time",
+      label: "3. One outlier slips into the data",
       body:
-        "Nothing about running the plan changes — a for-loop walks the subtask list in order, and each iteration hands one subtask to the supervisor instead of executing it directly.",
+        "Swap the last, largest value for something way bigger — say a request that hung and took 212ms instead of 12ms. Rerun the exact same mean calculation.",
       code:
-        "results = []\nfor i in range(len(subtasks)):\n    outcome = supervisor(subtasks[i])\n    results.append(outcome)",
+        'times = [8, 9, 10, 11, 212]\n\ntotal = 0\nfor t in times:\n    total = total + t\nmean = total / len(times)\nprint(mean)\n\n# 50 - even though four of the five requests were still fast',
     },
     {
-      label: "4. Real systems reach for a framework, not a hand-rolled router",
+      label: "4. The median barely notices",
       body:
-        "The miniature supervisor above is the whole idea in one function. At production scale, multi-agent frameworks like LangGraph and CrewAI provide this routing, plus shared state and hand-off between agents, without you writing the if/elif chain yourself.",
+        "Run the median calculation on the same outlier-containing list. The huge value just becomes the new last item in sorted order — the middle position, and the value sitting there, doesn't change at all.",
       code:
-        "# research_agent(\"research neighborhood food scenes\") -> gathers facts\n# writer_agent(\"write an engaging intro paragraph\") -> drafts prose\n# LangGraph / CrewAI: same supervisor idea, managed for you at scale",
+        'middle_index = len(times) // 2\nmedian = times[middle_index]\nprint(median)\n\n# 10 - unchanged, because the outlier didn\'t move what\'s in the middle',
     },
   ],
   realWorldIntro:
-    "Multi-agent systems built with LangGraph or CrewAI use exactly this supervisor pattern at a larger scale — a coordinator agent looks at the task queue, decides whether the next step needs a research agent, a coding agent, or a review agent, and hands off full conversational context to whichever one is chosen, instead of asking a single agent to be equally good at researching, coding, and reviewing all at once.",
+    "This is exactly why production dashboards show median latency (often called p50) right next to average latency: a handful of slow, timed-out requests can drag the mean far above what a typical user actually experiences, while the median stays anchored to what most requests really look like.",
   realWorldCode:
-    "def supervisor(subtask):\n    kind = subtask[\"type\"]\n    if kind == \"research\":\n        return research_agent(subtask[\"task\"])\n    elif kind == \"writing\":\n        return writer_agent(subtask[\"task\"])\n    elif kind == \"review\":\n        return review_agent(subtask[\"task\"])\n    else:\n        raise ValueError(\"no agent for type: \" + kind)",
+    'latencies = [42, 45, 48, 50, 415]\n\ntotal = 0\nfor t in latencies:\n    total = total + t\nmean = total / len(latencies)\n\nmiddle_index = len(latencies) // 2\nmedian = latencies[middle_index]\n\nprint(f"mean latency: {mean}ms")\nprint(f"median latency: {median}ms")',
   sandbox: {
     kind: "code",
     challenge:
-      "Write a research_agent and a writer_agent, then a supervisor(subtask) router that hands each subtask off to the right one based on subtask[\"type\"], and run a full subtask list through it.",
+      "This script crashes trying to print the median — fix the middle-index calculation so it lands on a whole number instead of a fraction, then rerun it to see both stats print cleanly.",
     starterCode:
-      "def research_agent(task):\n    return \"[research] found facts for: \" + task\n\ndef writer_agent(task):\n    return \"[writer] drafted prose for: \" + task\n\ndef supervisor(subtask):\n    kind = subtask[\"type\"]\n    if kind == \"research\":\n        return research_agent(subtask[\"task\"])\n    elif kind == \"writing\":\n        return writer_agent(subtask[\"task\"])\n    else:\n        raise ValueError(\"no agent for type: \" + kind)\n\nsubtasks = []\nsubtasks.append({\"task\": \"research neighborhood food scenes\", \"type\": \"research\"})\nsubtasks.append({\"task\": \"write an engaging intro paragraph\", \"type\": \"writing\"})\nsubtasks.append({\"task\": \"find 3 highly rated restaurants\", \"type\": \"research\"})\nsubtasks.append({\"task\": \"write the closing paragraph\", \"type\": \"writing\"})\n\nresults = []\nfor i in range(len(subtasks)):\n    subtask = subtasks[i]\n    print(f\"step {i}: handing off -> {subtask['task']} (type: {subtask['type']})\")\n    outcome = supervisor(subtask)\n    results.append(outcome)\n    print(f\"step {i}: {outcome}\")\n\nprint(f\"completed {len(results)} of {len(subtasks)} subtasks\")",
+      'times = [4, 7, 9, 20, 40]\n\ntotal = 0\nfor t in times:\n    total = total + t\n\nmean = total / len(times)\n\nmiddle_index = len(times) / 2\nmedian = times[middle_index]\n\nprint(f"mean response time: {mean}")\nprint(f"median response time: {median}")',
   },
   quizQuestion:
-    "Suppose you deleted the supervisor and research_agent entirely, and routed every subtask below — including the research ones — into writer_agent. What's the most likely real-world consequence, even though the code runs without crashing?",
+    "Five response times are recorded: 8, 9, 10, 11, and 212 milliseconds. The mean comes out to 50ms and the median comes out to 10ms. Which number better describes a \"typical\" request?",
   quizCode:
-    "def writer_agent(task):\n    return \"[writer] drafted prose for: \" + task\n\nsubtasks = []\nsubtasks.append({\"task\": \"research neighborhood food scenes\", \"type\": \"research\"})\nsubtasks.append({\"task\": \"write an engaging intro paragraph\", \"type\": \"writing\"})\n\nfor subtask in subtasks:\n    print(writer_agent(subtask[\"task\"]))",
+    'times = [8, 9, 10, 11, 212]\n# mean: 50\n# median: 10',
   quizOptions: [
     {
       key: "a",
       label:
-        "It still runs and prints something for every subtask, but the research subtasks get prose-writing treatment instead of fact-gathering — the code doesn't crash, but the output quality suffers because the wrong specialist handled the task",
+        "The median (10ms), because it depends only on the position of values once sorted, so the one extreme outlier barely affects it",
       correct: true,
     },
     {
       key: "b",
-      label: "Python raises a TypeError, since writer_agent's parameter doesn't match a research-shaped subtask",
+      label:
+        "The mean (50ms), because it factors in every single value, so it's always the more complete and accurate summary",
       correct: false,
     },
     {
       key: "c",
-      label: "Nothing changes at all, since research_agent and writer_agent do the same thing under the hood",
+      label:
+        "Neither is meaningful once a dataset contains an outlier — both statistics become unusable at that point",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — this is the real risk orchestration guards against. There's no crash to warn you, since writer_agent runs fine on any string it's handed. The failure is silent and qualitative: a research task run through a writing-only agent produces confident-sounding prose with no actual fact-gathering behind it, which is much harder to catch than a Python error would be.",
+    "Right — four of the five requests were fast, and the median reflects that because it only cares about the middle position in sorted order; the mean gets pulled way up because it adds the outlier's full value into the total.",
   quizFeedbackIncorrect:
-    "Not quite — writer_agent takes a single task string and both subtasks provide one, so nothing crashes. The real problem is invisible to Python entirely: routing a research subtask to a writing-only agent just produces well-written prose with no real facts behind it, a quality failure no stack trace will ever show you.",
+    "Not quite — \"uses every value\" is exactly the mean's weakness here, since it means one 212ms straggler can drag the average to 50ms even though four out of five requests were fast; the median (10ms) reflects the typical request much better.",
   takeaway:
-    "Orchestration means more than sequencing subtasks — it means deciding which agent should handle each one, and handing off cleanly via a supervisor/router just like Module 15's dispatch(call), but routing to an agent instead of a single function. Production systems reach for frameworks like LangGraph or CrewAI to manage that hand-off, shared state, and routing at scale, but the core idea — a coordinator matching subtask type to specialist agent — is the same one you just built.",
+    "Mean is sum divided by count and factors in every value, so a single extreme outlier can drag it far from where the data actually clusters. Median is the middle value once sorted, found by position rather than arithmetic, which makes it far more resistant to outliers — report both when an outlier is possible.",
 };
 
 export default content;

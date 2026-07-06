@@ -3,119 +3,109 @@ import type { LessonData } from "../types";
 const content: LessonData = {
   num: 18,
   orderIndex: 3,
-  phaseLabel: "LINEAR ALGEBRA BASICS",
-  title: "Matrices: a grid of numbers that transforms vectors",
+  phaseLabel: "EMBEDDINGS + RAG",
+  title: "Cutting documents down to size: why chunking makes retrieval work",
   minutes: 18,
   concept:
-    "A matrix is just a grid of numbers — rows and columns — and it does one job: it turns any vector you feed it into a new vector. You compute the new vector one entry at a time, and each entry is nothing new at all — it's a dot product between one row of the matrix and the input vector. Multiply the matrix's first row against the vector, and that sum becomes the first entry of the output; multiply the second row against the same vector, and that becomes the second entry. Because every row can contain different numbers, a matrix can stretch a vector, shrink it, flip it, rotate it, or leave it completely alone, depending entirely on what numbers you put in that grid. This is the exact mechanism inside neural networks: every \"layer\" that reshapes an embedding is really just a matrix, built from numbers the model learned during training, applied to the vector coming out of the layer before it.",
+    "Before a document can be embedded and retrieved, it has to be split into pieces — that step is called chunking, and getting it wrong quietly breaks everything downstream. Embed an entire 60-page manual as a single vector and you get one blurry average of everything in it, so a question about page 2 and a question about page 45 both match the same undifferentiated chunk. Go too far the other way — one chunk per sentence — and each piece becomes too small to carry context on its own, so retrieval can find a technically related sentence with no surrounding information to actually answer the question. The fix real systems use is a middle ground: chunks of a few hundred tokens, often sliced with a sliding window that overlaps the previous chunk slightly, so a sentence sitting right on a chunk boundary still appears whole in at least one chunk instead of getting cut in half. Better splitters go further and respect the document's own structure — paragraph breaks, headings, list items — instead of blindly cutting every N characters regardless of what idea gets sliced through.",
   conceptSimpler:
-    "Think of a matrix as a machine on a conveyor belt: a vector goes in one side, the machine applies a fixed, repeatable rule (stretch this way, flip that way), and a transformed vector comes out the other side — feed the same matrix any vector, and it always applies the same rule.",
+    "Chunking is like making index cards from a textbook: one card per idea, not one card per book and not one card per word. Cards that are too big blur every topic together; cards that are too small lose the sentence they came from.",
   vizStages: [
     {
-      label: "1. A matrix is rows, each one a dot product",
+      label: "1. Chunking happens before anything else",
       body:
-        "Take the matrix [[1, 0], [0, 1]] — two rows, two numbers each — applied to the vector [5, 3]. Row one, [1, 0], dotted with [5, 3] gives 1×5 + 0×3 = 5. Row two, [0, 1], dotted with [5, 3] gives 0×5 + 1×3 = 3. Nothing changed — this is the \"identity\" matrix, the matrix version of multiplying by 1.",
-      code:
-        "matrix = [[1, 0],\n          [0, 1]]\nvector = [5, 3]\n\nnew_vector = [\n  1*5 + 0*3,\n  0*5 + 1*3\n]\n# new_vector = [5, 3] -- unchanged",
+        "A document ingestion pipeline breaks raw text into chunks first, before embedding or storage ever happen. Everything downstream — every embedding, every search — operates on those pieces, never on the whole document at once.",
+      code: "raw_text -> chunks -> embeddings -> vector database",
     },
     {
-      label: "2. Scaling: stretch every axis",
+      label: "2. A search returns whole chunks, not snippets",
       body:
-        "Swap the diagonal 1s for 2s: [[2, 0], [0, 2]]. Now row one gives 2×5 + 0×3 = 10, and row two gives 0×5 + 2×3 = 6. Every entry got doubled — the vector points the same direction but reaches twice as far. This is what \"scaling up\" an embedding by a constant looks like.",
-      code:
-        "matrix = [[2, 0],\n          [0, 2]]\nvector = [5, 3]\n\nnew_vector = [\n  2*5 + 0*3,\n  0*5 + 2*3\n]\n# new_vector = [10, 6] -- same direction, doubled length",
+        "Retrieval hands back entire chunks, never a hand-picked excerpt from the middle of one. That means whatever size you chunked into becomes the smallest and largest unit that can ever come back as an answer.",
     },
     {
-      label: "3. Non-uniform scaling: stretch one axis only",
+      label: "3. Overlap protects information near the edges",
       body:
-        "Matrices don't have to treat every axis the same. [[3, 0], [0, 1]] triples the first coordinate but leaves the second untouched: row one gives 3×5 + 0×3 = 15, row two gives 0×5 + 1×3 = 3. The vector gets pulled long and thin in one direction, like squishing a circle into an ellipse.",
-      code:
-        "matrix = [[3, 0],\n          [0, 1]]\nvector = [5, 3]\n\nnew_vector = [\n  3*5 + 0*3,\n  0*5 + 1*3\n]\n# new_vector = [15, 3] -- stretched horizontally, vertical axis untouched",
+        "A sliding window that overlaps the previous chunk means a sentence sitting right at a boundary still appears fully intact in at least one chunk, instead of being severed between two chunks that each only have half of it.",
+      code: "chunk 1: \"...refunds are processed within 5-7\"\nchunk 2: \"within 5-7 business days of the return being received...\"",
     },
     {
-      label: "4. Rotation: same length, new direction",
+      label: "4. There's no single 'right' chunk size",
       body:
-        "The matrix [[0, -1], [1, 0]] rotates a vector 90 degrees counterclockwise. On [5, 3]: row one gives 0×5 + (-1)×3 = -3, row two gives 1×5 + 0×3 = 5, so the result is [-3, 5]. Check the magnitude: 5² + 3² = 34, and (-3)² + 5² = 34 too — same length, purely a change of direction.",
-      code:
-        "matrix = [[0, -1],\n          [1, 0]]\nvector = [5, 3]\n\nnew_vector = [\n  0*5 + (-1)*3,\n  1*5 + 0*3\n]\n# new_vector = [-3, 5] -- rotated 90 degrees, same length as [5, 3]",
-    },
-    {
-      label: "5. Reflection: flip across an axis",
-      body:
-        "[[1, 0], [0, -1]] leaves the first coordinate alone and flips the sign of the second: row one gives 1×5 + 0×3 = 5, row two gives 0×5 + (-1)×3 = -3, giving [5, -3]. That's a mirror image of the original vector across the horizontal axis.",
-      code:
-        "matrix = [[1, 0],\n          [0, -1]]\nvector = [5, 3]\n\nnew_vector = [\n  1*5 + 0*3,\n  0*5 + (-1)*3\n]\n# new_vector = [5, -3] -- reflected across the x-axis",
+        "A legal contract's dense clauses often need larger chunks to preserve their meaning, while a FAQ's short question-answer pairs work better as small, tightly-scoped chunks. Real systems tune chunk size per document type rather than picking one number for everything.",
     },
   ],
   realWorldIntro:
-    "Every layer of a neural network that reshapes an embedding — including the \"Query,\" \"Key,\" and \"Value\" projections inside attention, which is coming up next in this course — is a matrix multiplication like the ones above, just with far more rows, columns, and numbers learned from data instead of picked by hand.",
+    "Libraries like LangChain and LlamaIndex ship built-in \"text splitters\" that implement exactly this overlap-and-boundary logic, because getting chunk size wrong is one of the most common reasons a RAG system gives confident, wrong-sounding answers.",
   realWorldCode:
-    "W_query = learned_matrix   # shape depends on the model, but the operation is identical\ntoken_embedding = embed(\"bank\")\nquery_vector = matrix_multiply(W_query, token_embedding)\n# same row-times-vector dot products as above, just at a much larger scale",
+    "splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)\nchunks = splitter.split_text(document_text)",
   sandbox: {
     kind: "explore",
     instructions:
-      "Step through each matrix below to see how the same input vector gets stretched, rotated, or flipped depending only on the numbers inside the grid.",
+      "Click through each stage to see what happens to retrieval quality as the same document gets split a different way.",
     stages: [
       {
-        label: "Identity: change nothing",
+        label: "1. One giant chunk: too coarse",
         body:
-          "[[1, 0], [0, 1]] is the \"do nothing\" matrix — every row picks out exactly one coordinate and ignores the other, so whatever vector goes in comes out unchanged. It's the matrix equivalent of multiplying a number by 1.",
-        code: "matrix = [[1, 0], [0, 1]]\nvector = [5, 3]\n# result: [5, 3]",
+          "Embedding an entire 40-page manual as a single vector produces one averaged-out representation of everything in it. A question about page 30 and a question about page 2 both match that same lone chunk, so retrieval can't tell you which part is actually relevant.",
+        code: 'chunk = read_whole_file("manual.pdf")\n# 40 pages -> one single vector',
       },
       {
-        label: "Uniform scaling: grow or shrink evenly",
+        label: "2. One chunk per sentence: too fine",
         body:
-          "[[2, 0], [0, 2]] doubles both coordinates equally, so the output vector points in the same direction as the input but reaches twice as far from the origin.",
-        code: "matrix = [[2, 0], [0, 2]]\nvector = [5, 3]\n# result: [10, 6] -- same direction, doubled length",
+          "Splitting on every period keeps each chunk razor-sharp but shreds the context around it. \"It requires the API key.\" on its own doesn't say which feature it belongs to, so retrieval can surface a technically matching sentence that has no way to actually answer the question.",
+        code:
+          'chunks = split_by_sentence(document)\n# chunk 47: "It requires the API key."\n# chunk 48: "This step is optional for free-tier accounts."',
       },
       {
-        label: "Non-uniform scaling: stretch one axis",
+        label: "3. Fixed-size windows with overlap",
         body:
-          "[[3, 0], [0, 1]] only stretches the first coordinate, leaving the second alone. The output vector no longer points in the same direction as the input — it's been pulled toward the horizontal axis.",
-        code: "matrix = [[3, 0], [0, 1]]\nvector = [5, 3]\n# result: [15, 3] -- pulled toward the horizontal axis",
+          "Most real systems settle on chunks of a few hundred tokens — roughly a few paragraphs — sliced with a window that overlaps the previous chunk by 10-20%. That overlap means a sentence that would otherwise get cut in half between two chunks still shows up whole in at least one of them.",
+        code:
+          "chunk_size = 400  # tokens\noverlap = 50      # tokens\n# chunk 1: tokens 0-400\n# chunk 2: tokens 350-750  <- overlaps chunk 1 by 50 tokens",
       },
       {
-        label: "Rotation: same length, new angle",
+        label: "4. Splitting on natural boundaries",
         body:
-          "[[0, -1], [1, 0]] rotates any vector 90 degrees counterclockwise around the origin. The magnitude (length) of the vector never changes — only the direction it points does.",
-        code: "matrix = [[0, -1], [1, 0]]\nvector = [5, 3]\n# result: [-3, 5] -- same length as [5, 3], rotated 90 degrees",
+          "Instead of blindly cutting every N characters, boundary-aware chunking respects the document's own structure — paragraph breaks, headings, list items — so a chunk never ends mid-thought just because a character counter happened to hit its limit.",
+        code:
+          "# naive: cut every 400 characters, ignoring structure\n# boundary-aware: cut at the nearest paragraph break before 400 characters",
       },
       {
-        label: "Reflection: a mirror image",
+        label: "5. Every chunk carries its own metadata",
         body:
-          "[[1, 0], [0, -1]] leaves the horizontal coordinate untouched but flips the sign of the vertical one, producing a mirror image of the vector across the horizontal axis.",
-        code: "matrix = [[1, 0], [0, -1]]\nvector = [5, 3]\n# result: [5, -3] -- mirrored across the x-axis",
+          "A stored chunk isn't just raw text — it's tagged with metadata like the source document, section title, and page number. When it's retrieved later, that metadata is what lets the system (and the user) trace the answer back to exactly where it came from.",
+        code:
+          '{"text": "Refunds are processed within 5-7 business days.", "source": "refund-policy.pdf", "page": 2}',
       },
     ],
   },
   quizQuestion:
-    "matrix = [[1, 0], [0, -1]] is applied to vector = [5, 3]. What's the result, and what transformation does this matrix represent?",
-  quizCode:
-    "matrix = [[1, 0], [0, -1]]\nvector = [5, 3]\n# row 0: 1*5 + 0*3\n# row 1: 0*5 + (-1)*3",
+    "A support team embeds their entire 60-page product manual as a single chunk. A user then asks a specific question about something on page 45. What's most likely to happen at retrieval time?",
   quizOptions: [
     {
       key: "a",
       label:
-        "[5, -3] — the first row leaves the x-coordinate unchanged, and the second row flips the sign of the y-coordinate, reflecting the vector across the x-axis",
-      correct: true,
-    },
-    {
-      key: "b",
-      label: "[-5, 3] — the matrix flips the x-coordinate instead, reflecting the vector across the y-axis",
+        "Retrieval works fine — the whole manual is retrieved and the model reads through it to find page 45",
       correct: false,
     },
     {
+      key: "b",
+      label:
+        "Retrieval keeps returning the same all-purpose chunk for nearly every question, since one vector for 60 pages can't distinguish what's on page 2 from what's on page 45",
+      correct: true,
+    },
+    {
       key: "c",
-      label: "[5, 3] — since one row is mostly zeros, the vector passes through the matrix unchanged",
+      label: "Retrieval fails outright with an error, because a document that large can't be embedded",
       correct: false,
     },
   ],
   quizFeedbackCorrect:
-    "Right — row [1, 0] dotted with [5, 3] keeps the x-coordinate exactly as it was, while row [0, -1] dotted with [5, 3] negates the y-coordinate, which is precisely a reflection across the horizontal axis.",
+    "Right — a single embedding for 60 pages averages together everything the document contains, so it isn't distinctive enough to tell a question about page 2 apart from one about page 45; nearly every query ends up matching that same blurry chunk.",
   quizFeedbackIncorrect:
-    "Not quite — the first row has no negative sign, so the x-coordinate stays at 5 unchanged; it's the second row's -1 that flips the y-coordinate's sign, which mirrors the vector across the x-axis (not the y-axis), and that lone -1 absolutely still changes the result.",
+    "Not quite — embedding models can technically accept long text without erroring, but the resulting vector is too averaged-out to be useful for retrieval: it can't tell a question about page 2 from one about page 45, so nearly every query retrieves the same undifferentiated chunk.",
   takeaway:
-    "A matrix is nothing more than one dot product per row — stack a few of those together and you can stretch, shrink, rotate, or flip any vector, which is the entire mechanism neural networks use to reshape embeddings layer by layer.",
+    "Chunk size is a tradeoff between too coarse (loses precision) and too fine (loses context) — overlap and boundary-aware splitting are how real systems land in between. Get chunking wrong, and no amount of embedding or search sophistication downstream can fix it.",
 };
 
 export default content;
