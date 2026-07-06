@@ -282,11 +282,16 @@ export type Database = {
           email_frequency: string
           full_name: string | null
           id: string
+          learning_goal: string | null
           location: string | null
+          onboarding_completed_at: string | null
+          placement_answers: Json | null
           public_portfolio: boolean
+          setup_checklist: Json | null
           theme: string
           updated_at: string
           username: string
+          welcome_email_day: number
         }
         Insert: {
           avatar_url?: string | null
@@ -295,11 +300,16 @@ export type Database = {
           email_frequency?: string
           full_name?: string | null
           id: string
+          learning_goal?: string | null
           location?: string | null
+          onboarding_completed_at?: string | null
+          placement_answers?: Json | null
           public_portfolio?: boolean
+          setup_checklist?: Json | null
           theme?: string
           updated_at?: string
           username: string
+          welcome_email_day?: number
         }
         Update: {
           avatar_url?: string | null
@@ -308,11 +318,16 @@ export type Database = {
           email_frequency?: string
           full_name?: string | null
           id?: string
+          learning_goal?: string | null
           location?: string | null
+          onboarding_completed_at?: string | null
+          placement_answers?: Json | null
           public_portfolio?: boolean
+          setup_checklist?: Json | null
           theme?: string
           updated_at?: string
           username?: string
+          welcome_email_day?: number
         }
         Relationships: []
       }
@@ -506,7 +521,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_due_onboarding_emails: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string | null
+          full_name: string | null
+          next_day: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
