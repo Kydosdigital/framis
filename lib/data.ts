@@ -423,7 +423,8 @@ export const CAPSTONES: CapstoneData[] = [
 
 export type CapstoneTemplate = {
   slug: string;
-  emoji: string;
+  /** Font Awesome icon name (see components/Icon.tsx) — no emojis on the site. */
+  icon: string;
   name: string;
   difficulty: "Beginner" | "Intermediate" | "Advanced";
   timeEstimate: string;
@@ -439,7 +440,7 @@ export type CapstoneTemplate = {
 export const CAPSTONE_TEMPLATES: CapstoneTemplate[] = [
   {
     slug: "support-chatbot",
-    emoji: "💬",
+    icon: "comments",
     name: "Customer Support Chatbot",
     difficulty: "Intermediate",
     timeEstimate: "3–4 weeks",
@@ -492,7 +493,7 @@ async def chat(payload: dict):
   },
   {
     slug: "code-assistant",
-    emoji: "⚡",
+    icon: "bolt",
     name: "Code Generation Assistant",
     difficulty: "Advanced",
     timeEstimate: "3–4 weeks",
@@ -544,7 +545,7 @@ async def generate(payload: dict):
   },
   {
     slug: "doc-analyzer",
-    emoji: "📄",
+    icon: "file-lines",
     name: "Document Analyzer + Q&A",
     difficulty: "Intermediate",
     timeEstimate: "2–3 weeks",
@@ -585,7 +586,7 @@ async def generate(payload: dict):
   },
   {
     slug: "recommendation-engine",
-    emoji: "🎯",
+    icon: "bullseye",
     name: "Product Recommendation Engine",
     difficulty: "Intermediate",
     timeEstimate: "2–3 weeks",
@@ -626,7 +627,7 @@ async def generate(payload: dict):
   },
   {
     slug: "sentiment-dashboard",
-    emoji: "📊",
+    icon: "chart-bar",
     name: "Sentiment Analysis Dashboard",
     difficulty: "Intermediate",
     timeEstimate: "2–3 weeks",
@@ -667,7 +668,7 @@ def parse_sentiment(model_output: str) -> str:
   },
   {
     slug: "blog-generator",
-    emoji: "✍️",
+    icon: "pen-nib",
     name: "Blog Post Generator",
     difficulty: "Intermediate",
     timeEstimate: "2–3 weeks",
@@ -706,7 +707,7 @@ def parse_sentiment(model_output: str) -> str:
   },
   {
     slug: "image-classifier",
-    emoji: "🖼️",
+    icon: "image",
     name: "Image Classification System",
     difficulty: "Advanced",
     timeEstimate: "3–4 weeks",
@@ -751,7 +752,7 @@ def validate_image(content_type: str, size: int) -> str | None:
   },
   {
     slug: "data-cleaning-automation",
-    emoji: "🧹",
+    icon: "broom",
     name: "Data Cleaning Automation",
     difficulty: "Intermediate",
     timeEstimate: "2–3 weeks",

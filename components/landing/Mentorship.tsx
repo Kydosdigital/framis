@@ -2,6 +2,24 @@
 
 import { useFramis } from "@/lib/store";
 import { Logo } from "../ui";
+import { Icon } from "../Icon";
+
+const WHAT_YOU_GET: { icon: string; title: string; body: string }[] = [
+  { icon: "user-tie", title: "Dedicated mentor", body: "An experienced engineer matched to your goals and timezone." },
+  { icon: "code", title: "Weekly code review", body: "One detailed review a week on real work, with written feedback." },
+  { icon: "slack", title: "Slack access", body: "Direct messaging with a 12-hour response window." },
+  { icon: "graduation-cap", title: "Career coaching", body: "A monthly 1:1 on job search, CV, and interview prep." },
+  { icon: "list-check", title: "Progress tracking", body: "Your mentor notices when you go quiet, and helps you restart." },
+  { icon: "handshake", title: "Accountability", body: "Someone who cares that you finish and get hired." },
+];
+
+const HOW_IT_WORKS: { title: string; body: string }[] = [
+  { title: "Add mentorship", body: "£150/month, cancel anytime. We match you with a mentor." },
+  { title: "Meet your mentor", body: "A short intro call to set goals and a working rhythm." },
+  { title: "Learn together", body: "Weekly code reviews and Slack support as you work through the curriculum." },
+  { title: "Build your capstone", body: "Your mentor reviews it, gives feedback, and helps you polish it." },
+  { title: "Go to market", body: "Career coaching on the job search when your portfolio is ready." },
+];
 
 export default function Mentorship() {
   const goScreen = useFramis((s) => s.goScreen);
@@ -45,6 +63,19 @@ export default function Mentorship() {
           </div>
 
           <div className="mb-10">
+            <h2 className="mb-4 font-inter text-[20px] font-bold">What you get</h2>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+              {WHAT_YOU_GET.map((f) => (
+                <div key={f.title} className="rounded-[12px] border border-line bg-card p-5">
+                  <Icon name={f.icon} size={22} className="mb-2.5 text-blue" />
+                  <div className="mb-1 font-inter text-[15px] font-semibold">{f.title}</div>
+                  <p className="text-[13px]/[1.55] text-ink-500">{f.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-10">
             <h2 className="mb-3 font-inter text-[20px] font-bold">Why it exists</h2>
             <p className="text-[14.5px]/[1.7] text-ink-500">
               Self-paced learners finish and get hired too — about 1 in 5
@@ -62,6 +93,23 @@ export default function Mentorship() {
               fit, you can switch mentors free in your first two weeks — no
               awkward conversation required, just ask.
             </p>
+          </div>
+
+          <div className="mb-10">
+            <h2 className="mb-4 font-inter text-[20px] font-bold">How it works</h2>
+            <div className="flex flex-col gap-3">
+              {HOW_IT_WORKS.map((step, i) => (
+                <div key={step.title} className="flex items-start gap-3.5">
+                  <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-blue font-mono text-[13px] font-bold text-white">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <div className="font-inter text-[15px] font-semibold">{step.title}</div>
+                    <p className="text-[13.5px]/[1.55] text-ink-500">{step.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="rounded-[12px] border border-line bg-card px-7 py-6 text-center">

@@ -5,6 +5,7 @@ import { useFramis } from "@/lib/store";
 import { CAPSTONES, CAPSTONE_TEMPLATES, CAPSTONE_CHECKLIST, CAPSTONE_RUBRIC } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
 import { Check } from "../ui";
+import { Icon } from "../Icon";
 
 function CollapsibleSection({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -79,7 +80,7 @@ function TemplatePicker({ onPick }: { onPick: (slug: string) => void }) {
           className="flex flex-col gap-2 rounded-[12px] border border-line bg-card px-5 py-[18px] text-left transition-[border-color,box-shadow] duration-200 hover:border-blue hover:shadow-[0_10px_24px_rgba(10,20,40,.08)]"
         >
           <div className="flex items-center gap-2.5">
-            <span className="text-[22px] leading-none">{t.emoji}</span>
+            <Icon name={t.icon} size={20} className="text-blue" />
             <span className="font-inter text-[15px] font-semibold">{t.name}</span>
           </div>
           <div className="font-mono text-[11.5px] font-medium text-ink-400">
@@ -183,8 +184,9 @@ export default function Capstone() {
       {template && !submitted && (
         <div className="mb-[18px] rounded-[12px] border border-line bg-card px-[26px] py-[22px]">
           <div className="mb-1 flex items-center justify-between gap-3">
-            <span className="font-inter text-[14px] font-semibold">
-              {template.emoji} {template.name}
+            <span className="inline-flex items-center gap-2 font-inter text-[14px] font-semibold">
+              <Icon name={template.icon} size={16} className="text-blue" />
+              {template.name}
             </span>
             <button
               onClick={() => s.chooseCapstoneTemplate(data.slug, "")}

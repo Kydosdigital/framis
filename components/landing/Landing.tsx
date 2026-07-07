@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
 import { PHASES, FAQ_ITEMS } from "@/lib/data";
 import { Logo } from "../ui";
+import { Icon } from "../Icon";
 import FaqRow from "../FaqRow";
 import ThreeHero from "./ThreeHero";
 import LandingDemo from "./LandingDemo";
@@ -98,22 +99,25 @@ export default function Landing() {
             </h1>
             <p className="mb-[34px] max-w-[520px] text-pretty text-[18px]/[1.6] text-slateink-200 [animation:framisWordIn_.7s_.78s_both]">
               AI writes the code. Framis teaches the judgment — verification,
-              systems thinking, and shipping. Zero to full-stack AI engineer,
-              free, 10–15 hours a week.
+              systems thinking, and shipping. The full curriculum is free; add a
+              1:1 mentor whenever you want accountability. Zero to full-stack AI
+              engineer at 10–15 hours a week.
             </p>
             <div className="flex flex-wrap items-center gap-[14px] [animation:framisWordIn_.7s_.92s_both]">
               <button
                 onClick={startOnboarding}
-                className="rounded-[10px] bg-blue px-[30px] py-[15px] font-inter text-[16px] font-semibold text-white transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,102,204,.5)]"
+                className="inline-flex items-center gap-2.5 rounded-[10px] bg-blue px-[30px] py-[15px] font-inter text-[16px] font-semibold text-white transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,102,204,.5)]"
               >
                 Start free — no card needed
+                <Icon name="arrow-right" size={15} />
               </button>
-              <a
-                href="#curriculum"
-                className="px-2 py-[15px] font-inter text-[15px] font-semibold text-teal no-underline"
+              <button
+                onClick={() => goScreen("mentorship")}
+                className="inline-flex items-center gap-1.5 border-none bg-transparent px-2 py-[15px] font-inter text-[15px] font-semibold text-teal"
               >
-                View the full roadmap →
-              </a>
+                Explore mentorship
+                <Icon name="arrow-right" size={13} />
+              </button>
             </div>
             <div className="mt-[44px] flex flex-wrap gap-9 [animation:framisWordIn_.7s_1.05s_both]">
               {[
@@ -281,10 +285,17 @@ export default function Landing() {
               <div className="mb-1 font-mono text-[12px] font-medium text-ink-500">SELF-PACED</div>
               <div className="mb-4 font-inter text-[26px] font-bold">Free, forever</div>
               <ul className="flex flex-col gap-2.5 text-[14px] text-ink-500">
-                <li>✓ All 7 phases, 28 modules, 123 lessons</li>
-                <li>✓ Code sandboxes and every capstone</li>
-                <li>✓ Peer code review</li>
-                <li>✓ Public portfolio</li>
+                {[
+                  "All 7 phases, 28 modules, 123 lessons",
+                  "Code sandboxes and every capstone",
+                  "Peer code review",
+                  "Public portfolio",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5">
+                    <Icon name="circle-check" size={15} className="mt-0.5 flex-none text-teal" />
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="rounded-[12px] border-2 border-blue bg-white p-7">
@@ -293,19 +304,66 @@ export default function Landing() {
                 £150<span className="text-[15px] font-medium text-ink-500">/month</span>
               </div>
               <ul className="mb-5 flex flex-col gap-2.5 text-[14px] text-ink-500">
-                <li>✓ Everything in self-paced, plus:</li>
-                <li>✓ A dedicated 1:1 mentor</li>
-                <li>✓ One code review a week</li>
-                <li>✓ Monthly career coaching</li>
+                {[
+                  "Everything in self-paced, plus:",
+                  "A dedicated 1:1 mentor",
+                  "One code review a week",
+                  "Monthly career coaching",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5">
+                    <Icon name="circle-check" size={15} className="mt-0.5 flex-none text-blue" />
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
               <button
                 onClick={() => goScreen("mentorship")}
-                className="w-full rounded-lg bg-blue px-5 py-3 font-inter text-[14px] font-semibold text-white"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue px-5 py-3 font-inter text-[14px] font-semibold text-white"
               >
-                Learn about mentorship →
+                Learn about mentorship
+                <Icon name="arrow-right" size={13} />
               </button>
             </div>
           </div>
+
+          {/* honest side-by-side — only numbers backed by the SPEC */}
+          <div className="mt-6 overflow-x-auto rounded-[12px] border border-line bg-white">
+            <table className="w-full min-w-[520px] border-collapse text-[14px]">
+              <thead>
+                <tr className="border-b border-line text-left">
+                  <th className="px-5 py-3 font-inter font-semibold text-ink-700"> </th>
+                  <th className="px-5 py-3 font-inter font-semibold text-ink-700">Self-paced</th>
+                  <th className="px-5 py-3 font-inter font-semibold text-blue">With a mentor</th>
+                </tr>
+              </thead>
+              <tbody className="text-ink-500">
+                {[
+                  ["Curriculum", "All 28 modules", "All 28 modules"],
+                  ["Code review", "Peer review", "1 a week from your mentor"],
+                  ["Career coaching", "Community", "1:1 monthly check-in"],
+                  ["Direct mentor support", null, "Slack · 12-hr response"],
+                  ["Hired within 6 months", "~1 in 5", "~1 in 2"],
+                ].map(([label, free, mentor]) => (
+                  <tr key={label} className="border-b border-line last:border-0">
+                    <td className="px-5 py-3 font-medium text-ink-700">{label}</td>
+                    <td className="px-5 py-3">
+                      {free ?? <Icon name="circle-xmark" size={15} className="text-ink-400" />}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="inline-flex items-center gap-2">
+                        <Icon name="circle-check" size={15} className="flex-none text-blue" />
+                        {mentor}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-[12.5px] text-ink-400">
+            Placement figures are outcome rates for learners who finish, not
+            guarantees. The curriculum is identical on both tracks.
+          </p>
         </div>
       </Reveal>
 
