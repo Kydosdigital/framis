@@ -206,10 +206,29 @@ modules across 7 phases**, matching the app.
 
 > ⚠️ **Drift**: the app defines **7** capstones (`CAPSTONES`) but the DB seeds
 > only **6 projects** — `classical-ml-model-comparison` (Phase 3) is authored in
-> the app but not in the seed. And two migration files
-> (`auto_assign_peer_reviewers`, `seed_rag_lesson`) carry an in-file note: *"NOT
-> YET APPLIED to the live project — the Supabase MCP connector was disconnected."*
-> Verify against the live database before trusting seed/trigger state.
+> the app but not in the seed. Still outstanding.
+
+### 4.7 Live DB state — verified 2026-07-07
+
+Project `framis` (`zlumqbyesfmfxfjcddhm`, eu-west-2, active). Verified directly
+against the live database:
+
+- **All 10 migrations are effectively applied.** Migrations #5–#10 were applied
+  out-of-band via the Supabase MCP connector (per their file comments) and #4
+  was applied on 2026-07-07. Confirmed live: `modules` = 28 rows across phases
+  1–7; `lessons` = Variables + RAG; all 5 onboarding `profiles` columns;
+  functions `get_due_onboarding_emails`, `get_capstone_gallery`,
+  `assign_peer_reviewers` (+ its two triggers); `mentor_applications` table;
+  capstone-gallery policy. **The email/cron system's DB dependencies are all
+  present.**
+- ⚠️ **Tracking-table drift**: `supabase_migrations.schema_migrations` only
+  recorded init/seed_curriculum/harden_rls + the 2026-07-07 peer-reviewer apply.
+  The out-of-band changes were never recorded there. **Do NOT run
+  `supabase migration up` against this project** — it would try to re-run
+  already-applied migrations (incl. #5's destructive module-number arithmetic and
+  the unique-constrained seeds) and error/corrupt data. Apply any future single
+  migration via the MCP `apply_migration` path (which records it correctly), or
+  reconcile the tracking table first.
 
 ### 4.4 Peer-reviewer auto-assignment (`20260705000000_auto_assign_peer_reviewers.sql`)
 
@@ -329,8 +348,10 @@ Referenced in code (`lib/supabase/*`, `lib/resend.ts`, API routes,
 
 - DB `lessons` table has 2 rows; app authors ~125 lessons in TS → stats undercount.
 - App has 7 capstones; DB seeds 6 (`classical-ml-model-comparison` missing).
-- `auto_assign_peer_reviewers` + `seed_rag_lesson` migrations flagged "NOT YET
-  APPLIED" — verify against live DB.
+- ✅ Resolved 2026-07-07: `seed_rag_lesson` confirmed applied; `auto_assign_peer_reviewers`
+  applied. Both live. (See §4.7.)
+- Migration tracking table is out of sync with the real schema — never run a
+  blanket `supabase migration up` against the live project (see §4.7).
 - `CAPSTONE_TEMPLATES` still contain emoji fields (violates no-emoji rule).
 - Referenced but absent from the repo: `FRAMIS_MASTER_SPEC.md`,
   `FRAMIS_ICON_REFERENCE.md` (this `SPEC.md` supersedes the former).
