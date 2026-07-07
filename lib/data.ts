@@ -68,6 +68,49 @@ export const SETUP_ITEMS: { key: "py" | "vsc" | "git"; label: string }[] = [
   { key: "git", label: "Git + GitHub account" },
 ];
 
+export const FAQ_ITEMS: { question: string; answer: string }[] = [
+  {
+    question: "Is the curriculum really free forever?",
+    answer:
+      "Yes — every module, every lesson, every sandbox, and peer review are free, permanently. There's no paywall waiting further into the curriculum. The only paid option is an optional mentor at £150/month, and that's for people who want a dedicated person checking their work, not a requirement to keep learning.",
+  },
+  {
+    question: "Do I need to be good at math or already know how to code?",
+    answer:
+      "No. Phase 1 assumes zero coding experience and starts with the terminal. If you already know the basics, the placement quiz during onboarding starts you further in so you're not re-doing things you've already learned.",
+  },
+  {
+    question: "What happens when I get stuck?",
+    answer:
+      "Every lesson has a key-terms sidebar with plain-English definitions and real-world examples for anything jargon-heavy. Capstones get read by another learner before they count as shipped, so you get real feedback on real code, not just an automated check.",
+  },
+  {
+    question: "How long does this actually take?",
+    answer:
+      "The full path is 64 weeks (7 phases, 28 modules) at roughly 10–15 hours a week. You're not locked to that pace — go faster or slower — but that's the range that keeps momentum without burning out.",
+  },
+  {
+    question: "What's Phase 3 and why does everyone mention it?",
+    answer:
+      "Phase 3 is Data + Classical ML — Pandas, feature engineering, decision trees, model evaluation. It's a genuine jump in difficulty from the web-development phase before it, and most learners feel that. It's not a curriculum mistake; it's where the real understanding of how machine learning works actually happens.",
+  },
+  {
+    question: "What do I actually get if I finish?",
+    answer:
+      "Seven shipped capstones — real, working, deployed projects, not tutorials — reviewed by other learners, plus whatever you built along the way. About 1 in 5 self-paced learners get hired within 6 months of finishing; with a mentor, that's closer to 1 in 2, at an average salary of £52,000.",
+  },
+  {
+    question: "What does the mentor option actually include?",
+    answer:
+      "A dedicated mentor, one code review a week, Slack access with a 12-hour response window, and a monthly career coaching check-in — £150/month, cancel anytime. It's optional and doesn't unlock any curriculum that isn't already free.",
+  },
+  {
+    question: "Can I use this on my phone or an old laptop?",
+    answer:
+      "Everything runs in the browser — the code sandboxes are built in, no local Python or Node install required to work through lessons. A laptop is more comfortable for actually writing code, but there's no special hardware requirement.",
+  },
+];
+
 export const WEEK_TASKS: {
   label: string;
   meta: string;
