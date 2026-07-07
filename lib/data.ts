@@ -166,6 +166,7 @@ export type CapstoneData = {
   slug: string; // matches supabase projects.slug
   title: string;
   metaTags: string; // e.g. "INTERMEDIATE · 2-3 WEEKS · SOLO"
+  templates?: boolean; // true = learner picks a domain from CAPSTONE_TEMPLATES first
   description: string;
   criteria: string[];
   hints: string[];
@@ -319,10 +320,11 @@ export const CAPSTONES: CapstoneData[] = [
   {
     phaseIndex: 6,
     slug: "production-ai-system",
-    title: "A production-grade support agent with a kill switch",
+    title: "A production-grade AI system with a kill switch",
     metaTags: "ADVANCED · 3–4 WEEKS · SOLO OR PAIR",
+    templates: true,
     description:
-      "You’re building an AI support agent — it reads incoming tickets, calls tools (order lookup, refund status, docs search) and drafts or sends a reply — but the bar here isn’t “it works,” it’s “it’s safe to actually ship.” Every request is logged and costed, an eval suite guards every prompt change, guardrails catch bad input before it reaches the model, and anything the agent isn’t confident about lands in a human queue instead of going out the door. This is the project that pulls together everything from the five phases before it — auth and testing discipline, LLM tool calling, evals — plus the operational controls that separate a demo from something a real company would run.",
+      "Pick a domain below — support agent, code assistant, document Q&A, whatever fits what you want to build — but whichever you choose, the bar is the same: not “it works,” it’s “it’s safe to actually ship.” Every request is logged and costed, an eval suite guards every prompt change, guardrails catch bad input before it reaches the model, and anything the system isn’t confident about lands in a human queue instead of going out the door. This is the project that pulls together everything from the six phases before it — auth and testing discipline, LLM tool calling, evals — plus the operational controls that separate a demo from something a real company would run.",
     criteria: [
       "Every request is logged with latency and cost",
       "There's an automated eval suite (at least 20 cases) that runs before any prompt or config change ships",
@@ -416,6 +418,453 @@ export const CAPSTONES: CapstoneData[] = [
     reviewFlagCopy: "You flagged the scaler being fit on the full dataset before the train/test split — that's data leakage, since the test set's statistics quietly influenced the scaling of the training data. That’s exactly the judgment Framis is built to train.",
     shippedHeadline: "Shipped. That’s project 3 of 7.",
     autoCheckLine: "Auto-checks passed: repo public · README found · train/val/test split detected before fitting · model card present · deployed endpoint responds.",
+  },
+];
+
+export type CapstoneTemplate = {
+  slug: string;
+  emoji: string;
+  name: string;
+  difficulty: "Beginner" | "Intermediate" | "Advanced";
+  timeEstimate: string;
+  overview: string;
+  stack: { backend: string; frontend: string; database: string; aiComponent: string; deployment: string };
+  learningOutcomes: string[];
+  architecture: string[];
+  starterFolderStructure: string;
+  starterCode: { filename: string; code: string }[];
+  keyDecisions: string[];
+};
+
+export const CAPSTONE_TEMPLATES: CapstoneTemplate[] = [
+  {
+    slug: "support-chatbot",
+    emoji: "💬",
+    name: "Customer Support Chatbot",
+    difficulty: "Intermediate",
+    timeEstimate: "3–4 weeks",
+    overview:
+      "Answers customer questions from your own documents (RAG), escalates to a human when it isn't confident, and tracks satisfaction.",
+    stack: {
+      backend: "FastAPI (Python)",
+      frontend: "React (basic chat UI)",
+      database: "PostgreSQL + pgvector",
+      aiComponent: "Claude API + embeddings",
+      deployment: "Railway or Render",
+    },
+    learningOutcomes: [
+      "Retrieval-augmented generation end to end",
+      "Conversation state management",
+      "Human-in-the-loop escalation",
+      "Cost tracking on a per-conversation basis",
+    ],
+    architecture: [
+      "Customer sends a message",
+      "Search your knowledge base (vector DB) for relevant chunks",
+      "Claude generates a response using those chunks as context",
+      "If confidence is low, escalate to a human queue instead of answering",
+      "Track satisfaction (thumbs up/down) to see what's working",
+    ],
+    starterFolderStructure: "support-chatbot/\n  main.py\n  requirements.txt\n  .env.example\n  db/\n    schema.sql\n  app/\n    retrieval.py\n    chat.py\n  tests/\n    test_chat.py",
+    starterCode: [
+      {
+        filename: "main.py",
+        code: `from fastapi import FastAPI
+from app.chat import handle_message
+
+app = FastAPI()
+
+@app.post("/chat")
+async def chat(payload: dict):
+    reply = await handle_message(payload["conversation_id"], payload["message"])
+    return {"reply": reply.text, "escalated": reply.escalated}`,
+      },
+      {
+        filename: "requirements.txt",
+        code: "fastapi\nuvicorn\nanthropic\npsycopg2-binary\npgvector\npytest",
+      },
+    ],
+    keyDecisions: [
+      "RAG vs. fine-tuning: RAG is faster to stand up and doesn't need thousands of past conversations — start there.",
+      "Escalation threshold: pick a confidence signal (a model self-rating, or simply \"no chunk scored above X similarity\") and escalate by default when unsure.",
+      "Cost: Claude API is priced per token — log tokens per conversation from day one so you're not guessing at cost later.",
+    ],
+  },
+  {
+    slug: "code-assistant",
+    emoji: "⚡",
+    name: "Code Generation Assistant",
+    difficulty: "Advanced",
+    timeEstimate: "3–4 weeks",
+    overview:
+      "Takes a plain-English description, generates code, explains it, and handles follow-up requests like \"make it faster\" or \"add tests.\"",
+    stack: {
+      backend: "FastAPI",
+      frontend: "Next.js + a code editor component",
+      database: "PostgreSQL",
+      aiComponent: "Claude API (structured output)",
+      deployment: "Vercel (frontend) + Railway (backend)",
+    },
+    learningOutcomes: [
+      "Structured outputs (getting reliable, parseable responses from an LLM)",
+      "Multi-turn conversation context",
+      "Basic code validation without executing untrusted code",
+    ],
+    architecture: [
+      'User describes what they want ("merge two sorted arrays")',
+      "Claude returns code + explanation + a brief complexity note",
+      "UI displays code in an editor with the explanation alongside it",
+      "Follow-ups (\"make it faster\", \"explain this line\") reuse the conversation's context",
+    ],
+    starterFolderStructure: "code-assistant/\n  backend/\n    main.py\n    requirements.txt\n  frontend/\n    package.json\n    app/\n      page.tsx",
+    starterCode: [
+      {
+        filename: "backend/main.py",
+        code: `from fastapi import FastAPI
+from anthropic import Anthropic
+
+app = FastAPI()
+client = Anthropic()
+
+@app.post("/generate")
+async def generate(payload: dict):
+    msg = client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": payload["prompt"]}],
+    )
+    return {"code": msg.content[0].text}`,
+      },
+    ],
+    keyDecisions: [
+      "Don't execute generated code server-side — that's a real security risk. Validate syntax only, let the user run it themselves.",
+      "Start with Python + JavaScript before adding more languages.",
+      "Model choice is a real tradeoff: better code quality costs more per request — measure before assuming you need the most expensive model.",
+    ],
+  },
+  {
+    slug: "doc-analyzer",
+    emoji: "📄",
+    name: "Document Analyzer + Q&A",
+    difficulty: "Intermediate",
+    timeEstimate: "2–3 weeks",
+    overview:
+      "Upload a document (PDF or text), ask questions about it in plain English, and get answers with citations back to the source.",
+    stack: {
+      backend: "FastAPI",
+      frontend: "React",
+      database: "PostgreSQL + pgvector",
+      aiComponent: "Claude API + embeddings",
+      deployment: "Vercel + Railway",
+    },
+    learningOutcomes: [
+      "File upload and PDF parsing",
+      "Vector embeddings and similarity search",
+      "Citing sources instead of just answering",
+    ],
+    architecture: [
+      "User uploads a document",
+      "Split it into chunks, embed each chunk, store in a vector DB",
+      "User asks a question",
+      "Retrieve the most relevant chunks, pass them to Claude with the question",
+      "Return the answer along with which chunk(s) it came from",
+    ],
+    starterFolderStructure: "doc-analyzer/\n  main.py\n  requirements.txt\n  app/\n    ingest.py\n    query.py\n  tests/",
+    starterCode: [
+      {
+        filename: "app/ingest.py",
+        code: `def chunk_document(text: str, chunk_size: int = 500) -> list[str]:
+    words = text.split()
+    return [" ".join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]`,
+      },
+    ],
+    keyDecisions: [
+      "Chunk size matters: too small loses context, too large wastes tokens and dilutes relevance — 300-500 words is a reasonable starting point.",
+      "Always return which chunk an answer came from. An answer with no citation isn't verifiable.",
+    ],
+  },
+  {
+    slug: "recommendation-engine",
+    emoji: "🎯",
+    name: "Product Recommendation Engine",
+    difficulty: "Intermediate",
+    timeEstimate: "2–3 weeks",
+    overview: "Given a user's past behavior, recommends items they're likely to want next — collaborative filtering, refined with an LLM.",
+    stack: {
+      backend: "FastAPI",
+      frontend: "React",
+      database: "PostgreSQL",
+      aiComponent: "Collaborative filtering + Claude for re-ranking/explanations",
+      deployment: "Railway or Render",
+    },
+    learningOutcomes: [
+      "Collaborative filtering fundamentals",
+      "Using an LLM to explain a recommendation, not just generate it",
+      "Evaluating recommendation quality (not just accuracy)",
+    ],
+    architecture: [
+      "Track user interactions (views, purchases, ratings)",
+      "Compute similarity between users or items",
+      "Generate a candidate list of recommendations",
+      "Optionally, ask Claude to explain why each one was picked, in plain language",
+    ],
+    starterFolderStructure: "recommender/\n  main.py\n  requirements.txt\n  app/\n    similarity.py\n    recommend.py",
+    starterCode: [
+      {
+        filename: "app/similarity.py",
+        code: `def cosine_similarity(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = sum(x * x for x in a) ** 0.5
+    norm_b = sum(y * y for y in b) ** 0.5
+    return dot / (norm_a * norm_b) if norm_a and norm_b else 0.0`,
+      },
+    ],
+    keyDecisions: [
+      "Cold start problem: what do you recommend to a brand-new user with no history? Decide this explicitly, don't ignore it.",
+      "Measure more than accuracy — a technically-correct but boring recommendation isn't actually useful.",
+    ],
+  },
+  {
+    slug: "sentiment-dashboard",
+    emoji: "📊",
+    name: "Sentiment Analysis Dashboard",
+    difficulty: "Intermediate",
+    timeEstimate: "2–3 weeks",
+    overview: "Classifies text (reviews, social posts) as positive/negative/neutral and visualizes trends over time.",
+    stack: {
+      backend: "FastAPI",
+      frontend: "React + a charting library",
+      database: "PostgreSQL",
+      aiComponent: "Claude API for classification",
+      deployment: "Railway or Render",
+    },
+    learningOutcomes: [
+      "Text classification with an LLM",
+      "Aggregating and visualizing results over time",
+      "Batch processing at reasonable cost",
+    ],
+    architecture: [
+      "Ingest a batch of text (reviews, posts, tickets)",
+      "Classify each item's sentiment via Claude",
+      "Store results with a timestamp",
+      "Dashboard shows trends: is sentiment improving or declining?",
+    ],
+    starterFolderStructure: "sentiment-dashboard/\n  main.py\n  requirements.txt\n  app/\n    classify.py",
+    starterCode: [
+      {
+        filename: "app/classify.py",
+        code: `VALID_LABELS = {"positive", "negative", "neutral"}
+
+def parse_sentiment(model_output: str) -> str:
+    label = model_output.strip().lower()
+    return label if label in VALID_LABELS else "neutral"`,
+      },
+    ],
+    keyDecisions: [
+      "Batch your classification calls where you can — classifying 100 reviews one at a time is 100x the cost and latency of a smart batch design.",
+      "Decide what happens when the model's output doesn't cleanly parse into one of your labels — don't let that crash the pipeline.",
+    ],
+  },
+  {
+    slug: "blog-generator",
+    emoji: "✍️",
+    name: "Blog Post Generator",
+    difficulty: "Intermediate",
+    timeEstimate: "2–3 weeks",
+    overview: "Takes a topic and outline, generates a full draft, and refines it over multiple turns based on feedback.",
+    stack: {
+      backend: "FastAPI",
+      frontend: "React",
+      database: "PostgreSQL",
+      aiComponent: "Claude API (multi-turn)",
+      deployment: "Railway or Render",
+    },
+    learningOutcomes: [
+      "Multi-turn prompting for iterative refinement",
+      "Structured content generation (headings, sections)",
+      "Basic SEO-aware generation (titles, meta descriptions)",
+    ],
+    architecture: [
+      "User provides a topic and rough outline",
+      "Claude generates a first draft, section by section",
+      "User gives feedback (\"make the intro punchier\")",
+      "System regenerates just that section, keeping the rest intact",
+    ],
+    starterFolderStructure: "blog-generator/\n  main.py\n  requirements.txt\n  app/\n    draft.py",
+    starterCode: [
+      {
+        filename: "app/draft.py",
+        code: `def build_prompt(topic: str, outline: list[str]) -> str:
+    sections = "\\n".join(f"- {s}" for s in outline)
+    return f"Write a blog post about '{topic}' covering:\\n{sections}"`,
+      },
+    ],
+    keyDecisions: [
+      "Regenerate sections independently, not the whole post — otherwise every small edit costs a full re-generation and loses unrelated content the user liked.",
+      "Decide how much creative control the user has vs. how much you automate — full automation reads as generic.",
+    ],
+  },
+  {
+    slug: "image-classifier",
+    emoji: "🖼️",
+    name: "Image Classification System",
+    difficulty: "Advanced",
+    timeEstimate: "3–4 weeks",
+    overview: "Classifies uploaded images into categories with a confidence score and a plain-English explanation.",
+    stack: {
+      backend: "FastAPI",
+      frontend: "React",
+      database: "PostgreSQL",
+      aiComponent: "A vision-capable model (Claude's vision API, or a trained classifier)",
+      deployment: "Railway or Render",
+    },
+    learningOutcomes: [
+      "Working with image inputs instead of text",
+      "Confidence scores and when to say \"I'm not sure\"",
+      "Image preprocessing and validation",
+    ],
+    architecture: [
+      "User uploads an image",
+      "Validate file type and size before processing",
+      "Send to the vision model for classification",
+      "Return the label, confidence, and a short explanation",
+    ],
+    starterFolderStructure: "image-classifier/\n  main.py\n  requirements.txt\n  app/\n    validate.py\n    classify.py",
+    starterCode: [
+      {
+        filename: "app/validate.py",
+        code: `ALLOWED_TYPES = {"image/jpeg", "image/png"}
+MAX_SIZE_BYTES = 10 * 1024 * 1024
+
+def validate_image(content_type: str, size: int) -> str | None:
+    if content_type not in ALLOWED_TYPES:
+        return "Unsupported file type"
+    if size > MAX_SIZE_BYTES:
+        return "File too large"
+    return None`,
+      },
+    ],
+    keyDecisions: [
+      "Always validate file type and size before sending anything to a model — untrusted uploads are a real attack surface.",
+      "Report confidence honestly. A wrong answer stated confidently is worse than a correct \"not sure.\"",
+    ],
+  },
+  {
+    slug: "data-cleaning-automation",
+    emoji: "🧹",
+    name: "Data Cleaning Automation",
+    difficulty: "Intermediate",
+    timeEstimate: "2–3 weeks",
+    overview: "Takes a messy CSV, detects and fixes common data quality issues, and produces a report of what changed.",
+    stack: {
+      backend: "FastAPI",
+      frontend: "React (upload + report view)",
+      database: "PostgreSQL",
+      aiComponent: "pandas for the mechanics, Claude for domain judgment calls",
+      deployment: "Railway or Render",
+    },
+    learningOutcomes: [
+      "Real-world data cleaning at scale (this is most of Module 9's skills, applied end to end)",
+      "Using an LLM for judgment calls pandas can't make alone (\"is this a typo or a real value?\")",
+      "Producing an audit trail of automated changes",
+    ],
+    architecture: [
+      "User uploads a CSV",
+      "Detect issues: missing values, duplicates, inconsistent formatting, outliers",
+      "Apply fixes — some rule-based, some judgment calls sent to Claude",
+      "Return the cleaned file plus a report of every change made",
+    ],
+    starterFolderStructure: "data-cleaning/\n  main.py\n  requirements.txt\n  app/\n    detect.py\n    clean.py",
+    starterCode: [
+      {
+        filename: "app/detect.py",
+        code: `def find_missing(rows: list[dict], column: str) -> list[int]:
+    return [i for i, row in enumerate(rows) if not row.get(column)]`,
+      },
+    ],
+    keyDecisions: [
+      "Never silently drop or change data — every automated fix needs to show up in the report, or the user can't trust the output.",
+      "Not every judgment call needs an LLM — reserve it for genuinely ambiguous cases, and use plain rules for the rest (cheaper, faster, more predictable).",
+    ],
+  },
+];
+
+export const CAPSTONE_CHECKLIST: { section: string; items: string[] }[] = [
+  {
+    section: "Code quality",
+    items: [
+      "Functions are documented and named clearly — no single-letter variables",
+      "No commented-out code or dead ends left behind",
+      "Tests cover the core logic, not just the happy path",
+    ],
+  },
+  {
+    section: "Deployment",
+    items: [
+      "Live at a public URL — not just running on your laptop",
+      "API keys and secrets are in environment variables, never committed to the repo",
+      "Database migrations are automated, not manual SQL you ran once",
+    ],
+  },
+  {
+    section: "Monitoring",
+    items: [
+      "You can see logs and errors without SSHing into a server",
+      "Basic usage metrics exist (requests per day, error rate, cost if using paid APIs)",
+    ],
+  },
+  {
+    section: "Documentation",
+    items: [
+      "README explains what it does, how to run it, and why you made the key technical choices",
+      "API endpoints are documented if you built one",
+    ],
+  },
+  {
+    section: "Security",
+    items: [
+      "User input is validated, not trusted blindly",
+      "Nothing sensitive is logged (passwords, full API keys, personal data)",
+    ],
+  },
+];
+
+export const CAPSTONE_RUBRIC: { category: string; weight: string; excellent: string; poor: string }[] = [
+  {
+    category: "Code quality",
+    weight: "20%",
+    excellent: "Clean, documented, no duplication, passes a linter cleanly",
+    poor: "Hard to read, undocumented, or doesn't run",
+  },
+  {
+    category: "Production readiness",
+    weight: "20%",
+    excellent: "Deployed, stable for 2+ weeks, meaningful test coverage, proper error handling",
+    poor: "Not deployed, or breaks frequently",
+  },
+  {
+    category: "Documentation",
+    weight: "15%",
+    excellent: "README covers what/why/how; setup instructions actually work",
+    poor: "Missing or too thin to be useful",
+  },
+  {
+    category: "Architecture & decisions",
+    weight: "20%",
+    excellent: "Clear separation of concerns; tech choices are justified; edge cases considered",
+    poor: "No discernible structure or reasoning",
+  },
+  {
+    category: "Results & metrics",
+    weight: "15%",
+    excellent: "Real usage data, before/after comparisons, cost awareness",
+    poor: "No measurement of whether it actually works well",
+  },
+  {
+    category: "Creativity & polish",
+    weight: "10%",
+    excellent: "Goes beyond the brief; UX shows real care",
+    poor: "Bare minimum, rough edges everywhere",
   },
 ];
 
