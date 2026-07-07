@@ -22,12 +22,6 @@ export async function GET(req: Request) {
   const { data: due, error } = await supabase.rpc("get_due_onboarding_emails");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // TEMP diagnostic: which project the runtime resolved, whether a service key
-  // is present (length only, never the key), and how many rows the RPC returned.
-  console.log(
-    `[onboarding-cron-debug] url=${process.env.NEXT_PUBLIC_SUPABASE_URL} keyLen=${(process.env.SUPABASE_SERVICE_ROLE_KEY || "").length} dueCount=${due?.length ?? 0}`,
-  );
-
   const resend = getResendClient();
   let sent = 0;
   const failures: string[] = [];
