@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
-import { PHASES } from "@/lib/data";
+import { PHASES, FAQ_ITEMS } from "@/lib/data";
 import { Logo } from "../ui";
-import HeroCanvas from "./HeroCanvas";
+import FaqRow from "../FaqRow";
+import ThreeHero from "./ThreeHero";
 import LandingDemo from "./LandingDemo";
 import Ticker from "./Ticker";
 import Reveal from "./Reveal";
@@ -15,6 +16,7 @@ const HERO_WORDS = [
 
 export default function Landing() {
   const startOnboarding = useFramis((s) => s.startOnboarding);
+  const goScreen = useFramis((s) => s.goScreen);
   const [t, setT] = useState(0);
 
   useEffect(() => {
@@ -55,8 +57,14 @@ export default function Landing() {
       </div>
 
       {/* hero */}
-      <div className="relative overflow-hidden bg-navy px-12 pb-[72px] pt-20">
-        <HeroCanvas />
+      <div
+        className="relative overflow-hidden bg-navy px-12 pb-[72px] pt-20"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 70% 60% at 75% 20%, rgba(0,102,204,.18), transparent), radial-gradient(ellipse 60% 50% at 15% 80%, rgba(75,158,143,.14), transparent)",
+        }}
+      >
+        <ThreeHero />
         <div className="relative mx-auto flex max-w-[1040px] flex-wrap items-center gap-[52px]">
           <div className="min-w-[320px] flex-[1_1_460px]">
             <div className="mb-[26px] inline-flex items-center gap-2 rounded-full border border-navy-400 bg-navy/55 px-[14px] py-[6px] [animation:framisWordIn_.6s_both]">
@@ -90,8 +98,8 @@ export default function Landing() {
             </h1>
             <p className="mb-[34px] max-w-[520px] text-pretty text-[18px]/[1.6] text-slateink-200 [animation:framisWordIn_.7s_.78s_both]">
               AI writes the code. Framis teaches the judgment — verification,
-              systems thinking, and shipping. Zero to full-stack AI engineer in
-              12 months, 10–15 hours a week.
+              systems thinking, and shipping. Zero to full-stack AI engineer,
+              free, 10–15 hours a week.
             </p>
             <div className="flex flex-wrap items-center gap-[14px] [animation:framisWordIn_.7s_.92s_both]">
               <button
@@ -104,14 +112,14 @@ export default function Landing() {
                 href="#curriculum"
                 className="px-2 py-[15px] font-inter text-[15px] font-semibold text-teal no-underline"
               >
-                View the 12-month roadmap →
+                View the full roadmap →
               </a>
             </div>
             <div className="mt-[44px] flex flex-wrap gap-9 [animation:framisWordIn_.7s_1.05s_both]">
               {[
-                [cnt(6), "shipped, deployed projects"],
-                [cnt(40) + "+", "motion-guided concepts"],
-                [cnt(48), "lessons over 12 months"],
+                [cnt(7), "shipped, deployed projects"],
+                [cnt(28), "modules across 7 phases"],
+                [cnt(123), "lessons, free forever"],
               ].map(([n, label], i) => (
                 <div key={i}>
                   <div className="font-mono text-[26px] font-bold text-white">
@@ -197,7 +205,7 @@ export default function Landing() {
       <Reveal id="curriculum" className="flex justify-center px-12 pb-20 pt-6">
         <div className="w-full max-w-[960px]">
           <h2 className="mb-9 font-inter text-[30px] font-bold tracking-[-0.02em]">
-            The 12-month roadmap
+            The 64-week roadmap
           </h2>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
             {PHASES.map((ph) => (
@@ -226,6 +234,90 @@ export default function Landing() {
                   </span>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </Reveal>
+
+      {/* graduate outcomes */}
+      <Reveal className="flex justify-center px-12 py-20">
+        <div className="w-full max-w-[960px]">
+          <h2 className="mb-2 font-inter text-[30px] font-bold tracking-[-0.02em]">
+            Outcomes, not vibes.
+          </h2>
+          <p className="mb-9 max-w-[640px] text-[16px]/[1.6] text-ink-500">
+            The curriculum is free either way — these numbers are what
+            actually happens after people finish it.
+          </p>
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+            {[
+              ["20%", "hired within 6 months, self-paced"],
+              ["50%", "hired within 6 months, with a mentor"],
+              ["£52k", "average salary on hire"],
+              ["8 wks", "typical time-to-hire after a capstone"],
+            ].map(([n, label], i) => (
+              <div key={i} data-stagger="1" className="rounded-[12px] border border-line bg-white px-5 py-6">
+                <div className="mb-1.5 font-mono text-[26px] font-bold text-blue">{n}</div>
+                <div className="text-[13px]/[1.4] text-ink-500">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Reveal>
+
+      {/* mentorship comparison */}
+      <Reveal className="flex justify-center bg-[#F4F6F9] px-12 py-20">
+        <div className="w-full max-w-[960px]">
+          <h2 className="mb-2 font-inter text-[30px] font-bold tracking-[-0.02em]">
+            Free forever, or free plus a mentor.
+          </h2>
+          <p className="mb-9 max-w-[640px] text-[16px]/[1.6] text-ink-500">
+            The full curriculum, every lesson, every sandbox, is free —
+            permanently. The mentor track is for people who want a real
+            person checking their work along the way.
+          </p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5">
+            <div className="rounded-[12px] border border-line bg-white p-7">
+              <div className="mb-1 font-mono text-[12px] font-medium text-ink-500">SELF-PACED</div>
+              <div className="mb-4 font-inter text-[26px] font-bold">Free, forever</div>
+              <ul className="flex flex-col gap-2.5 text-[14px] text-ink-500">
+                <li>✓ All 7 phases, 28 modules, 123 lessons</li>
+                <li>✓ Code sandboxes and every capstone</li>
+                <li>✓ Peer code review</li>
+                <li>✓ Public portfolio</li>
+              </ul>
+            </div>
+            <div className="rounded-[12px] border-2 border-blue bg-white p-7">
+              <div className="mb-1 font-mono text-[12px] font-medium text-blue">WITH A MENTOR</div>
+              <div className="mb-4 font-inter text-[26px] font-bold">
+                £150<span className="text-[15px] font-medium text-ink-500">/month</span>
+              </div>
+              <ul className="mb-5 flex flex-col gap-2.5 text-[14px] text-ink-500">
+                <li>✓ Everything in self-paced, plus:</li>
+                <li>✓ A dedicated 1:1 mentor</li>
+                <li>✓ One code review a week</li>
+                <li>✓ Monthly career coaching</li>
+              </ul>
+              <button
+                onClick={() => goScreen("mentorship")}
+                className="w-full rounded-lg bg-blue px-5 py-3 font-inter text-[14px] font-semibold text-white"
+              >
+                Learn about mentorship →
+              </button>
+            </div>
+          </div>
+        </div>
+      </Reveal>
+
+      {/* faq */}
+      <Reveal className="flex justify-center px-12 py-20">
+        <div className="w-full max-w-[760px]">
+          <h2 className="mb-9 font-inter text-[30px] font-bold tracking-[-0.02em]">
+            Questions people ask
+          </h2>
+          <div className="flex flex-col gap-2.5">
+            {FAQ_ITEMS.map((item) => (
+              <FaqRow key={item.question} question={item.question} answer={item.answer} />
             ))}
           </div>
         </div>
