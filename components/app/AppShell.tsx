@@ -9,6 +9,7 @@ import Capstone from "./Capstone";
 import PeerReview from "./PeerReview";
 import Portfolio from "./Portfolio";
 import Faq from "./Faq";
+import Dictionary from "./Dictionary";
 import { Logo } from "../ui";
 
 export default function AppShell() {
@@ -38,6 +39,7 @@ export default function AppShell() {
         {appTab === "review" && <PeerReview />}
         {appTab === "portfolio" && <Portfolio />}
         {appTab === "faq" && <Faq />}
+        {appTab === "dictionary" && <Dictionary />}
       </div>
     </div>
   );
