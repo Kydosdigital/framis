@@ -566,6 +566,18 @@ export type Database = {
           next_day: number
         }[]
       }
+      get_capstone_gallery: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          project_title: string
+          project_slug: string
+          github_url: string | null
+          deployed_url: string | null
+          submitted_at: string | null
+          author_name: string | null
+          portfolio_slug: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

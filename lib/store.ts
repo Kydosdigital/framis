@@ -85,6 +85,7 @@ type State = {
   ghUrl: Record<string, string>;
   depUrl: Record<string, string>;
   capstoneSubmitted: Record<string, boolean>;
+  capstoneTemplateChoice: Record<string, string>;
 
   // peer review
   scores: Scores;
@@ -133,6 +134,7 @@ type Actions = {
   setGhUrl: (slug: string, v: string) => void;
   setDepUrl: (slug: string, v: string) => void;
   submitCapstone: (slug: string, totalCriteria: number) => void;
+  chooseCapstoneTemplate: (capstoneSlug: string, templateSlug: string) => void;
 
   setScore: (key: keyof Scores, n: number) => void;
   setFeedback: (key: keyof Feedback, v: string) => void;
@@ -180,6 +182,7 @@ export const useFramis = create<State & Actions>((set, get) => ({
   ghUrl: {},
   depUrl: {},
   capstoneSubmitted: {},
+  capstoneTemplateChoice: {},
 
   scores: { crit: 0, read: 0, tests: 0, deploy: 0, readme: 0 },
   feedback: { well: "", improve: "", question: "", learned: "" },
@@ -432,6 +435,8 @@ export const useFramis = create<State & Actions>((set, get) => ({
     const ready = criteriaCount === totalCriteria && (s.ghUrl[slug] ?? "").trim() && (s.depUrl[slug] ?? "").trim();
     if (ready) set({ capstoneSubmitted: { ...s.capstoneSubmitted, [slug]: true } });
   },
+  chooseCapstoneTemplate: (capstoneSlug, templateSlug) =>
+    set((s) => ({ capstoneTemplateChoice: { ...s.capstoneTemplateChoice, [capstoneSlug]: templateSlug } })),
 
   setScore: (key, n) => set((s) => ({ scores: { ...s.scores, [key]: n } })),
   setFeedback: (key, v) => set((s) => ({ feedback: { ...s.feedback, [key]: v } })),
