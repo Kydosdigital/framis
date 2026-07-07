@@ -104,7 +104,7 @@ export default function Dashboard() {
             Overall progress
           </span>
           <span className="font-mono text-[12.5px] font-medium text-ink-500">
-            Week {stats.weekNumber} / 48
+            Week {stats.weekNumber} / 64
           </span>
         </div>
         <div className="h-2.5 overflow-hidden rounded-[5px] bg-[var(--color-track)]">
@@ -124,6 +124,44 @@ export default function Dashboard() {
               <span className="text-[13px] text-ink-500">{label}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* your journey — compact 7-phase progress strip */}
+      <div className="mb-5 rounded-[12px] border border-line bg-card px-[26px] py-[22px]">
+        <div className="mb-3.5 font-inter text-[14px] font-semibold">Your journey</div>
+        <div className="flex flex-wrap gap-2.5">
+          {PHASES.map((ph, i) => {
+            const num = i + 1;
+            const status = num < phaseNum ? "complete" : num === phaseNum ? "current" : "locked";
+            return (
+              <div
+                key={ph.num}
+                className="flex min-w-[110px] flex-1 items-center gap-2.5 rounded-[9px] px-3.5 py-2.5"
+                style={{
+                  background: status === "current" ? "#EAF2FB" : "var(--color-surface)",
+                  border: `1.5px solid ${status === "current" ? "#0066CC" : "var(--color-border)"}`,
+                }}
+              >
+                <span
+                  className="flex h-6 w-6 flex-none items-center justify-center rounded-full font-mono text-[11px] font-semibold"
+                  style={{
+                    background: status === "complete" ? "#4B9E8F" : status === "current" ? "#0066CC" : "var(--color-card)",
+                    color: status === "locked" ? "var(--color-ink-500)" : "#fff",
+                    border: status === "locked" ? "1.5px solid var(--color-border-input)" : "none",
+                  }}
+                >
+                  {status === "complete" ? <Check size={11} opacity={1} /> : num}
+                </span>
+                <span
+                  className="text-[12px] font-medium leading-tight"
+                  style={{ color: status === "locked" ? "var(--color-ink-500)" : "var(--color-ink-900)" }}
+                >
+                  {ph.title}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

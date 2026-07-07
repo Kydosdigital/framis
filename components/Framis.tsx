@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useFramis } from "@/lib/store";
 import Landing from "./landing/Landing";
+import Mentorship from "./landing/Mentorship";
+import MentorApply from "./landing/MentorApply";
 import Onboarding from "./onboarding/Onboarding";
 import AppShell from "./app/AppShell";
 
@@ -23,6 +25,8 @@ export default function Framis() {
   return (
     <div className="min-h-screen bg-surface font-sans text-ink-900">
       {screen === "landing" && <Landing />}
+      {screen === "mentorship" && <Mentorship />}
+      {screen === "mentor-apply" && <MentorApply />}
       {screen === "onboarding" && <Onboarding />}
       {screen === "app" && <AppShell />}
     </div>

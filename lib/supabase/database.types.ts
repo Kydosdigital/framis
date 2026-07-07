@@ -179,6 +179,42 @@ export type Database = {
           },
         ]
       }
+      mentor_applications: {
+        Row: {
+          created_at: string
+          email: string
+          id: number
+          name: string
+          portfolio_url: string | null
+          status: string
+          timezone: string
+          why_mentor: string
+          years_experience: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: never
+          name: string
+          portfolio_url?: string | null
+          status?: string
+          timezone: string
+          why_mentor: string
+          years_experience: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: never
+          name?: string
+          portfolio_url?: string | null
+          status?: string
+          timezone?: string
+          why_mentor?: string
+          years_experience?: string
+        }
+        Relationships: []
+      }
       modules: {
         Row: {
           created_at: string
