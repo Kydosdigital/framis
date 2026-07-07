@@ -1,6 +1,6 @@
 import { ROADMAP_MODULES, LESSON_CONTENT } from "../data";
 import { GENERIC_LESSONS } from "./content";
-import type { LessonData } from "./types";
+import type { LessonData, Explainer } from "./types";
 
 /** Modules whose Lesson 1 is a bespoke hand-built component (Variables, RAG)
  * rather than data-driven. Their remaining lessons (2-4) are still generic. */
@@ -57,6 +57,37 @@ export function nextLessonLabel(num: number, orderIndex: number): string {
     if (nextMeta) return nextMeta.title;
   }
   return "Capstone: Production AI system";
+}
+
+export type DictionaryTerm = Explainer & {
+  appearsIn: { module: number; orderIndex: number; lessonTitle: string; phaseLabel: string }[];
+};
+
+/** Every explainer term across every lesson, deduped by id, with every
+ * lesson it appears in attached — the dictionary's whole dataset, derived
+ * from content that's already written rather than a separate source. */
+export function getAllDictionaryTerms(): DictionaryTerm[] {
+  const byId = new Map<string, DictionaryTerm>();
+  for (const [modKey, lessons] of Object.entries(GENERIC_LESSONS)) {
+    const moduleNum = Number(modKey);
+    for (const lesson of lessons) {
+      for (const explainer of lesson.explainers ?? []) {
+        const appearance = {
+          module: moduleNum,
+          orderIndex: lesson.orderIndex,
+          lessonTitle: lesson.title,
+          phaseLabel: lesson.phaseLabel,
+        };
+        const existing = byId.get(explainer.id);
+        if (existing) {
+          existing.appearsIn.push(appearance);
+        } else {
+          byId.set(explainer.id, { ...explainer, appearsIn: [appearance] });
+        }
+      }
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.term.localeCompare(b.term));
 }
 
 export { GENERIC_LESSONS };
