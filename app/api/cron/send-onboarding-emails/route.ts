@@ -33,12 +33,23 @@ export async function GET(req: Request) {
     }
     try {
       const template = getOnboardingEmail(row.next_day, row.full_name || "there");
-      await resend.emails.send({
+      const { data, error: sendError } = await resend.emails.send({
         from: EMAIL_FROM,
         to: row.email,
         subject: template.subject,
         html: template.html,
       });
+      // Resend returns 4xx (e.g. an unverified sender/domain) as `{ error }`,
+      // NOT a thrown exception. If we don't check it, a failed send silently
+      // advances the learner's day counter and that email is skipped forever.
+      if (sendError) {
+        console.error(
+          `[onboarding-email] Resend rejected day=${row.next_day} from="${EMAIL_FROM}" to=${row.email}: ${JSON.stringify(sendError)}`,
+        );
+        failures.push(`${row.id}: ${sendError.name ?? "resend_error"}: ${sendError.message ?? JSON.stringify(sendError)}`);
+        continue;
+      }
+      console.log(`[onboarding-email] sent day=${row.next_day} id=${data?.id} from="${EMAIL_FROM}" to=${row.email}`);
       await supabase.from("profiles").update({ welcome_email_day: row.next_day }).eq("id", row.id);
       sent++;
     } catch (err) {
@@ -46,5 +57,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ due: due?.length ?? 0, sent, failures });
+  return NextResponse.json({ due: due?.length ?? 0, sent, from: EMAIL_FROM, failures });
 }

@@ -36,17 +36,26 @@ export async function POST(req: Request) {
 
   const email = getOnboardingEmail(1, profile.full_name || user.email?.split("@")[0] || "there");
 
+  let messageId: string | null = null;
   try {
-    await getResendClient().emails.send({
+    const { data, error: sendError } = await getResendClient().emails.send({
       from: EMAIL_FROM,
       to: user.email!,
       subject: email.subject,
       html: email.html,
     });
+    // Resend surfaces 4xx (unverified sender, etc.) as `{ error }`, not a throw.
+    if (sendError) {
+      console.error(
+        `[onboarding-email] Resend rejected Day 1 from="${EMAIL_FROM}" to=${user.email}: ${JSON.stringify(sendError)}`,
+      );
+      return NextResponse.json({ error: sendError.message ?? "Resend error", from: EMAIL_FROM }, { status: 502 });
+    }
+    messageId = data?.id ?? null;
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
 
   await supabase.from("profiles").update({ welcome_email_day: 1 }).eq("id", userId);
-  return NextResponse.json({ sent: true });
+  return NextResponse.json({ sent: true, id: messageId, from: EMAIL_FROM });
 }
