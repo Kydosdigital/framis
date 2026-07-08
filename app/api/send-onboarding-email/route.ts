@@ -52,7 +52,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: sendError.message ?? "Resend error", from: EMAIL_FROM }, { status: 502 });
     }
     messageId = data?.id ?? null;
+    console.log(`[onboarding-email] sent Day 1 id=${messageId} from="${EMAIL_FROM}" to=${user.email}`);
   } catch (err) {
+    console.error(`[onboarding-email] Day 1 threw from="${EMAIL_FROM}" to=${user.email}: ${(err as Error).message}`);
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
 
