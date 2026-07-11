@@ -297,9 +297,9 @@ export default function RoadmapHero() {
           onMouseEnter={() => (pausedRef.current = true)}
           onMouseLeave={() => (pausedRef.current = false)}
         >
-          <div className="flex items-start gap-[18px]">
+          <div className="flex items-start gap-3 sm:gap-[18px]">
             <span
-              className="font-mono text-[82px] font-bold leading-[0.9] tracking-[-0.05em] text-teal"
+              className="font-mono text-[52px] font-bold leading-[0.9] tracking-[-0.05em] text-teal sm:text-[82px]"
               style={{ textShadow: "0 0 34px rgba(75,158,143,.45)" }}
             >
               {pad(active + 1)}
@@ -329,7 +329,7 @@ export default function RoadmapHero() {
           </div>
 
           {/* 64-week tick bar */}
-          <div className="mt-[22px] flex max-w-[430px] gap-[2px]">
+          <div className="mt-[22px] flex max-w-[430px] gap-[1px] sm:gap-[2px]">
             {Array.from({ length: TOTAL_WEEKS }, (_, i) => {
               const wk = i + 1;
               const inPhase = wk >= vm.start && wk <= vm.end;
