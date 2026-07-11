@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
-import { PHASES, FAQ_ITEMS } from "@/lib/data";
+import { FAQ_ITEMS } from "@/lib/data";
 import { Logo } from "../ui";
 import { Icon } from "../Icon";
 import FaqRow from "../FaqRow";
 import ThreeHero from "./ThreeHero";
+import RoadmapHero from "./RoadmapHero";
 import LandingDemo from "./LandingDemo";
 import Ticker from "./Ticker";
 import Reveal from "./Reveal";
@@ -205,43 +206,8 @@ export default function Landing() {
         </div>
       </Reveal>
 
-      {/* roadmap */}
-      <Reveal id="curriculum" className="flex justify-center px-12 pb-20 pt-6">
-        <div className="w-full max-w-[960px]">
-          <h2 className="mb-9 font-inter text-[30px] font-bold tracking-[-0.02em]">
-            The 64-week roadmap
-          </h2>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
-            {PHASES.map((ph) => (
-              <div
-                key={ph.num}
-                data-stagger="1"
-                className="flex flex-col gap-2 rounded-[12px] border border-line bg-white px-6 py-[22px] transition-[transform,box-shadow,border-color] duration-[250ms] hover:-translate-y-1 hover:border-blue hover:shadow-[0_14px_30px_rgba(10,20,40,.10)]"
-                style={{ animationDelay: `${ph.delay}s` }}
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-mono text-[11.5px] font-medium text-ink-500">
-                    {ph.weeks}
-                  </span>
-                  <span className="rounded-full bg-[#EAF2FB] px-[10px] py-[3px] font-inter text-[11px] font-semibold text-blue">
-                    PHASE {ph.num}
-                  </span>
-                </div>
-                <div className="font-inter text-[16.5px] font-semibold">
-                  {ph.title}
-                </div>
-                <p className="text-[13.5px]/[1.55] text-ink-500">{ph.desc}</p>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <span className="inline-block h-2 w-2 flex-none rounded-[2px] bg-teal" />
-                  <span className="text-[12.5px] font-medium text-teal">
-                    {ph.capstone}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Reveal>
+      {/* roadmap — 3D helix build graph */}
+      <RoadmapHero />
 
       {/* graduate outcomes */}
       <Reveal className="flex justify-center px-12 py-20">
