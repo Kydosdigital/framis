@@ -87,6 +87,17 @@ input:focus {
   }
 }
 
+/* Gentle float — used sparingly on proof visuals to signal "motion-first". */
+@keyframes framisFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 /* Scroll-reveal (mirrors the prototype's [data-reveal] transitions) */
 [data-reveal] {
   transition: opacity 0.8s ease, transform 0.8s ease;
@@ -100,4 +111,20 @@ input:focus {
 }
 [data-reveal="on"] [data-stagger] {
   animation: framisWordIn 0.65s backwards;
+}
+
+/* Respect the OS "reduce motion" setting for the scroll-reveal system. */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    transition: none;
+  }
+  [data-reveal="off"] {
+    opacity: 1;
+    transform: none;
+  }
+  [data-reveal="off"] [data-stagger],
+  [data-reveal="on"] [data-stagger] {
+    opacity: 1;
+    animation: none;
+  }
 }
