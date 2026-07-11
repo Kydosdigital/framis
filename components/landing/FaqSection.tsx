@@ -31,7 +31,7 @@ export default function FaqSection() {
             if (!items.length) return null;
             return (
               <div key={g.label} data-stagger="1">
-                <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-400">// {g.label}</p>
+                <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-400">{`// ${g.label}`}</p>
                 <div>
                   {items.map((it) => (
                     <FaqRow key={it.question} question={it.question} answer={it.answer} />
