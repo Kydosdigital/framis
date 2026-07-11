@@ -71,7 +71,7 @@ export default function Landing() {
             <div className="mb-[26px] inline-flex items-center gap-2 rounded-full border border-navy-400 bg-navy/55 px-[14px] py-[6px] [animation:framisWordIn_.6s_both]">
               <span className="inline-block h-[7px] w-[7px] rounded-full bg-teal [animation:framisPulse_2.4s_ease-out_infinite]" />
               <span className="font-mono text-[12.5px] font-medium tracking-[.04em] text-slateink-300">
-                ENGINEERING FORWARD
+                CODE IS CHEAP. JUDGMENT IS NOT.
               </span>
             </div>
             <h1 className="mb-[22px] text-balance font-inter text-[52px]/[1.08] font-extrabold tracking-[-0.03em] text-white">
