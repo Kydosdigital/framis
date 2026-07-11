@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
-import { PHASES } from "@/lib/data";
 import { Logo } from "../ui";
 import { Icon } from "../Icon";
 import ThreeHero from "./ThreeHero";
+import RoadmapHero from "./RoadmapHero";
 import WhyFramis from "./WhyFramis";
 import OutcomesSection from "./OutcomesSection";
 import Pricing from "./Pricing";
@@ -71,11 +71,8 @@ export default function Landing() {
         <ThreeHero />
         <div className="relative mx-auto flex max-w-[1040px] flex-wrap items-center gap-[52px]">
           <div className="min-w-[320px] flex-[1_1_460px]">
-            <div className="mb-[26px] inline-flex items-center gap-2 rounded-full border border-navy-400 bg-navy/55 px-[14px] py-[6px] [animation:framisWordIn_.6s_both]">
-              <span className="inline-block h-[7px] w-[7px] rounded-full bg-teal [animation:framisPulse_2.4s_ease-out_infinite]" />
-              <span className="font-mono text-[12.5px] font-medium tracking-[.04em] text-slateink-300">
-                CODE IS CHEAP. JUDGMENT IS NOT.
-              </span>
+            <div className="mb-[26px] font-inter text-[15px] font-semibold text-slateink-200 [animation:framisWordIn_.6s_both]">
+              Code is cheap. <span className="font-bold text-teal">Judgment isn’t.</span>
             </div>
             <h1 className="mb-[22px] text-balance font-inter text-[52px]/[1.08] font-extrabold tracking-[-0.03em] text-white">
               {HERO_WORDS.map((word, i) => (
@@ -146,43 +143,8 @@ export default function Landing() {
       {/* why framis — positioning pillars */}
       <WhyFramis />
 
-      {/* roadmap */}
-      <Reveal id="curriculum" className="flex justify-center px-12 pb-20 pt-6">
-        <div className="w-full max-w-[960px]">
-          <h2 className="mb-9 font-inter text-[30px] font-bold tracking-[-0.02em]">
-            The 64-week roadmap
-          </h2>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
-            {PHASES.map((ph) => (
-              <div
-                key={ph.num}
-                data-stagger="1"
-                className="flex flex-col gap-2 rounded-[12px] border border-line bg-white px-6 py-[22px] transition-[transform,box-shadow,border-color] duration-[250ms] hover:-translate-y-1 hover:border-blue hover:shadow-[0_14px_30px_rgba(10,20,40,.10)]"
-                style={{ animationDelay: `${ph.delay}s` }}
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-mono text-[11.5px] font-medium text-ink-500">
-                    {ph.weeks}
-                  </span>
-                  <span className="rounded-full bg-[#EAF2FB] px-[10px] py-[3px] font-inter text-[11px] font-semibold text-blue">
-                    PHASE {ph.num}
-                  </span>
-                </div>
-                <div className="font-inter text-[16.5px] font-semibold">
-                  {ph.title}
-                </div>
-                <p className="text-[13.5px]/[1.55] text-ink-500">{ph.desc}</p>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <span className="inline-block h-2 w-2 flex-none rounded-[2px] bg-teal" />
-                  <span className="text-[12.5px] font-medium text-teal">
-                    {ph.capstone}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Reveal>
+      {/* roadmap — 3D helix build graph */}
+      <RoadmapHero />
 
       {/* graduate outcomes — dot matrix */}
       <OutcomesSection />
