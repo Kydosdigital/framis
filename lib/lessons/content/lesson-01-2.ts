@@ -7,41 +7,43 @@ const content: LessonData = {
   title: "Save points for your code: git init, add, and commit",
   minutes: 20,
   concept:
-    "Your computer doesn't automatically keep a history of every version of your files — unless you set up a save system. That's what Git is: a save system for your code.\n\nA terminal is an app where you type commands to talk to your computer (you saw this in Lesson 1). You'll use it now to switch Git on inside a folder, turning that folder into a repository — a folder with a full memory of everything you've ever saved.\n\nHere's how saving works in Git. Think of it like a video game where you press Save after each level.\n\ngit init — run this once, in the folder you want to track. It switches the save system on. From this point on, Git quietly watches that folder.\n\ngit add — queues up the changes you want to include in your next save. You're picking which progress gets stored in this particular save slot.\n\ngit commit — actually takes the snapshot and stores it permanently, along with a short message you write describing what changed. Like naming your save slot 'Finished level 3'.\n\nTwo extra commands help you stay aware: git status shows what's changed and what's queued up for the next save, and git log shows your full save history, newest first.",
+    "Imagine you're writing an essay in a notebook. If you never save your work, and you make a mistake, your old version is just... gone.\n\n" +
+    "Git fixes that. Git is a save system for your work — like a video game that lets you save your progress and go back to an old save if you need to.\n\n" +
+    "A \"file\" is just anything you create and save — a document, an essay, a drawing. Right now, imagine you're working on a file called essay.txt.\n\n" +
+    "Here's how saving works in Git, using three commands.\n\n" +
+    "git init turns saving on for a folder. You only do this once — it's like inserting a game cartridge before you can start saving progress.\n\n" +
+    "git add chooses what you want to save. It doesn't save yet — it just picks what goes into your next save, like choosing which items go into your inventory before you save your game.\n\n" +
+    "git commit actually saves it, with a name. This is like pressing Save and naming the save slot — \"Finished my essay intro\".\n\n" +
+    "That's it. Three steps: turn saving on, choose what to save, then save.",
   conceptSimpler:
-    "Imagine a video game where you press Save after each mission, and the game asks you to name the save slot — like 'finished the boss fight'. That's git commit. Before you press Save, you pick which progress gets included in this slot — that's git add. And the very first time you play, you create the save file at all — that's git init.",
+    "Git is like a video game save system for your work.\n\n" +
+    "git init = put the game cartridge in\n" +
+    "git add = choose what to save\n" +
+    "git commit = press Save, and give it a name",
   vizStages: [
     {
-      label: "1. Switch on Git for a folder",
+      label: "1. Turn saving on",
       body:
-        "You've got a folder called homework on your computer, and you want Git to start tracking it. git init runs once and creates a hidden .git folder inside it — that's where Git stores all your save history from this point on.",
-      code: "$ git init\nInitialized empty Git repository in /Users/yourname/homework/.git/",
+        "You're in the folder with your essay in it. Type git init once to switch Git's save system on for that folder. Your computer confirms it's ready — from now on, Git can save your progress here.",
+      code: "$ git init\nInitialized empty Git repository",
     },
     {
-      label: "2. Check what's changed",
+      label: "2. Choose what to save",
       body:
-        "You've typed some answers into maths.txt. Git noticed the change, but hasn't saved anything yet. git status shows what's changed and reminds you: nothing will be saved until you run git add.",
-      code:
-        "$ git status\nOn branch main\nChanges not staged for commit:\n  modified:   maths.txt",
+        "Type git add essay.txt to pick that file for your next save. Nothing shows up on screen — that's normal. You've just chosen essay.txt to be included in your next save.",
+      code: "$ git add essay.txt",
     },
     {
-      label: "3. Queue up the change",
+      label: "3. Save it, with a name",
       body:
-        "git add maths.txt marks that file as ready to include in the next save. Nothing is permanently stored yet — it's just in the queue. You can add one file at a time, or use git add . to queue everything at once.",
-      code: "$ git add maths.txt\n$ git status\nChanges to be committed:\n  modified:   maths.txt",
-    },
-    {
-      label: "4. Take the snapshot",
-      body:
-        "git commit -m '...' saves everything in the queue as a permanent snapshot, with your message attached. git log shows it in your save history — a unique ID and the label you wrote.",
-      code:
-        "$ git commit -m \"Finished maths questions\"\n[main a1b2c3d] Finished maths questions\n 1 file changed, 3 insertions(+)\n$ git log --oneline\na1b2c3d Finished maths questions",
+        "Type git commit with a short message describing what you did. Your computer confirms one file was saved. That message is the name on this save slot — it's how you'll find this exact version later.",
+      code: "$ git commit -m \"Finished my essay intro\"\n1 file changed",
     },
   ],
   realWorldIntro:
-    "When someone builds an app — like a game or a streaming service — they use git add and git commit throughout the day, exactly like this. Each commit is a checkpoint they can come back to if something breaks. A project like Instagram has hundreds of thousands of commits in its history, one for every change the team ever made.",
+    "When someone builds an app — like a game or a streaming service — they use git add and git commit all day long, exactly like this. Each commit is a save point they can go back to if something breaks. A big project has thousands of these save points, one for every change the team ever made.",
   realWorldCode:
-    "$ git log --oneline\nc3d4e5f Add animated loading screen\nb2c3d4e Fix crash when going back\na1b2c3d First working version",
+    "Save points, newest first:\n\nFinished my essay intro\nAdd animated loading screen\nFirst working version",
   sandbox: {
     kind: "explore",
     instructions:
@@ -50,62 +52,48 @@ const content: LessonData = {
       {
         label: "git init",
         body:
-          "Turns the current folder into a Git repository by creating a hidden .git folder inside it. That folder stores all your future saves. Run this exactly once, when you first want Git to start tracking a folder.",
-        code: "$ git init\nInitialized empty Git repository in /Users/yourname/homework/.git/",
-      },
-      {
-        label: "git status",
-        body:
-          "Shows the current state of your folder: which files have changed, which are queued up ready to save, and which Git isn't tracking at all yet. This is the command you'll type most — run it constantly.",
-        code:
-          "$ git status\nOn branch main\nChanges not staged for commit:\n  modified:   maths.txt\nUntracked files:\n  ideas.txt",
+          "Turns the current folder into a place Git can save. It creates a hidden .git folder inside that quietly stores all your future saves. Run this exactly once — the first time you want Git to start saving a folder.",
+        code: "$ git init\nInitialized empty Git repository",
       },
       {
         label: "git add",
         body:
-          "Queues up a file to be included in your next save. You can add one file at a time (git add maths.txt) or everything at once (git add .).",
-        code: "$ git add maths.txt\n$ git status\nChanges to be committed:\n  modified:   maths.txt",
+          "Chooses a file to include in your next save. You can add one file at a time (git add essay.txt) or everything at once (git add .). Nothing is saved yet — you're just picking what goes in.",
+        code: "$ git add essay.txt",
       },
       {
         label: "git commit -m \"message\"",
         body:
-          "Saves everything currently queued as a permanent snapshot, with your message attached. Only queued files get included — anything you didn't git add is left out.",
-        code:
-          "$ git commit -m \"Add chapter 2 notes\"\n[main 7f8e9d0] Add chapter 2 notes\n 1 file changed, 12 insertions(+)",
-      },
-      {
-        label: "git log",
-        body:
-          "Shows every save ever made in this repository, newest first — each with its unique ID, author, date, and message. Use it to review your history or find a specific past snapshot.",
-        code:
-          "$ git log --oneline\n7f8e9d0 Add chapter 2 notes\na1b2c3d Finished maths questions",
+          "Saves everything you've chosen as a permanent save point, with your message as its name. Only the files you added get included — anything you didn't add is left out.",
+        code: "$ git commit -m \"Finished my essay intro\"\n1 file changed",
       },
     ],
   },
   quizQuestion:
-    "You edit two files, maths.txt and essay.txt, but only run git add maths.txt before committing. What happens to essay.txt?",
-  quizCode: "$ git add maths.txt\n$ git commit -m \"Update maths answers\"",
+    "You edit two files, essay.txt and notes.txt, but only run git add essay.txt before saving. What happens to notes.txt?",
+  quizCode: "$ git add essay.txt\n$ git commit -m \"Finish essay intro\"",
   quizOptions: [
-    { key: "a", label: "It gets saved too, since it was already changed", correct: false },
-    { key: "b", label: "It stays changed but not saved — it won't be part of this commit", correct: true },
-    { key: "c", label: "Git refuses to commit until every changed file is queued up", correct: false },
+    { key: "a", label: "It gets saved too, since it was also changed", correct: false },
+    { key: "b", label: "It stays changed but not saved — it isn't part of this save", correct: true },
+    { key: "c", label: "Git refuses to save until every changed file is added", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — only files you've queued up with git add are included in a commit. essay.txt was changed but never added, so it stays there, unsaved, waiting for the next git add.",
+    "Right — only the files you choose with git add are included in a save. You added essay.txt but not notes.txt, so notes.txt stays changed but unsaved, waiting for you to add it next time.",
   quizFeedbackIncorrect:
-    "Not quite — git commit only saves what you've queued with git add. Since essay.txt was never added, its changes stay there, uncommitted — waiting for you to queue it up.",
+    "Not quite — git commit only saves the files you chose with git add. Since notes.txt was never added, its changes stay there, unsaved — waiting for you to pick it next time.",
   takeaway:
-    "git init turns on Git's save system for a folder — run it once. git add queues up the changes you want to save next. git commit takes the snapshot with a message. git status shows what's queued, and git log shows your full save history.",
+    "Three steps, every time: git init turns saving on for a folder (just once), git add chooses what to save, and git commit saves it with a name you'll recognise later.",
   explainers: [
     {
       id: "what-is-repository",
       term: "What's a Repository (\"repo\")?",
       emoji: "🗂️",
-      shortDef: "A repository is a folder that Git has been set up to track — it keeps a full history of every save you've ever made.",
+      shortDef:
+        "A repository is a folder that Git has been set up to save — it keeps a full history of every save you've ever made.",
       longDef:
-        "Running git init in a folder creates a hidden .git folder inside it. That's what turns an ordinary folder into a repository. Git uses it to store every snapshot you've ever taken, so you can look back at or restore any of them later. Your actual files look and work exactly the same — Git just quietly keeps a history of everything alongside them.",
+        "Running git init in a folder creates a hidden .git folder inside it. That's what turns an ordinary folder into a repository. Git uses it to store every save you've ever made, so you can look back at or restore any of them later. Your actual files look and work exactly the same — Git just quietly keeps a history alongside them.",
       whyMatters:
-        "Without a repository, every change you make is permanent with no way back. With one, every commit stays in the history forever, so you can always get back to a version that worked.",
+        "Without a repository, every change you make is permanent with no way back. With one, every save stays in the history, so you can always return to a version that worked.",
       realWorldExample:
         "It's like a video game save file that keeps every checkpoint you've ever reached, not just the last one. You can reload any of them at any point.",
       relatedTerms: ["what-is-staging-area", "what-is-commit"],
@@ -113,28 +101,30 @@ const content: LessonData = {
     },
     {
       id: "what-is-staging-area",
-      term: "What's the Staging Area?",
+      term: "What Does git add Actually Do?",
       emoji: "🗃️",
-      shortDef: "The staging area is a holding zone for changes you've chosen to include in the next save — nothing gets in there automatically.",
+      shortDef:
+        "git add chooses which changes go into your next save — nothing is included automatically.",
       longDef:
-        "Editing a file doesn't save anything in Git — it just shows up as 'changed' when you run git status. Running git add moves a specific change into the staging area, which is Git's way of saying 'yes, put this in the next snapshot.' You can edit ten files and only stage three of them, and only those three end up in the next commit.",
+        "Editing a file doesn't save anything in Git; it just becomes a change Git has noticed. Running git add on a file marks it to be included in your next save. You can edit ten files and only add three of them, and only those three end up in the next commit. It's the step that lets you decide exactly what a save contains.",
       whyMatters:
-        "This extra step gives you control over exactly what gets saved together. You can make a small, focused save instead of accidentally bundling unrelated changes all at once.",
+        "This gives you control over exactly what gets saved together. You can make a small, focused save instead of accidentally bundling unrelated changes all at once.",
       realWorldExample:
-        "It's like choosing which items to lock in before pressing Save in a video game. Only the items you pick actually get stored in the save slot — the rest stay where they are, waiting.",
+        "It's like choosing which items to lock in before pressing Save in a video game. Only the items you pick get stored in the save slot — the rest stay where they are, waiting.",
       relatedTerms: ["what-is-commit"],
     },
     {
       id: "what-is-commit",
       term: "What's a Commit?",
       emoji: "💾",
-      shortDef: "A commit is a permanent snapshot of everything you've queued up, saved with a short message describing what changed.",
+      shortDef:
+        "A commit is a permanent save of everything you've chosen, stored with a short name describing what changed.",
       longDef:
-        "Running git commit -m \"message\" takes whatever is in the staging area and locks it in as a numbered, timestamped snapshot with your label on it. That snapshot stays in the history forever — you can view it anytime with git log, and even restore your whole folder to that exact state later on.",
+        "Running git commit -m \"message\" takes whatever you added and locks it in as a save point with your label on it. That save point stays in your history — you can look back through your history later, and even restore your whole folder to that exact state.",
       whyMatters:
-        "A commit is the undo history for your whole project, not just your last keypress. The habit of committing often — after every small, working change — is what makes Git actually useful when something breaks.",
+        "A commit is the undo history for your whole project, not just your last keypress. The habit of committing often — after every small, working change — is what makes Git useful when something breaks.",
       realWorldExample:
-        "It's exactly like pressing Save in a video game after you clear a level. If something goes wrong later, you reload that checkpoint instead of starting the whole thing over.",
+        "It's exactly like pressing Save in a video game after you clear a level. If something goes wrong later, you reload that checkpoint instead of starting over.",
       relatedTerms: ["what-is-staging-area", "what-is-repository"],
     },
   ],
