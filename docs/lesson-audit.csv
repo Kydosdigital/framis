@@ -4,17 +4,17 @@ phase,module,lesson,title,single_block_concept,missing_explainers,file
 1,1,3,"The undo button: git diff, checkout, and reset",no,no,lesson-01-3.ts
 1,1,4,"Syncing with the outside world: clone, push, and pull",no,no,lesson-01-4.ts
 1,1,5,"Working in parallel: branches, merges, and conflicts",no,no,lesson-01-5.ts
-1,2,2,Functions: Packaging Up Logic You'll Use Again,yes,yes,lesson-02-2.ts
-1,2,3,"Reading Python's Shape: Indentation, Comments, and Branching",yes,yes,lesson-02-3.ts
-1,2,4,"Lists and For Loops: Storing Many Values, Doing Something With Each",yes,yes,lesson-02-4.ts
-1,3,1,The For + If Filter: Building a New List From an Old One,yes,yes,lesson-03.ts
-1,3,2,Dictionaries: Looking Things Up by Key Instead of Position,yes,yes,lesson-03-2.ts
-1,3,3,Break: Stopping a Loop the Instant You're Done,yes,yes,lesson-03-3.ts
-1,3,4,"Nested Data: Lists of Dicts, Dicts of Lists",yes,yes,lesson-03-4.ts
-1,4,1,Catch Me If You Crash: Handling Missing Data with Try/Except,yes,yes,lesson-04.ts
-1,4,2,The Filing Cabinet: Reading and Writing Files Without a Disk,yes,yes,lesson-04-2.ts
-1,4,3,"Fail Loudly, Fail on Purpose: Raising Your Own Errors",yes,yes,lesson-04-3.ts
-1,4,4,The Case of the Vanishing Total: A Debugging Walkthrough,yes,yes,lesson-04-4.ts
+1,2,2,"Functions: write the steps once, use them again",no,no,lesson-02-2.ts
+1,2,3,"The shape of Python: indentation, comments, and choices",no,no,lesson-02-3.ts
+1,2,4,"Lists and for loops: many values, one at a time",no,no,lesson-02-4.ts
+1,3,1,The filter: building a new list from an old one,no,no,lesson-03.ts
+1,3,2,"Dictionaries: looking things up by name, not position",no,no,lesson-03-2.ts
+1,3,3,break: stopping a loop the instant you're done,no,no,lesson-03-3.ts
+1,3,4,"Nested data: lists of dictionaries, dictionaries of lists",no,no,lesson-03-4.ts
+1,4,1,Catch me if you crash: handling errors with try / except,no,no,lesson-04.ts
+1,4,2,Saving your work: reading and writing files,no,no,lesson-04-2.ts
+1,4,3,"Fail loudly, on purpose: raising your own errors",no,no,lesson-04-3.ts
+1,4,4,The case of the vanishing total: a debugging walkthrough,no,no,lesson-04-4.ts
 2,5,1,"Real JavaScript: Variables, Types, and Functions",yes,yes,lesson-05.ts
 2,5,2,"Control Flow, Arrays, and Objects in Real JavaScript",yes,yes,lesson-05-2.ts
 2,5,3,The DOM and Events: Making a Page Listen,yes,yes,lesson-05-3.ts
