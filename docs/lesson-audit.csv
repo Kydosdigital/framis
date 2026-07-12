@@ -1,0 +1,124 @@
+phase,module,lesson,title,single_block_concept,missing_explainers,file
+1,1,1,Finding your way around the terminal,no,no,lesson-01.ts
+1,1,2,"Save points for your code: git init, add, and commit",no,no,lesson-01-2.ts
+1,1,3,"The undo button: git diff, checkout, and reset",no,no,lesson-01-3.ts
+1,1,4,"Syncing with the outside world: clone, push, and pull",no,no,lesson-01-4.ts
+1,1,5,"Working in parallel: branches, merges, and conflicts",no,no,lesson-01-5.ts
+1,2,2,Functions: Packaging Up Logic You'll Use Again,yes,yes,lesson-02-2.ts
+1,2,3,"Reading Python's Shape: Indentation, Comments, and Branching",yes,yes,lesson-02-3.ts
+1,2,4,"Lists and For Loops: Storing Many Values, Doing Something With Each",yes,yes,lesson-02-4.ts
+1,3,1,The For + If Filter: Building a New List From an Old One,yes,yes,lesson-03.ts
+1,3,2,Dictionaries: Looking Things Up by Key Instead of Position,yes,yes,lesson-03-2.ts
+1,3,3,Break: Stopping a Loop the Instant You're Done,yes,yes,lesson-03-3.ts
+1,3,4,"Nested Data: Lists of Dicts, Dicts of Lists",yes,yes,lesson-03-4.ts
+1,4,1,Catch Me If You Crash: Handling Missing Data with Try/Except,yes,yes,lesson-04.ts
+1,4,2,The Filing Cabinet: Reading and Writing Files Without a Disk,yes,yes,lesson-04-2.ts
+1,4,3,"Fail Loudly, Fail on Purpose: Raising Your Own Errors",yes,yes,lesson-04-3.ts
+1,4,4,The Case of the Vanishing Total: A Debugging Walkthrough,yes,yes,lesson-04-4.ts
+2,5,1,"Real JavaScript: Variables, Types, and Functions",yes,yes,lesson-05.ts
+2,5,2,"Control Flow, Arrays, and Objects in Real JavaScript",yes,yes,lesson-05-2.ts
+2,5,3,The DOM and Events: Making a Page Listen,yes,yes,lesson-05-3.ts
+2,5,4,"One Button, Three Real Languages",yes,yes,lesson-05-4.ts
+2,6,1,"One click, one re-render: how state updates a component",yes,yes,lesson-06.ts
+2,6,2,"Props, curly braces, and children: the syntax that runs JSX",yes,yes,lesson-06-2.ts
+2,6,3,Lists and keys: rendering many components from an array,yes,yes,lesson-06-3.ts
+2,6,4,Controlled inputs: keeping value and onChange in sync,yes,yes,lesson-06-4.ts
+2,7,1,JSON: the text format everything speaks,yes,yes,lesson-07.ts
+2,7,2,"fetch, await, and the real shape of a network call",yes,yes,lesson-07-2.ts
+2,7,3,"When the request fails: try, catch, throw",yes,yes,lesson-07-3.ts
+2,7,4,"Putting it together: fetch, transform, and send back",yes,yes,lesson-07-4.ts
+2,8,1,"CREATE, INSERT, SELECT: your first real table",yes,yes,lesson-08.ts
+2,8,2,JOIN: pulling two tables together,yes,yes,lesson-08-2.ts
+2,8,3,GROUP BY: summarizing rows instead of listing them,yes,yes,lesson-08-3.ts
+2,8,4,ORDER BY + LIMIT: putting it all together,yes,yes,lesson-08-4.ts
+3,9,1,Tables as rows: loading and exploring data,yes,no,lesson-09.ts
+3,9,2,Cleaning messy data: handling missing values,yes,yes,lesson-09-2.ts
+3,9,3,Cleaning messy data: duplicates and outliers,yes,yes,lesson-09-3.ts
+3,9,4,Transforming data: group-by and aggregation,yes,yes,lesson-09-4.ts
+3,10,1,Feature Engineering: Turning Raw Columns Into Signal,yes,no,lesson-10.ts
+3,10,2,One-Hot vs. Label Encoding: Turning Categories Into Numbers,yes,no,lesson-10-2.ts
+3,10,3,Min-Max Scaling: Putting Every Feature on the Same Scale,yes,no,lesson-10-3.ts
+3,10,4,Feature Selection: Deciding What Earns a Seat in the Model,yes,no,lesson-10-4.ts
+3,11,1,Decision Stumps: Teaching a Tree to Ask One Good Question,yes,no,lesson-11.ts
+3,11,2,Random Forests: Why a Vote Beats Any Single Guess,yes,no,lesson-11-2.ts
+3,11,3,"Logistic Regression: A Weighted Sum, Squashed Into a Probability",yes,no,lesson-11-3.ts
+3,11,4,K-Means: Finding Groups Nobody Labeled,yes,no,lesson-11-4.ts
+3,12,1,Train/Test Split: Why You Can't Grade Your Own Homework,yes,no,lesson-12.ts
+3,12,2,"Metrics That Actually Matter: Precision, Recall, F1",yes,no,lesson-12-2.ts
+3,12,3,Overfitting vs. Underfitting: Reading the Gap,yes,no,lesson-12-3.ts
+3,12,4,K-Fold Cross-Validation: One Split Is Just One Guess,yes,no,lesson-12-4.ts
+4,13,1,"Right Answer, Wrong Reason: The Test That Passed by Accident",yes,yes,lesson-13.ts
+4,13,2,Isolated on Purpose: What Makes a Test a Unit Test,yes,yes,lesson-13-2.ts
+4,13,3,Fixtures and Mocks: Faking What a Test Shouldn't Need,no,yes,lesson-13-3.ts
+4,13,4,The Bug Between Them: Writing an Integration Test,yes,yes,lesson-13-4.ts
+4,13,5,The Last Mile: Test Coverage and Real End-to-End Tests,no,yes,lesson-13-5.ts
+4,14,1,Print Statements: X-Ray Vision for Broken Code,yes,yes,lesson-14.ts
+4,14,2,Logging Levels: A Volume Knob for Your Print Statements,yes,yes,lesson-14-2.ts
+4,14,3,"Stack Traces: Reading the Crime Scene, Not the Headline",yes,yes,lesson-14-3.ts
+4,14,4,Monitoring: Hearing the Alarm Before the Customer Complaint,yes,yes,lesson-14-4.ts
+4,15,1,Never store the password: hashing vs. plaintext,yes,yes,lesson-15.ts
+4,15,2,One quote breaks everything: SQL injection and string concatenation,yes,yes,lesson-15-2.ts
+4,15,3,"Cookies, sessions, and JWTs: how the server remembers you're logged in",yes,yes,lesson-15-3.ts
+4,15,4,Why the padlock matters: HTTPS and the case against plaintext requests,yes,yes,lesson-15-4.ts
+4,15,5,Not from around here: CORS and the same-origin policy,yes,yes,lesson-15-5.ts
+4,15,6,Two ways to abuse a logged-in browser: XSS and CSRF,yes,yes,lesson-15-6.ts
+4,15,7,Logged in isn't the same as allowed: authorization and RBAC,yes,yes,lesson-15-7.ts
+4,16,1,Four gates between your commit and production,yes,yes,lesson-16.ts
+4,16,2,"Containers: why \""it works on my machine\"" stops being an excuse",yes,yes,lesson-16-2.ts
+4,16,3,Environment variables and secrets: configuration without hardcoding,yes,yes,lesson-16-3.ts
+4,16,4,Rollbacks: what happens when a deploy goes wrong,yes,yes,lesson-16-4.ts
+5,17,1,The Meter That's Always Running: Tokens and Cost,yes,yes,lesson-17.ts
+5,17,2,"It's a Transcript, Not a Textbox: Structuring a Chat Call",yes,yes,lesson-17-2.ts
+5,17,3,The Randomness Dial: Temperature and Sampling,yes,yes,lesson-17-3.ts
+5,17,4,"Try, Try Again: Surviving Rate Limits in Production",yes,yes,lesson-17-4.ts
+5,18,2,Meaning as coordinates: how embeddings turn words into vectors,yes,yes,lesson-18-2.ts
+5,18,3,Cutting documents down to size: why chunking makes retrieval work,yes,yes,lesson-18-3.ts
+5,18,4,Finding a needle in a billion vectors: how vector databases search,yes,yes,lesson-18-4.ts
+5,19,1,The Dispatcher: Turning a Tool Call Into a Function Call,yes,yes,lesson-19.ts
+5,19,2,The Contract: Writing a JSON Schema the Model Can't Ignore,yes,yes,lesson-19-2.ts
+5,19,3,"One Model, Many Tools: Routing Between Three or More",yes,yes,lesson-19-3.ts
+5,19,4,The Safety Net: Surviving a Bad Tool Call,yes,yes,lesson-19-4.ts
+5,19,5,Closing the Loop: Sending the Tool's Result Back to the Model,yes,yes,lesson-19-5.ts
+5,19,6,Trust But Verify: Validating Arguments Before You Call the Tool,yes,yes,lesson-19-6.ts
+5,20,1,37 out of 40: the eval loop that scores a prompt instead of guessing,yes,yes,lesson-20.ts
+5,20,2,In and out: a guardrail that checks both ends of the conversation,yes,yes,lesson-20-2.ts
+5,20,3,Ignore all previous instructions: how prompt injection hijacks control,yes,yes,lesson-20-3.ts
+5,20,4,The eval can't tell: when a person has to make the call,yes,yes,lesson-20-4.ts
+6,21,1,"One roll lies, ten thousand rolls tell the truth",yes,yes,lesson-21.ts
+6,21,2,The billionaire walks in: mean vs. median,yes,yes,lesson-21-2.ts
+6,21,3,"10% vs. 20%: is that a real lift, or just luck?",yes,yes,lesson-21-3.ts
+6,21,4,"Same average, totally different wobble: standard deviation",yes,yes,lesson-21-4.ts
+6,21,5,The test came back positive — now what? Conditional probability + Bayes' theorem,yes,yes,lesson-21-5.ts
+6,22,1,Dot product: the one number that says 'these are alike',yes,yes,lesson-22.ts
+6,22,2,"Vector magnitude: how \""long\"" is a vector",yes,yes,lesson-22-2.ts
+6,22,3,Matrices: a grid of numbers that transforms vectors,yes,yes,lesson-22-3.ts
+6,22,4,"Cosine similarity: comparing direction, not just magnitude",yes,yes,lesson-22-4.ts
+6,23,1,Order isn't free: telling the model what came first,yes,yes,lesson-23.ts
+6,23,2,"Query, key, value: the question every word asks the sentence",yes,yes,lesson-23-2.ts
+6,23,3,Raw scores aren't probabilities yet: scaling and softmax,yes,yes,lesson-23-3.ts
+6,23,4,The payoff: attention weights become an actual answer,yes,yes,lesson-23-4.ts
+6,23,5,"Attention is one ingredient: residuals, layer norm, feed-forward, and masking",yes,yes,lesson-23-5.ts
+6,24,1,"100 clean examples beat 10,000 messy ones",yes,yes,lesson-24.ts
+6,24,2,Don't fine-tune a problem a better prompt can fix in an afternoon,yes,yes,lesson-24-2.ts
+6,24,3,"100% training accuracy is a warning sign, not a victory",yes,yes,lesson-24-3.ts
+6,24,4,Held-out score decides if it ships — training score doesn't get a vote,yes,yes,lesson-24-4.ts
+7,25,1,"Plan, Act, Check, Repeat: The ReAct Pattern Behind Every Agent Loop",yes,yes,lesson-25.ts
+7,25,2,Orchestration: The Supervisor That Routes Work to the Right Agent,yes,yes,lesson-25-2.ts
+7,25,3,Agents Need a Notebook (With a Page Limit): Memory and the Context Window,yes,yes,lesson-25-3.ts
+7,25,4,When the Loop Won't Stop: Failure Modes and Recovery,yes,yes,lesson-25-4.ts
+7,26,1,"The Refund Bot's Three Lanes: Auto-Approve, Ask, or Block",yes,yes,lesson-26.ts
+7,26,2,"Trust the Number, Not the Vibe: Routing on Confidence",yes,yes,lesson-26-2.ts
+7,26,3,Escalating to 'a Human' Isn't a Plan — It's a Missing Design,yes,yes,lesson-26-3.ts
+7,26,4,"The Review Screen Is Part of the Guardrail, Not an Afterthought",yes,yes,lesson-26-4.ts
+7,26,5,Before It Reaches a Human: Injection-Safe Summaries and Redacted PII,yes,yes,lesson-26-5.ts
+7,26,6,"The Last Checkpoint: Validating the Answer, Scoring the Risk",yes,yes,lesson-26-6.ts
+7,27,1,The Two-Line Function Standing Between You and a Surprise Bill,yes,yes,lesson-27.ts
+7,27,2,"One Request, Five Services, One Trace ID",yes,yes,lesson-27-2.ts
+7,27,3,The Function That Decides Whether to Wake Someone Up,yes,yes,lesson-27-3.ts
+7,27,4,Which Feature Is Actually Burning the Budget,yes,yes,lesson-27-4.ts
+7,27,5,The 5% of Requests Your Average Never Mentions,yes,yes,lesson-27-5.ts
+7,27,6,"One Meter, Every User: Tracking Cost Per Person",yes,yes,lesson-27-6.ts
+7,28,1,The demo works. Now handle everything else.,yes,yes,lesson-28.ts
+7,28,2,Show your work: why citations beat confidence,yes,yes,lesson-28-2.ts
+7,28,3,Latency as a feature: what to show while the model thinks,yes,yes,lesson-28-3.ts
+7,28,4,Before you ship: the one checklist that ties it all together,yes,yes,lesson-28-4.ts
