@@ -51,6 +51,38 @@ Never remove, reorder, or rename these. Each field has **one distinct job** (see
 
 8. **`realWorldIntro` must connect to something the learner can picture** — e.g. "this is how people build apps like Instagram" — never internal developer-workflow jargon.
 
+## Difficulty Tiers
+
+These do **not** replace any rule above — one analogy, paragraph spacing, define-before-use, and no silent jargon apply at **every** tier. A tier changes only **what counts as "already taught"** (Rules 3 and 4). Match the tier to the lesson's `phase` (derivable from `num`: modules 1–8 = Phases 1–2, 9–20 = Phases 3–5, 21–28 = Phases 6–7).
+
+Not every lesson can assume zero background — a Phase 6 transformers lesson is inherently for someone who has already survived Phases 1–5. The "explain clearly" discipline never relaxes; only the "assume zero background" bar moves.
+
+### Tier 1 — True Beginner (Phases 1–2 · modules 1–8)
+Audience: complete beginners, zero IT/dev background, age ~12+.
+- Assume **nothing** beyond what was explicitly taught in an earlier Tier 1 lesson.
+- Analogies must come from everyday life a 12-year-old already knows (texting, games, school, a locker, a group chat).
+- Every technical term is defined in plain English at first use, every time — no exceptions. Each such term gets an `explainers[]` entry.
+- No dev-jargon in examples (`concept`, `vizStages[].code`, `sandbox`, `quizCode`, `realWorldCode`) until it has been taught (Rule 4).
+
+### Tier 2 — Building Learner (Phases 3–5 · modules 9–20)
+Audience: has completed Phases 1–2. Knows programming fundamentals, basic web/full-stack concepts, and terminal/Git.
+- May assume concepts explicitly taught in Phases 1–2 (variables, functions, loops, terminal commands, git basics, HTTP/API basics where covered).
+- Still requires **one consistent analogy** per lesson and paragraph spacing — the "explain clearly" rule never relaxes, only the "assume zero background" rule does.
+- New terms specific to this tier (e.g. "DataFrame", "model", "training") must still be defined at first use via `explainers[]` — don't assume the learner has seen them just because they're now more advanced.
+- Analogies can draw on slightly broader references (school subjects, sports, organising a room) but should still avoid workplace/office jargon.
+
+### Tier 3 — Advanced Learner (Phases 6–7 · modules 21–28)
+Audience: has completed Phases 1–5. Comfortable with programming, data, and foundational ML concepts.
+- May assume everything explicitly taught in Phases 1–5.
+- Analogies are **optional** if the concept is genuinely abstract (e.g. attention mechanisms, backpropagation) — but if used, still single and consistent, not stacked.
+- Explanations must still be paced and spaced. Density of PRIOR knowledge assumed does **not** excuse density of WRITING — a wall of text is still a wall of text at Tier 3.
+- New/advanced terms still get defined at first use, even for an experienced learner: assume expertise in the prerequisites, not mind-reading of new vocabulary.
+
+### Applying the tiers
+Before rewriting or auditing any lesson, check its `phase` and apply the matching tier's assumptions.
+- **Don't apply Tier 1 rules to a Phase 6 lesson** (e.g. re-explaining what a variable is) — it wastes space re-teaching what's already known and buries the actual new content.
+- **Don't apply Tier 3 looseness to a Phase 1–2 lesson** — that's exactly the failure mode that made Lesson 1 (terminal) and Lesson 5 (JS) fail beginners.
+
 ## Process for every module
 - Write or rewrite lessons using the rules above.
 - **Before pushing, re-read the full module back to back as a complete beginner would** — not lesson by lesson in isolation.
