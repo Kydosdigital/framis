@@ -7,7 +7,7 @@ const content: LessonData = {
   title: "Working in parallel: branches, merges, and conflicts",
   minutes: 22,
   concept:
-    "What if your whole team is working on the same project at the same time? If everyone saves changes on the same line, they'll keep overwriting each other.\n\nBranches solve this. A branch is your own separate save line inside the same project. You can commit to it as many times as you like without touching anyone else's work — and when you're done, you bring those changes back into the main line.\n\nThink of it like a group essay. Each person makes their own draft copy to work on freely. When everyone's happy with their part, you combine all the drafts into the final version.\n\ngit branch — lists all the branches in your project (the one with * is where you currently are).\ngit checkout -b name — creates a new branch and jumps onto it in one step.\ngit merge branchname — brings a branch's commits into the one you're currently on.\n\nMost merges happen automatically. But if two branches both changed the exact same line of a file differently, Git can't guess which version to keep — so it stops and marks the spot inside the file with special lines called conflict markers:\n\n<<<<<<< HEAD (your current branch's version)\n======= (the divider)\n>>>>>>> branchname (the incoming version)\n\nYou fix it by opening the file, choosing which version to keep or writing something new, deleting all three marker lines, then running git add and git commit.\n\nOne more thing: a .gitignore file tells Git to completely ignore certain files — like secret passwords or downloaded software — so they're never tracked and can never get saved by accident.",
+    "What if your whole team is working on the same project at the same time? If everyone saves changes on the same line, they'll keep overwriting each other.\n\nBranches solve this. A branch is your own separate save line inside the same project. You can commit to it as many times as you like without touching anyone else's work — and when you're done, you bring those changes back into the main line.\n\nThink of it like a group essay. Each person makes their own draft copy to work on freely. When everyone's happy with their part, you combine all the drafts into the final version.\n\ngit branch — lists all the branches in your project (the one with * is where you currently are).\n\ngit checkout -b name — creates a new branch and jumps onto it in one step.\n\ngit merge branchname — brings a branch's commits into the one you're currently on.\n\nMost merges happen automatically. But if two branches both changed the exact same line of a file differently, Git can't guess which version to keep — so it stops and marks the spot inside the file with special lines called conflict markers:\n\n<<<<<<< HEAD (your current branch's version)\n======= (the divider)\n>>>>>>> branchname (the incoming version)\n\nYou fix it by opening the file, choosing which version to keep or writing something new, deleting all three marker lines, then running git add and git commit.",
   conceptSimpler:
     "Imagine you and a friend are each writing your own draft of the same essay at the same time — so you don't keep overwriting each other. That's what branches are. When you're both done, you combine your drafts into one final version — that's the merge. A conflict just means you both rewrote the same sentence differently, and someone (you) needs to decide which version makes the final cut.",
   vizStages: [
@@ -47,7 +47,7 @@ const content: LessonData = {
   sandbox: {
     kind: "explore",
     instructions:
-      "Click through each command to see how branches, merges, and .gitignore fit together.",
+      "Click through each command to see how branches and merges fit together.",
     stages: [
       {
         label: "git branch",
@@ -75,13 +75,6 @@ const content: LessonData = {
         code:
           "$ cat essay.txt\n<<<<<<< HEAD\nIn conclusion, keep practising.\n=======\nIn conclusion, never stop learning.\n>>>>>>> my-draft\n$ # after editing by hand:\n$ cat essay.txt\nIn conclusion, keep practising and never stop learning.\n$ git add essay.txt\n$ git commit -m \"Merge my-draft\"\n[main 2b3c4d5] Merge my-draft",
       },
-      {
-        label: ".gitignore",
-        body:
-          "A plain text file listing file and folder patterns Git should never track — like downloaded software or secret passwords. Anything matching a line in .gitignore is skipped by git status and git add completely.",
-        code:
-          "$ cat .gitignore\nnode_modules/\n.env\n*.log\n$ git status\nOn branch main\nnothing to commit, working tree clean",
-      },
     ],
   },
   quizQuestion:
@@ -107,7 +100,7 @@ const content: LessonData = {
   quizFeedbackIncorrect:
     "Not quite — Git hasn't picked anything and nothing is broken. HEAD marks your current branch's version and the name after >>>>>>> marks the incoming version. You resolve it by editing the file down to what you actually want, deleting the markers, then git add and git commit.",
   takeaway:
-    "git branch and git checkout -b let you work on a separate save line without touching main. git merge brings that work back together. A conflict just means two branches changed the same line differently — fix it by editing the file, deleting the markers, then git add and git commit. .gitignore keeps files that were never meant to be tracked out of the picture entirely.",
+    "git branch and git checkout -b let you work on a separate save line without touching main. git merge brings that work back together. A conflict just means two branches changed the same line differently — fix it by editing the file, deleting the markers, then git add and git commit.",
   explainers: [
     {
       id: "what-is-branch",
@@ -151,20 +144,6 @@ const content: LessonData = {
       realWorldExample:
         "It's like two people leaving sticky notes on the same sentence in a shared doc: one says 'use my version' and the other says 'use mine.' You read both, decide what the sentence should say, and peel off both sticky notes before you're done.",
       relatedTerms: ["what-is-merge-conflict"],
-    },
-    {
-      id: "what-is-gitignore",
-      term: "What's a .gitignore File?",
-      emoji: "🚫",
-      shortDef:
-        "A .gitignore file lists files and folders Git should never track, so they never show up in git status or get saved by accident.",
-      longDef:
-        "Some files don't belong in your project's history at all — downloaded software that can be reinstalled, log files, or secret passwords. Listing a name or pattern like node_modules/ or .env in a file named .gitignore tells Git to ignore anything matching it completely, so it never appears as 'untracked' and can never be swept up by an accidental git add.",
-      whyMatters:
-        "Saving downloaded software bloats your project for no reason, and saving a secret password can leak it publicly once it's pushed online — .gitignore prevents both by stopping those files from ever being tracked in the first place.",
-      realWorldExample:
-        "It's like a note on your locker that says 'don't put anything from this bag in here' — so nobody has to remember each time, it's just automatically skipped.",
-      relatedTerms: ["what-is-branch"],
     },
   ],
 };

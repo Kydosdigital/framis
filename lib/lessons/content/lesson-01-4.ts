@@ -56,13 +56,6 @@ const content: LessonData = {
           "$ git clone https://github.com/example/my-game.git\nCloning into 'my-game'...\nremote: Enumerating objects: 142, done.\nReceiving objects: 100% (142/142), done.",
       },
       {
-        label: "git remote -v",
-        body:
-          "Lists the online locations your repository knows about and their addresses. Run this if you're ever unsure where 'origin' actually points.",
-        code:
-          "$ git remote -v\norigin  https://github.com/example/my-game.git (fetch)\norigin  https://github.com/example/my-game.git (push)",
-      },
-      {
         label: "git push origin main",
         body:
           "Uploads your local commits on the main branch to the online copy called origin. Use this once you've committed work you want your team (or anyone watching the project) to see.",
@@ -133,7 +126,7 @@ const content: LessonData = {
       emoji: "⬇️",
       shortDef: "git clone downloads a full copy of an online repository — every file and its entire save history — onto your computer.",
       longDef:
-        "Cloning isn't just downloading the current files; it copies the project's full save history along with them, so git log works immediately and you can see every past commit. It also automatically sets up the remote as 'origin,' ready for you to push and pull right away.",
+        "Cloning isn't just downloading the current files; it copies the project's full save history along with them, so the project's past saves come with it too. It also automatically sets up the remote as 'origin,' ready for you to push and pull right away.",
       whyMatters:
         "This is usually the very first command you run on any existing project — it's how you go from 'a project exists somewhere online' to 'I have a fully working copy on my machine.'",
       realWorldExample:

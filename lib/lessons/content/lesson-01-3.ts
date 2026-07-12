@@ -7,7 +7,7 @@ const content: LessonData = {
   title: "The undo button: git diff, checkout, and reset",
   minutes: 22,
   concept:
-    "Mistakes happen. Git gives you ways to undo almost anything — as long as you pick the right type of undo.\n\ngit diff shows you exactly what's changed in a file since your last save, line by line. Lines you added show up with a + in front, lines you removed show with a -. Think of it as rereading a text message draft before you hit Send — a quick check while you can still easily fix it.\n\nIf you decide you don't like those changes, git checkout -- filename throws them away and restores that file to how it looked in your last commit. Like clearing a draft you never sent.\n\nOnce a commit is already made, git checkout won't touch it. That's when you need git reset, which rewinds your save history back one step. How much it undoes depends on the flag:\n\n--soft rewinds the commit but keeps your changes queued up, ready to save again — like unsending a message but keeping a copy in drafts.\nPlain git reset HEAD~1 (the default) rewinds the commit and removes changes from the queue, but leaves them in your files — like unsending it but leaving the text in your inbox.\n--hard rewinds the commit and deletes the changes completely — like unsending the message and deleting it from both sides. There's no getting it back.",
+    "Mistakes happen. Git gives you ways to undo almost anything — as long as you pick the right type of undo.\n\ngit diff shows you exactly what's changed in a file since your last save, line by line. Lines you added show up with a + in front, lines you removed show with a -. Think of it as rereading a text message draft before you hit Send — a quick check while you can still easily fix it.\n\nIf you decide you don't like those changes, git checkout -- filename throws them away and restores that file to how it looked in your last commit. Like clearing a draft you never sent.\n\nOnce a commit is already made, git checkout won't touch it. That's when you need git reset, which rewinds your save history back one step.\n\ngit reset --soft HEAD~1 rewinds the commit but keeps your changes queued up, ready to save again — like unsending a message but keeping a copy in drafts.\n\nPlain git reset HEAD~1 (the default) rewinds the commit and removes changes from the queue, but leaves them in your files — like unsending it but leaving the text in your inbox.\n\ngit reset --hard HEAD~1 rewinds the commit and deletes the changes completely — like unsending the message and deleting it from both sides. There's no getting it back.",
   conceptSimpler:
     "Think about texting a friend. git diff is rereading your unsent draft before you press Send — catching a mistake while you still can. git checkout is deleting the draft because you changed your mind. And git reset is like being able to 'unsend' a message you already sent: one version keeps a draft copy for you, one just un-sends it, and one deletes it completely from both sides.",
   vizStages: [
@@ -55,16 +55,16 @@ const content: LessonData = {
           "$ git diff\n--- a/notes.txt\n+++ b/notes.txt\n- My homework is on Friday.\n+ My homework is on Thursday.",
       },
       {
-        label: "git diff --staged",
-        body:
-          "Same as git diff, but shows what's already queued up with git add instead of what's still unqueued. Use it right before committing to double-check exactly what's about to be saved.",
-        code: "$ git diff --staged\n+++ b/essay.txt\n+ My final conclusion is...",
-      },
-      {
         label: "git checkout -- filename",
         body:
           "Throws away uncommitted changes to a single file and restores it to how it looked at your last save. Use this when you've made edits you don't want and there's nothing worth keeping.",
         code: "$ git checkout -- notes.txt\n$ git status\nnothing to commit, working tree clean",
+      },
+      {
+        label: "git reset HEAD~1",
+        body:
+          "Undoes the most recent commit and removes its changes from the queue, but keeps them in your files. Use this when you want to look at those edits again before deciding what to save next.",
+        code: "$ git reset HEAD~1\n$ git status\nChanges not staged for commit:\n  modified:   notes.txt",
       },
       {
         label: "git reset --soft HEAD~1",
