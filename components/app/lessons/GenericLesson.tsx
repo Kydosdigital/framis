@@ -104,7 +104,13 @@ export default function GenericLesson({
       </div>
 
       <div className="mb-[18px] rounded-[12px] border border-line bg-card px-7 py-[26px]">
-        <p className="text-pretty text-[16px]/[1.7]">{simpler ? data.conceptSimpler : data.concept}</p>
+        {(simpler ? data.conceptSimpler : data.concept)
+          .split(/\n\n+/)
+          .map((para, i) => (
+            <p key={i} className={`whitespace-pre-line text-pretty text-[16px]/[1.7]${i > 0 ? " mt-4" : ""}`}>
+              {para}
+            </p>
+          ))}
       </div>
 
       <StageViz stages={data.vizStages} mode="auto" />
