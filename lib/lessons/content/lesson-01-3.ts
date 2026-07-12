@@ -7,104 +7,104 @@ const content: LessonData = {
   title: "The undo button: git diff, checkout, and reset",
   minutes: 22,
   concept:
-    "Mistakes are normal in Git, and there's almost always a way back. git diff shows you the exact lines that changed but haven't been committed yet — every added line marked with a +, every removed line marked with a -, so you know precisely what you're about to save before you save it. If you've edited a file and want to throw those uncommitted edits away entirely, git checkout -- filename restores it to how it looked at your last commit, as if you'd never touched it. If the mistake already made it into a commit, git reset moves your branch back to an earlier point in history — but how much it undoes depends on the flag: --soft keeps your changes staged, plain reset (called --mixed, the default) unstages them but leaves them in your files, and --hard throws them away completely. Because --hard permanently deletes uncommitted work, it's the one command in this trio worth pausing before you run.",
+    "Mistakes happen. Git gives you ways to undo almost anything — as long as you pick the right type of undo.\n\ngit diff shows you exactly what's changed in a file since your last save, line by line. Lines you added show up with a + in front, lines you removed show with a -. Think of it as rereading a text message draft before you hit Send — a quick check while you can still easily fix it.\n\nIf you decide you don't like those changes, git checkout -- filename throws them away and restores that file to how it looked in your last commit. Like clearing a draft you never sent.\n\nOnce a commit is already made, git checkout won't touch it. That's when you need git reset, which rewinds your save history back one step. How much it undoes depends on the flag:\n\n--soft rewinds the commit but keeps your changes queued up, ready to save again — like unsending a message but keeping a copy in drafts.\nPlain git reset HEAD~1 (the default) rewinds the commit and removes changes from the queue, but leaves them in your files — like unsending it but leaving the text in your inbox.\n--hard rewinds the commit and deletes the changes completely — like unsending the message and deleting it from both sides. There's no getting it back.",
   conceptSimpler:
-    "git diff is proofreading a letter before you mail it, git checkout is crumpling up a draft and starting that page over, and git reset is tearing pages out of a notebook you've already written in — gently if you keep the torn-out pages, violently if you shred them.",
+    "Think about texting a friend. git diff is rereading your unsent draft before you press Send — catching a mistake while you still can. git checkout is deleting the draft because you changed your mind. And git reset is like being able to 'unsend' a message you already sent: one version keeps a draft copy for you, one just un-sends it, and one deletes it completely from both sides.",
   vizStages: [
     {
-      label: "1. Review before you commit",
+      label: "1. Preview before you save",
       body:
-        "You've edited config.js but haven't committed. git diff shows exactly what changed, line by line, so you can catch a typo or an accidental edit before it becomes part of your history.",
+        "You've changed a line in notes.txt but haven't committed yet. git diff shows exactly what changed — the old line marked with a -, the new line marked with a +. Running this doesn't change anything; it's purely a preview.",
       code:
-        "$ git diff\n--- a/config.js\n+++ b/config.js\n- const timeout = 3000;\n+ const timeout = 30000;",
+        "$ git diff\n--- a/notes.txt\n+++ b/notes.txt\n- My homework is due Friday.\n+ My homework is due Thursday.",
     },
     {
-      label: "2. Discard an uncommitted mistake",
+      label: "2. Throw away an uncommitted change",
       body:
-        "You decide that edit was wrong and you'd rather start from scratch. git checkout -- config.js throws away the uncommitted change and restores the file to exactly how it was in your last commit.",
-      code: "$ git checkout -- config.js\n$ git diff\n(nothing — file matches the last commit)",
+        "You decide that edit was wrong and you want to start fresh. git checkout -- notes.txt throws away the uncommitted change and restores the file to how it was in your last save — like clearing a draft before sending it.",
+      code: "$ git checkout -- notes.txt\n$ git diff\n(nothing — file matches the last commit)",
     },
     {
-      label: "3. Undo a commit, keep the changes staged",
+      label: "3. Undo a commit, keep the change ready to re-save",
       body:
-        "This time the mistake was already committed. git reset --soft HEAD~1 moves your branch back one commit but leaves all those changes staged, ready to be edited slightly and recommitted.",
+        "This time the mistake made it into a commit. git reset --soft HEAD~1 rewinds your history back one step but leaves those changes queued up, ready to save again — like unsending a message but keeping a draft copy.",
       code:
-        "$ git reset --soft HEAD~1\n$ git status\nChanges to be committed:\n  modified:   config.js",
+        "$ git reset --soft HEAD~1\n$ git status\nChanges to be committed:\n  modified:   notes.txt",
     },
     {
-      label: "4. Undo a commit completely",
+      label: "4. Undo a commit and delete everything",
       body:
-        "Sometimes you want the commit and its changes gone entirely — for example, a commit that added a temporary debug file you never meant to keep. git reset --hard HEAD~1 rewinds the branch and wipes out the file changes too, with no trace left.",
+        "Sometimes you want the commit and all its changes gone entirely. git reset --hard HEAD~1 rewinds your history and wipes those changes completely — there is no getting them back.",
       code: "$ git reset --hard HEAD~1\n$ git status\nnothing to commit, working tree clean",
     },
   ],
   realWorldIntro:
-    "Developers run git diff constantly right before committing as a final review, reach for git checkout to bail out of a small experiment that didn't work, and use git reset to clean up local commit history before sharing it with teammates.",
+    "When someone builds an app, they run git diff before every save as a quick review — like proofreading a post before publishing it. If something breaks, they pick the right type of reset depending on how much work they want to keep. It sounds like a lot of options at first, but choosing the right one becomes automatic fast.",
   realWorldCode:
-    "$ git diff\n--- a/Header.tsx\n+++ b/Header.tsx\n- <h1>Welcom</h1>\n+ <h1>Welcome</h1>",
+    "$ git diff\n--- a/notes.txt\n+++ b/notes.txt\n- Welcom to the app!\n+ Welcome to the app!",
   sandbox: {
     kind: "explore",
     instructions:
-      "Click through each command to see what it undoes, and how much damage (or safety) it comes with.",
+      "Click through each command to see what it undoes, and how much it keeps.",
     stages: [
       {
         label: "git diff",
         body:
-          "Shows uncommitted changes line by line — nothing is undone here, it's purely a preview. Run it before every commit as a habit, so you never commit something you didn't mean to.",
+          "Shows uncommitted changes line by line — nothing is undone here, it's purely a preview. Run it before every commit as a habit, so you never save something you didn't mean to.",
         code:
-          "$ git diff\n--- a/app.js\n+++ b/app.js\n- console.log(\"debug\");\n+ // removed debug log",
+          "$ git diff\n--- a/notes.txt\n+++ b/notes.txt\n- My homework is on Friday.\n+ My homework is on Thursday.",
       },
       {
         label: "git diff --staged",
         body:
-          "Same idea as git diff, but shows what's already staged with git add instead of what's still unstaged. Use it right before committing to double-check exactly what's about to be saved.",
-        code: "$ git diff --staged\n+++ b/app.js\n+ function validateEmail(input) { ... }",
+          "Same as git diff, but shows what's already queued up with git add instead of what's still unqueued. Use it right before committing to double-check exactly what's about to be saved.",
+        code: "$ git diff --staged\n+++ b/essay.txt\n+ My final conclusion is...",
       },
       {
         label: "git checkout -- filename",
         body:
-          "Discards uncommitted changes to a single file, reverting it to the last commit. Reach for this when you've made edits you no longer want and there's nothing worth keeping.",
-        code: "$ git checkout -- app.js\n$ git status\nnothing to commit, working tree clean",
+          "Throws away uncommitted changes to a single file and restores it to how it looked at your last save. Use this when you've made edits you don't want and there's nothing worth keeping.",
+        code: "$ git checkout -- notes.txt\n$ git status\nnothing to commit, working tree clean",
       },
       {
         label: "git reset --soft HEAD~1",
         body:
-          "Undoes the most recent commit but keeps all its changes staged. Use this when you committed too early and want to add a bit more before recommitting, without losing any work.",
-        code: "$ git reset --soft HEAD~1\n$ git status\nChanges to be committed:\n  modified:   app.js",
+          "Undoes the most recent commit but keeps all its changes queued up. Use this when you committed too early and want to add a bit more before saving again — without losing any of your work.",
+        code: "$ git reset --soft HEAD~1\n$ git status\nChanges to be committed:\n  modified:   notes.txt",
       },
       {
         label: "git reset --hard HEAD~1",
         body:
-          "Undoes the most recent commit and permanently deletes its changes from your files too — there's no recovering them afterward. Only use this when you're certain you never want that commit's work back.",
+          "Undoes the most recent commit and permanently deletes its changes — there is no recovering them afterwards. Only use this when you are completely sure you never want that work back.",
         code: "$ git reset --hard HEAD~1\n$ git status\nnothing to commit, working tree clean",
       },
     ],
   },
   quizQuestion:
-    "You want to undo your last commit, but keep the changes sitting in your files, unstaged, so you can rework them before committing again. Which command does that?",
+    "You want to undo your last commit, but keep the changes in your files — not queued up — so you can look at them and decide what to fix. Which command does that?",
   quizOptions: [
     { key: "a", label: "git reset --soft HEAD~1", correct: false },
     { key: "b", label: "git reset HEAD~1", correct: true },
     { key: "c", label: "git reset --hard HEAD~1", correct: false },
   ],
   quizFeedbackCorrect:
-    "Right — plain git reset HEAD~1 uses the default \"mixed\" mode, which undoes the commit and unstages the changes, but leaves them in your files exactly as they were, ready to edit.",
+    "Right — plain git reset HEAD~1 uses the default mode (called 'mixed'), which undoes the commit and removes the changes from the queue, but leaves them sitting in your files exactly as they were, ready to look at and fix.",
   quizFeedbackIncorrect:
-    "Not quite — --soft undoes the commit but leaves changes staged (not unstaged), while --hard undoes the commit and deletes the changes entirely. Plain git reset (the default \"mixed\" mode) is the middle ground: unstaged, but still in your files.",
+    "Not quite — --soft undoes the commit but leaves changes queued up (not unqueued), and --hard undoes the commit and deletes the changes entirely. Plain git reset HEAD~1 (the default 'mixed' mode) is the middle ground: changes removed from the queue but still in your files.",
   takeaway:
-    "git diff lets you preview before you commit, git checkout throws away uncommitted mistakes, and git reset rewinds committed ones — with --soft, --mixed, and --hard trading off how much of your work survives the rewind.",
+    "git diff lets you preview before you commit. git checkout -- filename throws away uncommitted mistakes. git reset rewinds commits you've already made — with --soft, plain (mixed), and --hard trading off how much of your work survives.",
   explainers: [
     {
       id: "what-is-uncommitted-changes",
       term: "What Are \"Uncommitted Changes\"?",
       emoji: "✏️",
-      shortDef: "Uncommitted changes are edits Git has noticed but hasn't saved as a permanent snapshot yet.",
+      shortDef: "Uncommitted changes are edits Git has noticed but hasn't saved as a snapshot yet.",
       longDef:
-        "The moment you edit a tracked file, Git notices — git status will call it \"modified.\" But nothing is actually saved until you stage it and commit it. Until then, it's just sitting there as an uncommitted change: easy to review, easy to throw away, and not yet part of your project's permanent history.",
+        "The moment you edit a tracked file, Git notices — git status will call it 'modified.' But nothing is actually saved until you queue it with git add and commit it. Until then, it's just sitting there as an uncommitted change: easy to review, easy to throw away, and not yet part of your project's save history.",
       whyMatters:
-        "Knowing whether a change is committed or not tells you how safe it is. Uncommitted work can be undone with a single command and no trace left behind — committed work takes a deliberate rewind instead.",
+        "Knowing whether a change is committed or not tells you how safe it is. Uncommitted changes can be thrown away with one command and no trace left behind — committed ones take a deliberate undo instead.",
       realWorldExample:
-        "It's like a sentence you just typed in a document but haven't saved yet — still easy to delete completely, versus a paragraph you already saved and would now have to deliberately go back and remove.",
+        "It's like a text message you typed but haven't sent yet — still easy to delete completely, versus one you already sent and would now have to deliberately go back and unsend.",
       relatedTerms: ["what-is-git-diff", "what-is-checkout"],
       expandedByDefault: true,
     },
@@ -112,39 +112,39 @@ const content: LessonData = {
       id: "what-is-git-diff",
       term: "What Does git diff Show You?",
       emoji: "🔍",
-      shortDef: "git diff shows the exact lines you've changed but haven't committed yet — additions and deletions, side by side.",
+      shortDef: "git diff shows the exact lines you've changed but haven't committed yet — additions and removals, side by side.",
       longDef:
-        "Run git diff and Git prints every uncommitted change line by line: lines you removed marked with a minus sign, lines you added marked with a plus sign. Nothing is modified by running it — it's purely a preview, so you can catch a typo or an accidental edit before it becomes a permanent part of your history.",
+        "Run git diff and Git prints every uncommitted change line by line: lines you removed marked with a minus sign, lines you added marked with a plus sign. Nothing is modified by running it — it's purely a preview, so you can catch a typo or an accidental edit before it becomes a permanent part of your save history.",
       whyMatters:
-        "Committing a mistake is far more annoying to undo than catching it before you commit. A quick git diff habit before every commit catches most of those mistakes for free.",
+        "Saving a mistake is much more annoying to undo than catching it before you save. A quick git diff habit before every commit catches most of those mistakes for free.",
       realWorldExample:
-        "It's proofreading a text message before you hit send — a quick look at exactly what changed, while you can still easily fix it.",
+        "It's like rereading a text message draft before you hit Send — a quick look at exactly what you wrote, while you can still easily fix it.",
       relatedTerms: ["what-is-uncommitted-changes"],
     },
     {
       id: "what-is-checkout",
       term: "checkout vs. reset — What's the Difference?",
       emoji: "↩️",
-      shortDef: "git checkout -- file throws away uncommitted edits to one file. git reset rewinds your branch past commits you've already made.",
+      shortDef: "git checkout -- file throws away uncommitted edits to one file. git reset rewinds commits you've already made.",
       longDef:
-        "These two solve different problems. git checkout -- filename only works on uncommitted changes — it restores one file to how it looked at your last commit, discarding whatever you'd typed since. git reset works on commits themselves — it moves your branch backward in history, undoing one or more commits you already made. If your mistake hasn't been committed yet, reach for checkout. If it already got committed, you need reset.",
+        "These two solve different problems. git checkout -- filename only works on uncommitted changes — it restores one file to how it looked at your last save, throwing away whatever you typed since. git reset works on commits themselves — it moves your save history backward, undoing one or more commits you already made. If your mistake hasn't been committed yet, reach for checkout. If it already got committed, you need reset.",
       whyMatters:
         "Reaching for the wrong one wastes time — checkout won't touch a commit that already happened, and reset is overkill (and riskier) for a change you haven't even saved yet.",
       realWorldExample:
-        "checkout is crumpling up a draft page you haven't handed in. reset is going back through pages you've already turned in and pulling some of them back out.",
+        "checkout is deleting a draft message before you send it. reset is being able to unsend a message you already sent — with different levels of how completely it disappears.",
       relatedTerms: ["what-is-uncommitted-changes", "what-is-hard-reset"],
     },
     {
       id: "what-is-hard-reset",
-      term: "Why Is --hard the Scary One?",
+      term: "Why Is --hard the Dangerous One?",
       emoji: "⚠️",
-      shortDef: "--soft and plain reset keep your changes around after rewinding; --hard deletes them completely, with no undo.",
+      shortDef: "--soft and plain reset keep your changes around after rewinding. --hard deletes them completely, with no undo.",
       longDef:
-        "All three reset modes move your branch back to an earlier commit — they differ only in what happens to the work in between. --soft keeps it staged, ready to re-commit. Plain reset (the default, \"mixed\") unstages it but leaves it sitting in your files, editable. --hard throws it away entirely, as if it never happened, and there's no simple command to bring it back.",
+        "All three reset modes move your history back to an earlier commit — they differ only in what happens to the work in between. --soft keeps it queued up, ready to re-commit. Plain reset (the default, 'mixed') removes it from the queue but leaves it sitting in your files. --hard throws it away entirely, as if it never existed — there's no simple way to bring it back.",
       whyMatters:
-        "Of the three, --hard is the one genuinely destructive command in this lesson. It's worth a two-second pause before running it — everything else here is easy to recover from if you get it wrong.",
+        "Of the three, --hard is the one genuinely permanent command in this lesson. It's worth a two-second pause before running it — everything else here is easy to recover from if you get it wrong.",
       realWorldExample:
-        "--soft and mixed reset are like tearing pages out of a notebook but keeping them in a pile on your desk. --hard is shredding them on the spot.",
+        "--soft and mixed reset are like unsending a text but keeping a copy in drafts. --hard is deleting the whole message from both sides — completely gone.",
       relatedTerms: ["what-is-checkout"],
     },
   ],
