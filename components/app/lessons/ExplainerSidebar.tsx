@@ -96,7 +96,13 @@ function ExplainerCard({
   );
 }
 
-export default function ExplainerSidebar({ explainers }: { explainers: Explainer[] }) {
+export default function ExplainerSidebar({
+  explainers,
+  onExplainerOpen,
+}: {
+  explainers: Explainer[];
+  onExplainerOpen?: (termId: string) => void;
+}) {
   const [openIds, setOpenIds] = useState<Set<string>>(
     () => new Set(explainers.filter((e) => e.expandedByDefault).map((e) => e.id)),
   );
@@ -109,8 +115,12 @@ export default function ExplainerSidebar({ explainers }: { explainers: Explainer
   const toggle = (id: string) => {
     setOpenIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        onExplainerOpen?.(id);
+      }
       return next;
     });
   };

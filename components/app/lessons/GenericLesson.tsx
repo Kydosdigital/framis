@@ -7,6 +7,9 @@ import { runPythonExt, type OutputLine } from "@/lib/pythonExt";
 import { runJsExt } from "@/lib/jsExt";
 import { runSqlExt } from "@/lib/sqlExt";
 import type { LessonData, QuizOption } from "@/lib/lessons/types";
+import { useLessonEngagement } from "@/lib/engagement/useLessonEngagement";
+import { lessonEngagementId, moduleEngagementId } from "@/lib/engagement/types";
+import { phaseForModule } from "@/lib/engagement/phase";
 import StageViz from "./StageViz";
 import ExplainerSidebar from "./ExplainerSidebar";
 
@@ -27,6 +30,13 @@ export default function GenericLesson({
 
   const [code, setCode] = useState(data.sandbox.kind === "code" ? data.sandbox.starterCode : "");
   const [output, setOutput] = useState<OutputLine[]>([]);
+  const [sandboxAttempted, setSandboxAttempted] = useState(false);
+
+  const engagement = useLessonEngagement(
+    lessonEngagementId(data.num, data.orderIndex),
+    moduleEngagementId(data.num),
+    phaseForModule(data.num),
+  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -53,6 +63,7 @@ export default function GenericLesson({
         { onConflict: "user_id,lesson_id" },
       )
       .then(() => {}, () => {});
+    engagement.trackQuizAttempt(correct ? 100 : 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizPick, userId, lessonId]);
 
@@ -70,12 +81,23 @@ export default function GenericLesson({
     }
   };
 
-  const runCode = (src: string) => {
-    const language = data.sandbox.kind === "code" ? data.sandbox.language ?? "python" : "python";
-    if (language === "javascript") return runJsExt(src);
-    if (language === "sql") return runSqlExt(src);
-    return runPythonExt(src);
+  const toggleSimpler = () => {
+    setSimpler((v) => !v);
+    engagement.trackExplainSimplerToggle();
   };
+
+  const runCode = (src: string) => {
+    if (!sandboxAttempted) {
+      setSandboxAttempted(true);
+      engagement.trackSandboxAttempt();
+    }
+    const language = data.sandbox.kind === "code" ? data.sandbox.language ?? "python" : "python";
+    const result = language === "javascript" ? runJsExt(src) : language === "sql" ? runSqlExt(src) : runPythonExt(src);
+    const hadError = result.some((line) => line.color === "#DC2626");
+    if (!hadError) engagement.trackSandboxComplete();
+    return result;
+  };
+
 
   const quizCorrect = data.quizOptions.find((o) => o.key === quizPick)?.correct ?? false;
   const quizFeedback = quizPick == null ? "" : quizCorrect ? data.quizFeedbackCorrect : data.quizFeedbackIncorrect;
@@ -85,7 +107,7 @@ export default function GenericLesson({
   const hasExplainers = Boolean(data.explainers && data.explainers.length > 0);
 
   return (
-    <div className={hasExplainers ? "md:flex md:items-start md:gap-6" : ""}>
+    <div ref={engagement.containerRef} className={hasExplainers ? "md:flex md:items-start md:gap-6" : ""}>
       <div className={hasExplainers ? "md:w-[65%] md:min-w-0" : ""}>
       <div className="mb-2.5 font-mono text-[12.5px] font-medium text-ink-500">
         MODULE {data.num} · {data.phaseLabel} · LESSON {data.orderIndex} OF {totalLessons}
@@ -96,7 +118,7 @@ export default function GenericLesson({
         <span className="text-line-input">·</span>
         <span className="text-[13px] text-ink-500">One concept. That’s the whole lesson.</span>
         <button
-          onClick={() => setSimpler(!simpler)}
+          onClick={toggleSimpler}
           className="ml-auto rounded-full border border-line-input bg-card px-4 py-[7px] font-inter text-[12.5px] font-semibold text-blue"
         >
           {simpler ? "Original explanation" : "Explain it simpler"}
@@ -246,7 +268,12 @@ export default function GenericLesson({
         </button>
       </div>
       </div>
-      {hasExplainers && <ExplainerSidebar explainers={data.explainers as NonNullable<LessonData["explainers"]>} />}
+      {hasExplainers && (
+        <ExplainerSidebar
+          explainers={data.explainers as NonNullable<LessonData["explainers"]>}
+          onExplainerOpen={engagement.trackExplainerOpen}
+        />
+      )}
     </div>
   );
 }

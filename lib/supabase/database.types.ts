@@ -179,6 +179,112 @@ export type Database = {
           },
         ]
       }
+      lesson_engagement_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          event_value: Json
+          id: string
+          lesson_id: string
+          module_id: string
+          phase: number
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          event_value?: Json
+          id?: string
+          lesson_id: string
+          module_id: string
+          phase: number
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          event_value?: Json
+          id?: string
+          lesson_id?: string
+          module_id?: string
+          phase?: number
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_engagement_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_engagement_summary: {
+        Row: {
+          engagement_score: number
+          explain_simpler_used: boolean
+          explainer_opens_count: number
+          last_visited_at: string | null
+          lesson_id: string
+          max_scroll_pct: number
+          module_id: string
+          phase: number
+          quiz_attempts: number
+          quiz_best_score: number | null
+          sandbox_attempted: boolean
+          sandbox_completed: boolean
+          total_time_seconds: number
+          user_id: string
+          visit_count: number
+        }
+        Insert: {
+          engagement_score?: number
+          explain_simpler_used?: boolean
+          explainer_opens_count?: number
+          last_visited_at?: string | null
+          lesson_id: string
+          max_scroll_pct?: number
+          module_id?: string
+          phase?: number
+          quiz_attempts?: number
+          quiz_best_score?: number | null
+          sandbox_attempted?: boolean
+          sandbox_completed?: boolean
+          total_time_seconds?: number
+          user_id: string
+          visit_count?: number
+        }
+        Update: {
+          engagement_score?: number
+          explain_simpler_used?: boolean
+          explainer_opens_count?: number
+          last_visited_at?: string | null
+          lesson_id?: string
+          max_scroll_pct?: number
+          module_id?: string
+          phase?: number
+          quiz_attempts?: number
+          quiz_best_score?: number | null
+          sandbox_attempted?: boolean
+          sandbox_completed?: boolean
+          total_time_seconds?: number
+          user_id?: string
+          visit_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_engagement_summary_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mentor_applications: {
         Row: {
           created_at: string
@@ -328,6 +434,7 @@ export type Database = {
           updated_at: string
           username: string
           welcome_email_day: number
+          is_admin: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -346,6 +453,7 @@ export type Database = {
           updated_at?: string
           username: string
           welcome_email_day?: number
+          is_admin?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -364,6 +472,7 @@ export type Database = {
           updated_at?: string
           username?: string
           welcome_email_day?: number
+          is_admin?: boolean
         }
         Relationships: []
       }
@@ -577,6 +686,10 @@ export type Database = {
           author_name: string | null
           portfolio_slug: string
         }[]
+      }
+      recompute_lesson_engagement_summary: {
+        Args: { p_user_id: string; p_lesson_id: string }
+        Returns: undefined
       }
     }
     Enums: {

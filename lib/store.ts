@@ -17,7 +17,7 @@ function applyTheme(theme: "light" | "dark") {
 }
 
 export type Screen = "landing" | "onboarding" | "app" | "mentorship" | "mentor-apply";
-export type AppTab = "dashboard" | "lesson" | "capstone" | "review" | "portfolio" | "roadmap" | "faq" | "dictionary";
+export type AppTab = "dashboard" | "lesson" | "capstone" | "review" | "portfolio" | "roadmap" | "faq" | "dictionary" | "report";
 export type QuizKey = "a" | "b" | "c";
 export type Theme = "light" | "dark";
 // null = browsing the full lesson list; "variables"/"rag" = a built lesson;
