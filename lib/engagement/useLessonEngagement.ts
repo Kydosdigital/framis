@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { EngagementEvent, EngagementEventType } from "./types";
+import type { Json } from "@/lib/supabase/database.types";
 
 const FLUSH_INTERVAL_MS = 15_000;
 /** Longer than this with the tab hidden/inactive doesn't count as attention —
@@ -36,7 +37,7 @@ export function useLessonEngagement(lessonId: string, moduleId: string, phase: n
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const enqueue = useCallback(
-    (eventType: EngagementEventType, eventValue: Record<string, unknown> = {}) => {
+    (eventType: EngagementEventType, eventValue: Record<string, Json> = {}) => {
       queueRef.current.push({
         lesson_id: lessonId,
         module_id: moduleId,

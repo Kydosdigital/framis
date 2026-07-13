@@ -1,5 +1,7 @@
 /** Shared types for lesson engagement tracking — see spec §1-3. */
 
+import type { Json } from "@/lib/supabase/database.types";
+
 export type EngagementEventType =
   | "page_view"
   | "scroll_depth"
@@ -15,7 +17,7 @@ export type EngagementEvent = {
   module_id: string;
   phase: number;
   event_type: EngagementEventType;
-  event_value: Record<string, unknown>;
+  event_value: Record<string, Json>;
   session_id: string;
 };
 
