@@ -129,6 +129,137 @@ export type Database = {
           },
         ]
       }
+      curriculum_track_sessions: {
+        Row: {
+          description: string | null
+          id: string
+          month: number | null
+          session_number: number
+          title: string
+          track_id: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          month?: number | null
+          session_number: number
+          title: string
+          track_id: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          month?: number | null
+          session_number?: number
+          title?: string
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_track_sessions_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_tracks: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      student_track_enrollments: {
+        Row: {
+          enrolled_at: string
+          id: string
+          student_id: string
+          track_id: string
+        }
+        Insert: {
+          enrolled_at?: string
+          id?: string
+          student_id: string
+          track_id: string
+        }
+        Update: {
+          enrolled_at?: string
+          id?: string
+          student_id?: string
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_track_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_track_enrollments_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_track_progress: {
+        Row: {
+          completed_at: string | null
+          id: string
+          status: string
+          student_id: string
+          track_session_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          status?: string
+          student_id: string
+          track_session_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          status?: string
+          student_id?: string
+          track_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_track_progress_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_track_progress_track_session_id_fkey"
+            columns: ["track_session_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_track_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           content: Json
@@ -433,36 +564,45 @@ export type Database = {
       }
       mentor_sessions: {
         Row: {
+          ai_generated_summary: string | null
           created_at: string
           duration_minutes: number
           id: string
           mentor_id: string
+          recording_url: string | null
           scheduled_at: string
           status: string
           student_id: string
           student_summary: string | null
+          track_session_id: string | null
           updated_at: string
         }
         Insert: {
+          ai_generated_summary?: string | null
           created_at?: string
           duration_minutes?: number
           id?: string
           mentor_id: string
+          recording_url?: string | null
           scheduled_at: string
           status?: string
           student_id: string
           student_summary?: string | null
+          track_session_id?: string | null
           updated_at?: string
         }
         Update: {
+          ai_generated_summary?: string | null
           created_at?: string
           duration_minutes?: number
           id?: string
           mentor_id?: string
+          recording_url?: string | null
           scheduled_at?: string
           status?: string
           student_id?: string
           student_summary?: string | null
+          track_session_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -478,6 +618,13 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentor_sessions_track_session_id_fkey"
+            columns: ["track_session_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_track_sessions"
             referencedColumns: ["id"]
           },
         ]
