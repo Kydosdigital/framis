@@ -5,10 +5,15 @@ import { useFramis } from "@/lib/store";
 import { ROADMAP_MODULES } from "@/lib/data";
 import { totalLessonsFor } from "@/lib/lessons";
 import { fetchEngagementReport, type EngagementReport } from "@/lib/engagement/reportData";
+import { fetchStudentMentorReport, type StudentMentorReport } from "@/lib/mentor/studentReport";
 
 function formatMinutes(seconds: number): string {
   const minutes = Math.round(seconds / 60);
   return `${minutes} min`;
+}
+
+function formatSessionDate(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 export default function Report() {
@@ -18,6 +23,7 @@ export default function Report() {
   const loadStats = useFramis((st) => st.loadStats);
   const [report, setReport] = useState<EngagementReport | null>(null);
   const [reportLoading, setReportLoading] = useState(true);
+  const [mentorReport, setMentorReport] = useState<StudentMentorReport | null>(null);
 
   useEffect(() => {
     if (!stats && !statsLoading) loadStats();
@@ -30,6 +36,7 @@ export default function Report() {
     fetchEngagementReport(userId)
       .then(setReport)
       .finally(() => setReportLoading(false));
+    fetchStudentMentorReport(userId).then(setMentorReport);
   }, [userId]);
 
   if (statsLoading || !stats || reportLoading || !report) {
@@ -98,6 +105,46 @@ export default function Report() {
           </div>
         )}
       </div>
+
+      {mentorReport?.mentored && (
+        <div className="rounded-[12px] border border-line bg-card px-6 py-5">
+          <div className="mb-1 font-mono text-[12px] font-semibold text-ink-500">MENTORSHIP</div>
+          <div className="font-inter text-[16px] font-semibold">
+            {mentorReport.mentorName ? `Mentored by ${mentorReport.mentorName}` : "Mentored"}
+          </div>
+
+          {mentorReport.track && (
+            <div className="mt-3 text-[13.5px]">
+              <span className="font-medium">{mentorReport.track.name}:</span>{" "}
+              {mentorReport.track.completed} of {mentorReport.track.total} sessions completed
+              {mentorReport.track.currentMonth ? ` · currently in Month ${mentorReport.track.currentMonth}` : ""}
+            </div>
+          )}
+
+          <div className="mt-3 text-[13.5px]">
+            <span className="font-medium">Next session:</span>{" "}
+            {mentorReport.nextSession ? (
+              <span>{formatSessionDate(mentorReport.nextSession.scheduledAt)} · {mentorReport.nextSession.durationMinutes} min</span>
+            ) : (
+              <span className="text-ink-500">none scheduled</span>
+            )}
+          </div>
+
+          {mentorReport.pastSessions.length > 0 && (
+            <div className="mt-4">
+              <div className="mb-2 font-mono text-[11.5px] font-semibold text-ink-500">SESSION HISTORY</div>
+              <ul className="flex flex-col gap-2">
+                {mentorReport.pastSessions.map((s, i) => (
+                  <li key={i} className="text-[13px]">
+                    <span className="text-ink-500">{formatSessionDate(s.scheduledAt)}</span>
+                    {s.studentSummary ? <span> — {s.studentSummary}</span> : <span className="text-ink-500"> — no summary shared</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {(report.strengths.length > 0 || report.gaps.length > 0) && (
         <div className="rounded-[12px] border border-line bg-card px-6 py-5">

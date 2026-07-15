@@ -1,0 +1,11 @@
+-- ============================================================
+-- Harden the sync_track_progress_from_session trigger function.
+-- It is only ever invoked by the trigger on mentor_sessions, never
+-- meant to be called directly over the REST API. Revoking EXECUTE
+-- from the API roles removes it from the exposed rpc surface without
+-- affecting trigger execution (triggers run in the table owner's
+-- context regardless of these grants). Closes the
+-- anon/authenticated_security_definer_function_executable advisories
+-- for this function.
+-- ============================================================
+revoke all on function public.sync_track_progress_from_session () from public, anon, authenticated;
