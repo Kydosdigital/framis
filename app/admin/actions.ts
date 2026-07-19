@@ -58,6 +58,25 @@ export async function unassignStudent(formData: FormData): Promise<ActionResult>
   return { ok: true };
 }
 
+/** Promote/demote a user (student | mentor | super_admin). Goes through
+ * the set_user_role security-definer function because profiles UPDATE is
+ * owner-only — that function is the one narrow path that can change a
+ * role, and it re-checks super-admin server-side. */
+export async function setUserRole(formData: FormData): Promise<ActionResult> {
+  const userId = String(formData.get("userId") ?? "");
+  const role = String(formData.get("role") ?? "");
+  if (!userId || !role) return { ok: false, error: "Pick a person and a role." };
+  if (!(await currentUserIsSuperAdmin())) return { ok: false, error: "Super admins only." };
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("set_user_role", { p_user_id: userId, p_role: role });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/admin/assignments");
+  revalidatePath("/admin/mentors");
+  return { ok: true };
+}
+
 /** Enrol a student in a curriculum track (one row per student+track). */
 export async function enrollStudentInTrack(formData: FormData): Promise<ActionResult> {
   const studentId = String(formData.get("studentId") ?? "");

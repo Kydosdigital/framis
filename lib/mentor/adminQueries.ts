@@ -79,8 +79,14 @@ export type Person = { id: string; fullName: string | null; username: string; ro
 export type ActiveAssignment = { studentId: string; studentName: string; mentorId: string; mentorName: string };
 
 /** Data for the assign-students-to-mentors UI: everyone, split into
- * mentors and students, plus the current active pairings. */
-export async function fetchAssignmentData(): Promise<{ mentors: Person[]; students: Person[]; active: ActiveAssignment[] }> {
+ * mentors and students, plus the current active pairings. `people` is the
+ * unsplit list (with each person's role) used by the role manager. */
+export async function fetchAssignmentData(): Promise<{
+  mentors: Person[];
+  students: Person[];
+  people: Person[];
+  active: ActiveAssignment[];
+}> {
   const supabase = createClient();
   const [{ data: people }, { data: assignments }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, username, role"),
@@ -92,6 +98,7 @@ export async function fetchAssignmentData(): Promise<{ mentors: Person[]; studen
 
   const mentors = all.filter((p) => p.role === "mentor" || p.role === "super_admin").sort(byName);
   const students = all.filter((p) => p.role === "student").sort(byName);
+  const allSorted = [...all].sort(byName);
   const active: ActiveAssignment[] = (assignments ?? []).map((a) => ({
     studentId: a.student_id,
     studentName: nameById.get(a.student_id) ?? a.student_id.slice(0, 8),
@@ -99,7 +106,7 @@ export async function fetchAssignmentData(): Promise<{ mentors: Person[]; studen
     mentorName: nameById.get(a.mentor_id) ?? a.mentor_id.slice(0, 8),
   }));
 
-  return { mentors, students, active };
+  return { mentors, students, people: allSorted, active };
 }
 
 function byName(a: Person, b: Person) {

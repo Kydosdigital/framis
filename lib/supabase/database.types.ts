@@ -1013,6 +1013,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      set_user_role: {
+        Args: { p_user_id: string; p_role: string }
+        Returns: undefined
+      }
       get_due_onboarding_emails: {
         Args: Record<PropertyKey, never>
         Returns: {
