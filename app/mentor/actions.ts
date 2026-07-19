@@ -109,6 +109,58 @@ export async function logSession(formData: FormData): Promise<ActionResult> {
   return { ok: true };
 }
 
+/** Create and send an assignment to the student. Goes out as 'sent' so it
+ * appears on their Assignments tab immediately. */
+export async function createAssignment(formData: FormData): Promise<ActionResult> {
+  const studentId = String(formData.get("studentId") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const instructions = String(formData.get("instructions") ?? "").trim();
+  const dueAt = String(formData.get("dueAt") ?? "");
+  const trackSessionId = String(formData.get("trackSessionId") ?? "");
+  if (!studentId || !title) return { ok: false, error: "Give the assignment a title." };
+
+  const resolved = await resolveMentorFor(studentId);
+  if (!resolved) return { ok: false, error: "Not authorised for this student." };
+
+  const supabase = createClient();
+  const { error } = await supabase.from("assignments").insert({
+    mentor_id: resolved.mentorId,
+    student_id: studentId,
+    title,
+    instructions: instructions || null,
+    due_at: dueAt ? new Date(dueAt).toISOString() : null,
+    track_session_id: trackSessionId || null,
+    status: "sent",
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/mentor/students/${studentId}`);
+  return { ok: true };
+}
+
+/** Leave feedback on a student's submission. The DB trigger guarantees a
+ * mentor can only touch the feedback columns here, never the student's
+ * submitted work. */
+export async function reviewSubmission(formData: FormData): Promise<ActionResult> {
+  const studentId = String(formData.get("studentId") ?? "");
+  const assignmentId = String(formData.get("assignmentId") ?? "");
+  const feedback = String(formData.get("mentorFeedback") ?? "").trim();
+  if (!studentId || !assignmentId) return { ok: false, error: "Missing assignment." };
+
+  const resolved = await resolveMentorFor(studentId);
+  if (!resolved) return { ok: false, error: "Not authorised for this student." };
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("assignment_submissions")
+    .update({ mentor_feedback: feedback || null, reviewed_at: new Date().toISOString() })
+    .eq("assignment_id", assignmentId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/mentor/students/${studentId}`);
+  return { ok: true };
+}
+
 /** Send a threaded message to the student. Sender is always the caller;
  * RLS additionally requires an active assignment between the pair. */
 export async function sendMessage(formData: FormData): Promise<ActionResult> {

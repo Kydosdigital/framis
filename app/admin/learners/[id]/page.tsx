@@ -1,10 +1,16 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { fetchLearnerDetail } from "@/lib/engagement/adminQueries";
+import { engagementScopeStudentIds } from "@/lib/mentor/access";
 import LessonEngagementTable from "@/components/app/engagement/LessonEngagementTable";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLearnerDetailPage({ params }: { params: { id: string } }) {
+  // A mentor may only open their own students' pages — without this they'd
+  // get a real profile header with an empty (RLS-blanked) engagement table.
+  const scope = await engagementScopeStudentIds();
+  if (scope !== null && !scope.includes(params.id)) redirect("/admin");
+
   const detail = await fetchLearnerDetail(params.id);
   if (!detail.profile) notFound();
 

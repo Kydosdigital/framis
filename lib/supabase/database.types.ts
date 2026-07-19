@@ -129,6 +129,121 @@ export type Database = {
           },
         ]
       }
+      assignments: {
+        Row: {
+          created_at: string
+          due_at: string | null
+          id: string
+          instructions: string | null
+          mentor_id: string
+          status: string
+          student_id: string
+          title: string
+          track_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          instructions?: string | null
+          mentor_id: string
+          status?: string
+          student_id: string
+          title: string
+          track_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          instructions?: string | null
+          mentor_id?: string
+          status?: string
+          student_id?: string
+          title?: string
+          track_session_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_track_session_id_fkey"
+            columns: ["track_session_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_track_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_submissions: {
+        Row: {
+          assignment_id: string
+          content: string | null
+          created_at: string
+          id: string
+          link_url: string | null
+          mentor_feedback: string | null
+          reviewed_at: string | null
+          student_id: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          link_url?: string | null
+          mentor_feedback?: string | null
+          reviewed_at?: string | null
+          student_id: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          link_url?: string | null
+          mentor_feedback?: string | null
+          reviewed_at?: string | null
+          student_id?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       curriculum_track_sessions: {
         Row: {
           description: string | null

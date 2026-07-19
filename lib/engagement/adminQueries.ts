@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { lookupLesson } from "./lessonLookup";
 import { ROADMAP_MODULES } from "@/lib/data";
+import { engagementScopeStudentIds } from "@/lib/mentor/access";
 
 export type OverviewStats = {
   totalLearners: number;
@@ -19,12 +20,25 @@ const DAY_MS = 86_400_000;
 export async function fetchOverviewStats(): Promise<OverviewStats> {
   const supabase = createClient();
 
-  const [{ count: totalLearners }, { data: summaryRows }] = await Promise.all([
-    supabase.from("profiles").select("id", { count: "exact", head: true }),
-    supabase
-      .from("lesson_engagement_summary")
-      .select("user_id, lesson_id, phase, engagement_score, last_visited_at"),
-  ]);
+  // A mentor sees this page scoped to their own students; a super admin
+  // (or the original is_admin holder) sees the whole cohort. RLS already
+  // filters the engagement rows — this keeps the learner count honest too.
+  const scope = await engagementScopeStudentIds();
+
+  const learnerCountQuery =
+    scope === null
+      ? supabase.from("profiles").select("id", { count: "exact", head: true })
+      : supabase.from("profiles").select("id", { count: "exact", head: true }).in("id", scope);
+
+  const summaryQuery =
+    scope === null
+      ? supabase.from("lesson_engagement_summary").select("user_id, lesson_id, phase, engagement_score, last_visited_at")
+      : supabase
+          .from("lesson_engagement_summary")
+          .select("user_id, lesson_id, phase, engagement_score, last_visited_at")
+          .in("user_id", scope);
+
+  const [{ count: totalLearners }, { data: summaryRows }] = await Promise.all([learnerCountQuery, summaryQuery]);
 
   const rows = summaryRows ?? [];
   const now = Date.now();
