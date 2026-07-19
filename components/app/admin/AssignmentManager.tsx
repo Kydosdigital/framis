@@ -20,7 +20,10 @@ export default function AssignmentManager({
   const [mentorId, setMentorId] = useState("");
   const [studentId, setStudentId] = useState("");
 
-  const assignedStudentIds = new Set(active.map((a) => a.studentId));
+  const mentorCountByStudent = active.reduce<Record<string, number>>((acc, a) => {
+    acc[a.studentId] = (acc[a.studentId] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const run = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>) => {
     setError(null);
@@ -41,9 +44,10 @@ export default function AssignmentManager({
     setStudentId("");
   };
 
-  const submitUnassign = (sid: string) => {
+  const submitUnassign = (sid: string, mid: string) => {
     const fd = new FormData();
     fd.set("studentId", sid);
+    fd.set("mentorId", mid);
     run(() => unassignStudent(fd));
   };
 
@@ -65,18 +69,24 @@ export default function AssignmentManager({
             Student
             <select value={studentId} onChange={(e) => setStudentId(e.target.value)} className="mt-1 block w-56 rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]">
               <option value="">— pick a student —</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {(s.fullName ?? s.username) + (assignedStudentIds.has(s.id) ? " (reassign)" : "")}
-                </option>
-              ))}
+              {students.map((s) => {
+                const n = mentorCountByStudent[s.id] ?? 0;
+                return (
+                  <option key={s.id} value={s.id}>
+                    {(s.fullName ?? s.username) + (n ? ` (${n} mentor${n === 1 ? "" : "s"})` : "")}
+                  </option>
+                );
+              })}
             </select>
           </label>
           <button disabled={pending || !mentorId || !studentId} className="rounded-[8px] bg-blue px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-60">
             {pending ? "Saving…" : "Assign"}
           </button>
         </div>
-        <p className="text-[12px] text-ink-500">Reassigning a student moves them to the new mentor (one active mentor per student).</p>
+        <p className="text-[12px] text-ink-500">
+          A student can have more than one mentor — assigning adds a mentor, it doesn&apos;t replace their existing ones.
+          Unassign a specific pairing below to remove just that mentor.
+        </p>
         {error && <div className="rounded-[8px] bg-[#FDF0F0] px-3.5 py-2.5 text-[13px] font-medium text-[#DC2626]">{error}</div>}
       </form>
 
@@ -95,11 +105,12 @@ export default function AssignmentManager({
             </thead>
             <tbody>
               {active.map((a) => (
-                <tr key={a.studentId} className="border-b border-line last:border-none">
+                // keyed by the pair — a student can appear once per mentor
+                <tr key={`${a.studentId}-${a.mentorId}`} className="border-b border-line last:border-none">
                   <td className="py-2.5 font-medium">{a.studentName}</td>
                   <td className="py-2.5 text-ink-500">{a.mentorName}</td>
                   <td className="py-2.5 text-right">
-                    <button onClick={() => submitUnassign(a.studentId)} disabled={pending} className="text-[13px] font-medium text-[#DC2626] hover:underline disabled:opacity-60">
+                    <button onClick={() => submitUnassign(a.studentId, a.mentorId)} disabled={pending} className="text-[13px] font-medium text-[#DC2626] hover:underline disabled:opacity-60">
                       Unassign
                     </button>
                   </td>

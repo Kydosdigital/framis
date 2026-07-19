@@ -110,7 +110,9 @@ export default function Report() {
         <div className="rounded-[12px] border border-line bg-card px-6 py-5">
           <div className="mb-1 font-mono text-[12px] font-semibold text-ink-500">MENTORSHIP</div>
           <div className="font-inter text-[16px] font-semibold">
-            {mentorReport.mentorName ? `Mentored by ${mentorReport.mentorName}` : "Mentored"}
+            {mentorReport.mentorNames.length > 0
+              ? `Mentored by ${new Intl.ListFormat(undefined, { style: "long", type: "conjunction" }).format(mentorReport.mentorNames)}`
+              : "Mentored"}
           </div>
 
           {mentorReport.track && (

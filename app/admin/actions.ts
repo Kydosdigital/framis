@@ -6,9 +6,10 @@ import { currentUser, currentUserIsSuperAdmin } from "@/lib/mentor/access";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-/** Assign a student to a mentor. Enforces one active mentor per student:
- * any existing active assignment is deactivated first (the DB has a
- * partial unique index that would otherwise reject a second active row).
+/** Add a mentor to a student. A student may have several mentors, so this
+ * only adds — it never deactivates the student's other mentors. The DB
+ * rejects a duplicate active (mentor, student) pair; that's surfaced as a
+ * friendly message rather than a raw constraint error.
  * Super-admin only (also enforced by RLS). */
 export async function assignStudent(formData: FormData): Promise<ActionResult> {
   const mentorId = String(formData.get("mentorId") ?? "");
@@ -20,29 +21,29 @@ export async function assignStudent(formData: FormData): Promise<ActionResult> {
   if (!me?.isSuperAdmin) return { ok: false, error: "Super admins only." };
 
   const supabase = createClient();
-  await supabase
-    .from("mentor_assignments")
-    .update({ active: false, unassigned_at: new Date().toISOString() })
-    .eq("student_id", studentId)
-    .eq("active", true);
-
   const { error } = await supabase.from("mentor_assignments").insert({
     mentor_id: mentorId,
     student_id: studentId,
     assigned_by: me.id,
     active: true,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    const duplicate = error.code === "23505" || /duplicate|unique/i.test(error.message);
+    return { ok: false, error: duplicate ? "That mentor is already assigned to this student." : error.message };
+  }
 
   revalidatePath("/admin/assignments");
   revalidatePath("/admin/mentors");
+  revalidatePath("/admin/students");
   return { ok: true };
 }
 
-/** Deactivate a student's current active assignment. */
+/** Deactivate one specific mentor/student pairing, leaving the student's
+ * other mentors untouched. */
 export async function unassignStudent(formData: FormData): Promise<ActionResult> {
   const studentId = String(formData.get("studentId") ?? "");
-  if (!studentId) return { ok: false, error: "Missing student." };
+  const mentorId = String(formData.get("mentorId") ?? "");
+  if (!studentId || !mentorId) return { ok: false, error: "Missing mentor or student." };
   if (!(await currentUserIsSuperAdmin())) return { ok: false, error: "Super admins only." };
 
   const supabase = createClient();
@@ -50,11 +51,13 @@ export async function unassignStudent(formData: FormData): Promise<ActionResult>
     .from("mentor_assignments")
     .update({ active: false, unassigned_at: new Date().toISOString() })
     .eq("student_id", studentId)
+    .eq("mentor_id", mentorId)
     .eq("active", true);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/admin/assignments");
   revalidatePath("/admin/mentors");
+  revalidatePath("/admin/students");
   return { ok: true };
 }
 

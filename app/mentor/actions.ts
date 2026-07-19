@@ -7,8 +7,12 @@ import { currentUser, mentorCanSeeStudent } from "@/lib/mentor/access";
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 /** Resolve the mentor_id to write rows under. A mentor writes as themselves;
- * a super admin acts on behalf of the student's actual assigned mentor so
- * RLS + the data stay consistent. Returns null if unauthorised. */
+ * a super admin acts on behalf of one of the student's assigned mentors so
+ * RLS + the data stay consistent. Returns null if unauthorised.
+ *
+ * A student may now have several mentors, so this takes the earliest-assigned
+ * active mentor rather than assuming there is exactly one — `.maybeSingle()`
+ * here would throw as soon as a second mentor was added. */
 async function resolveMentorFor(studentId: string): Promise<{ meId: string; mentorId: string } | null> {
   const me = await currentUser();
   if (!me) return null;
@@ -22,9 +26,11 @@ async function resolveMentorFor(studentId: string): Promise<{ meId: string; ment
     .select("mentor_id")
     .eq("student_id", studentId)
     .eq("active", true)
-    .maybeSingle();
-  if (!data) return null; // super admin can only act where a mentor is assigned
-  return { meId: me.id, mentorId: data.mentor_id };
+    .order("assigned_at", { ascending: true })
+    .limit(1);
+  const first = data?.[0];
+  if (!first) return null; // super admin can only act where a mentor is assigned
+  return { meId: me.id, mentorId: first.mentor_id };
 }
 
 /** Schedule a future session — a simple mentor_sessions row with

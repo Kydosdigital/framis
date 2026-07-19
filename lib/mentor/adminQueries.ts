@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { lookupLesson } from "@/lib/engagement/lessonLookup";
 
 export type MentorSummary = {
   mentorId: string;
@@ -111,6 +112,87 @@ export async function fetchAssignmentData(): Promise<{
 
 function byName(a: Person, b: Person) {
   return (a.fullName ?? a.username).localeCompare(b.fullName ?? b.username);
+}
+
+export type AllStudentRow = {
+  studentId: string;
+  fullName: string | null;
+  username: string;
+  role: string;
+  mentorNames: string[];
+  currentPhase: number | null;
+  currentModuleNum: number | null;
+  currentModuleTitle: string | null;
+  avgEngagementScore: number | null;
+  lastActivityAt: string | null;
+  stale: boolean;
+  enrolledTrack: string | null;
+};
+
+const DAY_MS = 86_400_000;
+
+/** Every learner on the platform with their mentors, current position,
+ * engagement and track enrolment — the super admin's whole-cohort roster.
+ * Unlike `/mentor`, this is not scoped to one mentor's students. */
+export async function fetchAllStudents(): Promise<AllStudentRow[]> {
+  const supabase = createClient();
+
+  const [{ data: people }, { data: assignments }, { data: summaryRows }, { data: enrollments }] = await Promise.all([
+    supabase.from("profiles").select("id, full_name, username, role"),
+    supabase.from("mentor_assignments").select("mentor_id, student_id").eq("active", true),
+    supabase.from("lesson_engagement_summary").select("user_id, lesson_id, engagement_score, last_visited_at"),
+    supabase.from("student_track_enrollments").select("student_id, curriculum_tracks(name)"),
+  ]);
+
+  const nameById = new Map((people ?? []).map((p) => [p.id, p.full_name ?? p.username] as const));
+
+  const mentorsByStudent = new Map<string, string[]>();
+  for (const a of assignments ?? []) {
+    if (!mentorsByStudent.has(a.student_id)) mentorsByStudent.set(a.student_id, []);
+    mentorsByStudent.get(a.student_id)!.push(nameById.get(a.mentor_id) ?? a.mentor_id.slice(0, 8));
+  }
+
+  const trackByStudent = new Map<string, string>();
+  for (const e of enrollments ?? []) {
+    const t = (Array.isArray(e.curriculum_tracks) ? e.curriculum_tracks[0] : e.curriculum_tracks) as { name: string } | null;
+    if (t) trackByStudent.set(e.student_id, t.name);
+  }
+
+  const agg = new Map<string, { sum: number; count: number; latest: { at: number; lessonId: string } | null }>();
+  for (const r of summaryRows ?? []) {
+    const e = agg.get(r.user_id) ?? { sum: 0, count: 0, latest: null };
+    if (r.engagement_score != null) {
+      e.sum += r.engagement_score;
+      e.count += 1;
+    }
+    const at = r.last_visited_at ? new Date(r.last_visited_at).getTime() : 0;
+    if (at && (!e.latest || at > e.latest.at)) e.latest = { at, lessonId: r.lesson_id };
+    agg.set(r.user_id, e);
+  }
+
+  const now = Date.now();
+  return (people ?? [])
+    .filter((p) => p.role === "student")
+    .map((p) => {
+      const e = agg.get(p.id);
+      const meta = e?.latest ? lookupLesson(e.latest.lessonId) : undefined;
+      const lastAt = e?.latest?.at ?? null;
+      return {
+        studentId: p.id,
+        fullName: p.full_name,
+        username: p.username,
+        role: p.role,
+        mentorNames: mentorsByStudent.get(p.id) ?? [],
+        currentPhase: meta?.phase ?? null,
+        currentModuleNum: meta?.moduleNum ?? null,
+        currentModuleTitle: meta?.moduleTitle ?? null,
+        avgEngagementScore: e && e.count ? Math.round((e.sum / e.count) * 10) / 10 : null,
+        lastActivityAt: lastAt ? new Date(lastAt).toISOString() : null,
+        stale: lastAt != null ? now - lastAt > 14 * DAY_MS : true,
+        enrolledTrack: trackByStudent.get(p.id) ?? null,
+      };
+    })
+    .sort((a, b) => (a.fullName ?? a.username).localeCompare(b.fullName ?? b.username));
 }
 
 export type TrackAdmin = {
