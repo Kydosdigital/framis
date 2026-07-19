@@ -11,6 +11,7 @@ import {
   reviewSubmission,
   answerQuestion,
   resolveQuestion,
+  saveTrackSessionOverride,
   type ActionResult,
 } from "@/app/mentor/actions";
 import type { SessionRecord, MessageRecord } from "@/lib/mentor/queries";
@@ -116,7 +117,7 @@ export default function MentorStudentDetail({
 
       {tab === "diary" && <DiaryTab context={context} />}
 
-      {tab === "curriculum" && <CurriculumTab track={track} isEnrolled={isEnrolled} />}
+      {tab === "curriculum" && <CurriculumTab studentId={studentId} track={track} isEnrolled={isEnrolled} />}
 
       {tab === "messages" && <MessagesTab studentId={studentId} messages={messages} currentUserId={currentUserId} />}
     </div>
@@ -467,8 +468,13 @@ function QuestionsTab({
                 <div className="font-mono text-[11.5px] font-semibold text-ink-500">
                   {q.lessonTitle ? q.lessonTitle.toUpperCase() : "GENERAL"} · {fmt(q.createdAt)}
                 </div>
-                <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${q.resolvedAt ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#FFFBEB] text-[#92400E]"}`}>
-                  {q.resolvedAt ? "resolved" : "open"}
+                <span className="flex items-center gap-2">
+                  {q.assignedMentorId === currentUserId && (
+                    <span className="rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[11px] font-semibold text-[#0066CC]">for you</span>
+                  )}
+                  <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${q.resolvedAt ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#FFFBEB] text-[#92400E]"}`}>
+                    {q.resolvedAt ? "resolved" : "open"}
+                  </span>
                 </span>
               </div>
               <p className="mt-2 whitespace-pre-wrap text-[13.5px]">{q.body}</p>
@@ -589,7 +595,18 @@ function DiaryTab({ context }: { context: StudentContext }) {
   );
 }
 
-function CurriculumTab({ track, isEnrolled }: { track: StudentTrack | null; isEnrolled: boolean }) {
+function CurriculumTab({
+  studentId,
+  track,
+  isEnrolled,
+}: {
+  studentId: string;
+  track: StudentTrack | null;
+  isEnrolled: boolean;
+}) {
+  const { pending, error, run } = useAction();
+  const [editing, setEditing] = useState<string | null>(null);
+
   if (!isEnrolled || !track) {
     return (
       <div className="rounded-[12px] border border-line bg-card px-6 py-5 text-[14px] text-ink-500">
@@ -606,6 +623,13 @@ function CurriculumTab({ track, isEnrolled }: { track: StudentTrack | null; isEn
   }
   const months = Array.from(byMonth.keys()).sort((a, b) => a - b);
 
+  const submit = (form: HTMLFormElement, trackSessionId: string) => {
+    const fd = new FormData(form);
+    fd.set("studentId", studentId);
+    fd.set("trackSessionId", trackSessionId);
+    run(() => saveTrackSessionOverride(fd), () => setEditing(null));
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <div className="rounded-[12px] border border-line bg-card px-6 py-5">
@@ -614,21 +638,87 @@ function CurriculumTab({ track, isEnrolled }: { track: StudentTrack | null; isEn
           {track.completedCount} of {track.totalCount} sessions completed
           {track.currentMonth ? ` · currently in Month ${track.currentMonth}` : ""}
         </div>
-        {track.totalCount === 0 && (
-          <p className="mt-1 text-[13px] text-ink-500">The track has no sessions loaded yet.</p>
-        )}
+        {track.totalCount === 0 && <p className="mt-1 text-[13px] text-ink-500">The track has no sessions loaded yet.</p>}
+        <p className="mt-2 text-[12.5px] text-ink-500">
+          Edits and notes here apply to <span className="font-medium">this student only</span> — the shared curriculum
+          stays as it is for everyone else.
+        </p>
       </div>
+
+      {error && <div className="rounded-[8px] bg-[#FDF0F0] px-3.5 py-2.5 text-[13px] font-medium text-[#DC2626]">{error}</div>}
 
       {months.map((m) => (
         <div key={m} className="rounded-[12px] border border-line bg-card px-6 py-5">
           <div className="mb-3 font-mono text-[12px] font-semibold text-ink-500">{m ? `MONTH ${m}` : "SESSIONS"}</div>
-          <ul className="flex flex-col gap-1.5">
+          <ul className="flex flex-col gap-3">
             {byMonth.get(m)!.map((s) => (
-              <li key={s.trackSessionId} className="flex items-center justify-between text-[13.5px]">
-                <span>
-                  <span className="font-mono text-ink-500">S{s.sessionNumber}</span> · {s.title}
-                </span>
-                <StatusPill status={s.status} />
+              <li key={s.trackSessionId} className="border-b border-line pb-3 last:border-none last:pb-0">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <span className="text-[13.5px]">
+                      <span className="font-mono text-ink-500">S{s.sessionNumber}</span> · {s.title}
+                    </span>
+                    {s.isOverridden && (
+                      <span className="ml-2 rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[11px] font-semibold text-[#0066CC]">
+                        edited for this student
+                      </span>
+                    )}
+                    {s.mentorNote && (
+                      <p className="mt-1 rounded-[6px] bg-[#FFFBEB] px-2.5 py-1.5 text-[12.5px] text-[#92400E] dark:bg-[#2A2410] dark:text-[#D4B78A]">
+                        {s.mentorNote}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusPill status={s.status} />
+                    <button
+                      onClick={() => setEditing(editing === s.trackSessionId ? null : s.trackSessionId)}
+                      className="text-[12.5px] font-medium text-blue hover:underline"
+                    >
+                      {editing === s.trackSessionId ? "Cancel" : "Edit"}
+                    </button>
+                  </div>
+                </div>
+
+                {editing === s.trackSessionId && (
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); submit(e.currentTarget, s.trackSessionId); }}
+                    className="mt-3 flex flex-col gap-2 rounded-[8px] border border-line px-3.5 py-3"
+                  >
+                    <label className="text-[12.5px] font-medium">
+                      Title for this student
+                      <input
+                        name="title"
+                        defaultValue={s.isOverridden ? s.title : ""}
+                        placeholder={s.canonicalTitle}
+                        className="mt-1 block w-full rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]"
+                      />
+                      <span className="mt-0.5 block text-[11.5px] text-ink-500">Leave blank to keep &ldquo;{s.canonicalTitle}&rdquo;.</span>
+                    </label>
+                    <label className="text-[12.5px] font-medium">
+                      Description for this student
+                      <textarea
+                        name="description"
+                        rows={3}
+                        defaultValue={s.description !== s.canonicalDescription ? s.description ?? "" : ""}
+                        placeholder={s.canonicalDescription ?? "Use the standard description"}
+                        className="mt-1 block w-full rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]"
+                      />
+                    </label>
+                    <label className="text-[12.5px] font-medium">
+                      Mini message to the student
+                      <input
+                        name="mentorNote"
+                        defaultValue={s.mentorNote ?? ""}
+                        placeholder="e.g. bring your laptop, we'll pair on this"
+                        className="mt-1 block w-full rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]"
+                      />
+                    </label>
+                    <button disabled={pending} className="w-fit rounded-[8px] bg-blue px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-60">
+                      {pending ? "Saving…" : "Save for this student"}
+                    </button>
+                  </form>
+                )}
               </li>
             ))}
           </ul>

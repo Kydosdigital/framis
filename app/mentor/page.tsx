@@ -61,9 +61,16 @@ export default async function MentorOverviewPage() {
             {openQuestions.map((q) => (
               <li key={q.id} className="border-b border-line pb-3 last:border-none last:pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Link href={`/mentor/students/${q.studentId}`} className="text-[13.5px] font-medium text-blue">
-                    {q.studentName}
-                  </Link>
+                  <span className="text-[13.5px]">
+                    <Link href={`/mentor/students/${q.studentId}`} className="font-medium text-blue">
+                      {q.studentName}
+                    </Link>
+                    {q.addressedToMe && (
+                      <span className="ml-2 rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[11px] font-semibold text-[#0066CC]">
+                        for you
+                      </span>
+                    )}
+                  </span>
                   <span className="font-mono text-[11.5px] text-ink-500">
                     {q.lessonTitle ? q.lessonTitle : "General"} ·{" "}
                     {new Date(q.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}

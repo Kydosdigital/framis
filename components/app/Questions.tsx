@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
-import { fetchMyQuestions, askQuestion, replyToQuestion, setQuestionResolved, type Question } from "@/lib/mentor/studentQuestions";
+import {
+  fetchMyQuestions,
+  fetchMyMentors,
+  askQuestion,
+  replyToQuestion,
+  setQuestionResolved,
+  type Question,
+  type MyMentor,
+} from "@/lib/mentor/studentQuestions";
 import { resolveLesson } from "@/lib/lessons";
 
 function fmt(iso: string): string {
@@ -19,6 +27,8 @@ export default function Questions() {
   const [error, setError] = useState<string | null>(null);
   const [replyFor, setReplyFor] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
+  const [mentors, setMentors] = useState<MyMentor[]>([]);
+  const [assignTo, setAssignTo] = useState("");
 
   // If the learner is mid-lesson, offer to tag the question to it.
   const current = activeLessonKey ? resolveLesson(activeLessonKey.module, activeLessonKey.lessonIndex) : null;
@@ -33,6 +43,13 @@ export default function Questions() {
 
   useEffect(() => {
     load();
+    if (userId) {
+      fetchMyMentors(userId).then((m) => {
+        setMentors(m);
+        // one mentor → address it to them by default, no extra choice to make
+        if (m.length === 1) setAssignTo(m[0].id);
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -45,6 +62,7 @@ export default function Questions() {
       body,
       attachLesson ? currentLessonId : null,
       attachLesson ? currentLessonTitle : null,
+      assignTo || null,
     );
     setSending(false);
     if (res.ok) {
@@ -90,6 +108,21 @@ export default function Questions() {
           <label className="mt-2 flex items-center gap-2 text-[12.5px] text-ink-500">
             <input type="checkbox" checked={attachLesson} onChange={(e) => setAttachLesson(e.target.checked)} />
             Attach the lesson I&apos;m on{currentLessonTitle ? ` (${currentLessonTitle})` : ""}
+          </label>
+        )}
+        {mentors.length > 1 && (
+          <label className="mt-2 block text-[12.5px] text-ink-500">
+            Send to
+            <select
+              value={assignTo}
+              onChange={(e) => setAssignTo(e.target.value)}
+              className="ml-2 rounded-[8px] border border-line bg-transparent px-2 py-1.5 text-[13px]"
+            >
+              <option value="">Any of my mentors</option>
+              {mentors.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
           </label>
         )}
         <button onClick={send} disabled={sending || !body.trim()} className="mt-3 rounded-[8px] bg-blue px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-60">

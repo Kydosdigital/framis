@@ -228,6 +228,57 @@ export type Database = {
           },
         ]
       }
+      student_track_session_overrides: {
+        Row: {
+          id: string
+          student_id: string
+          track_session_id: string
+          title: string | null
+          description: string | null
+          mentor_note: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          track_session_id: string
+          title?: string | null
+          description?: string | null
+          mentor_note?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          track_session_id?: string
+          title?: string | null
+          description?: string | null
+          mentor_note?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_track_session_overrides_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_track_session_overrides_track_session_id_fkey"
+            columns: ["track_session_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_track_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_questions: {
         Row: {
           id: string
@@ -236,6 +287,7 @@ export type Database = {
           lesson_title: string | null
           body: string
           resolved_at: string | null
+          assigned_mentor_id: string | null
           created_at: string
           updated_at: string
         }
@@ -246,6 +298,7 @@ export type Database = {
           lesson_title?: string | null
           body: string
           resolved_at?: string | null
+          assigned_mentor_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -256,6 +309,7 @@ export type Database = {
           lesson_title?: string | null
           body?: string
           resolved_at?: string | null
+          assigned_mentor_id?: string | null
           created_at?: string
           updated_at?: string
         }

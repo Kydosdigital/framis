@@ -8,6 +8,7 @@ export type MentorViewQuestion = {
   body: string;
   createdAt: string;
   resolvedAt: string | null;
+  assignedMentorId: string | null;
   replies: { id: string; authorId: string; body: string; createdAt: string }[];
 };
 
@@ -40,7 +41,7 @@ export async function fetchStudentContext(studentId: string): Promise<StudentCon
       .limit(20),
     supabase
       .from("lesson_questions")
-      .select("id, lesson_title, body, created_at, resolved_at")
+      .select("id, lesson_title, body, created_at, resolved_at, assigned_mentor_id")
       .eq("student_id", studentId)
       .order("created_at", { ascending: false }),
   ]);
@@ -84,6 +85,7 @@ export async function fetchStudentContext(studentId: string): Promise<StudentCon
       body: q.body,
       createdAt: q.created_at,
       resolvedAt: q.resolved_at,
+      assignedMentorId: q.assigned_mentor_id,
       replies: repliesByQuestion.get(q.id) ?? [],
     })),
   };
