@@ -9,13 +9,16 @@ import {
   sendMessage,
   createAssignment,
   reviewSubmission,
+  answerQuestion,
+  resolveQuestion,
   type ActionResult,
 } from "@/app/mentor/actions";
 import type { SessionRecord, MessageRecord } from "@/lib/mentor/queries";
 import type { StudentTrack } from "@/lib/mentor/track";
 import type { AssignmentRecord } from "@/lib/mentor/assignments";
+import type { StudentContext } from "@/lib/mentor/studentContext";
 
-type Tab = "engagement" | "sessions" | "assignments" | "curriculum" | "messages";
+type Tab = "engagement" | "sessions" | "assignments" | "questions" | "diary" | "curriculum" | "messages";
 
 const STATUS_STYLES: Record<string, string> = {
   completed: "bg-[#ECFDF5] text-[#059669]",
@@ -39,6 +42,7 @@ export default function MentorStudentDetail({
   trackSessionOptions,
   isEnrolled,
   assignments,
+  context,
 }: {
   studentId: string;
   lessons: LessonEngagementRow[];
@@ -50,15 +54,19 @@ export default function MentorStudentDetail({
   trackSessionOptions: { id: string; label: string }[];
   isEnrolled: boolean;
   assignments: AssignmentRecord[];
+  context: StudentContext;
 }) {
   const [tab, setTab] = useState<Tab>("engagement");
 
   const awaitingReview = assignments.filter((a) => a.submission && !a.submission.reviewedAt).length;
+  const openQuestions = context.questions.filter((q) => !q.resolvedAt).length;
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "engagement", label: "Engagement" },
     { key: "sessions", label: `Sessions (${sessions.length})` },
     { key: "assignments", label: `Assignments (${assignments.length})${awaitingReview ? ` · ${awaitingReview} to review` : ""}` },
+    { key: "questions", label: `Questions${openQuestions ? ` · ${openQuestions} open` : ` (${context.questions.length})`}` },
+    { key: "diary", label: "Goals & diary" },
     { key: "curriculum", label: "Curriculum" },
     { key: "messages", label: `Messages (${messages.length})` },
   ];
@@ -103,6 +111,10 @@ export default function MentorStudentDetail({
       {tab === "assignments" && (
         <AssignmentsTab studentId={studentId} assignments={assignments} trackSessionOptions={trackSessionOptions} />
       )}
+
+      {tab === "questions" && <QuestionsTab studentId={studentId} questions={context.questions} currentUserId={currentUserId} />}
+
+      {tab === "diary" && <DiaryTab context={context} />}
 
       {tab === "curriculum" && <CurriculumTab track={track} isEnrolled={isEnrolled} />}
 
@@ -411,6 +423,169 @@ function SubmissionPill({ submission, overdue }: { submission: AssignmentRecord[
     <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${submission.reviewedAt ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#EFF6FF] text-[#0066CC]"}`}>
       {submission.reviewedAt ? "reviewed" : "awaiting review"}
     </span>
+  );
+}
+
+function QuestionsTab({
+  studentId,
+  questions,
+  currentUserId,
+}: {
+  studentId: string;
+  questions: StudentContext["questions"];
+  currentUserId: string;
+}) {
+  const { pending, error, run } = useAction();
+  const [replyFor, setReplyFor] = useState<string | null>(null);
+
+  const submitAnswer = (form: HTMLFormElement, questionId: string) => {
+    const fd = new FormData(form);
+    fd.set("studentId", studentId);
+    fd.set("questionId", questionId);
+    run(() => answerQuestion(fd), () => { form.reset(); setReplyFor(null); });
+  };
+
+  const toggleResolved = (questionId: string, resolved: boolean) => {
+    const fd = new FormData();
+    fd.set("studentId", studentId);
+    fd.set("questionId", questionId);
+    fd.set("resolved", String(resolved));
+    run(() => resolveQuestion(fd));
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {error && <div className="rounded-[8px] bg-[#FDF0F0] px-3.5 py-2.5 text-[13px] font-medium text-[#DC2626]">{error}</div>}
+
+      {questions.length === 0 ? (
+        <p className="text-[14px] text-ink-500">This student hasn&apos;t asked anything yet.</p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {questions.map((q) => (
+            <li key={q.id} className="rounded-[12px] border border-line bg-card px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-mono text-[11.5px] font-semibold text-ink-500">
+                  {q.lessonTitle ? q.lessonTitle.toUpperCase() : "GENERAL"} · {fmt(q.createdAt)}
+                </div>
+                <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${q.resolvedAt ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#FFFBEB] text-[#92400E]"}`}>
+                  {q.resolvedAt ? "resolved" : "open"}
+                </span>
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-[13.5px]">{q.body}</p>
+
+              {q.replies.length > 0 && (
+                <ul className="mt-3 flex flex-col gap-2 border-l-2 border-line pl-3">
+                  {q.replies.map((r) => (
+                    <li key={r.id} className="text-[13.5px]">
+                      <div className="font-mono text-[11.5px] text-ink-500">
+                        {r.authorId === currentUserId ? "You" : "Student"} · {fmt(r.createdAt)}
+                      </div>
+                      <p className="mt-0.5 whitespace-pre-wrap">{r.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {replyFor === q.id ? (
+                <form onSubmit={(e) => { e.preventDefault(); submitAnswer(e.currentTarget, q.id); }} className="mt-3 flex flex-col gap-2">
+                  <textarea name="body" rows={3} required placeholder="Answer the student…" className="block w-full rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]" />
+                  <div className="flex gap-2">
+                    <button disabled={pending} className="rounded-[8px] bg-blue px-3.5 py-1.5 text-[12.5px] font-semibold text-white disabled:opacity-60">
+                      {pending ? "Sending…" : "Send answer"}
+                    </button>
+                    <button type="button" onClick={() => setReplyFor(null)} className="rounded-[8px] border border-line px-3.5 py-1.5 text-[12.5px] font-semibold">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <button onClick={() => setReplyFor(q.id)} className="text-[12.5px] font-medium text-blue hover:underline">Answer</button>
+                  <button onClick={() => toggleResolved(q.id, !q.resolvedAt)} disabled={pending} className="text-[12.5px] font-medium text-ink-500 hover:text-ink-900 disabled:opacity-60">
+                    {q.resolvedAt ? "Reopen" : "Mark resolved"}
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DiaryTab({ context }: { context: StudentContext }) {
+  const { plan, goals, entries } = context;
+  const nothing = !plan?.mission && !plan?.vision && !plan?.howToAchieve && goals.length === 0 && entries.length === 0;
+
+  if (nothing) {
+    return (
+      <div className="rounded-[12px] border border-line bg-card px-6 py-5 text-[14px] text-ink-500">
+        This student hasn&apos;t written anything in their diary yet. It&apos;s their own space — you can read it, but
+        not edit it.
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-[12.5px] text-ink-500">
+        The student&apos;s own words. Read-only — use it to steer sessions toward what they actually want.
+      </p>
+
+      {(plan?.mission || plan?.vision || plan?.howToAchieve) && (
+        <div className="rounded-[12px] border border-line bg-card px-6 py-5">
+          <div className="mb-3 font-mono text-[12px] font-semibold text-ink-500">MISSION &amp; VISION</div>
+          {plan?.mission && <p className="text-[13.5px]"><span className="font-medium">Mission:</span> {plan.mission}</p>}
+          {plan?.vision && <p className="mt-1.5 text-[13.5px]"><span className="font-medium">Vision:</span> {plan.vision}</p>}
+          {plan?.howToAchieve && <p className="mt-1.5 text-[13.5px]"><span className="font-medium">How:</span> {plan.howToAchieve}</p>}
+        </div>
+      )}
+
+      {goals.length > 0 && (
+        <div className="rounded-[12px] border border-line bg-card px-6 py-5">
+          <div className="mb-3 font-mono text-[12px] font-semibold text-ink-500">GOALS</div>
+          <ul className="flex flex-col gap-3">
+            {goals.map((g) => (
+              <li key={g.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[13.5px] font-medium">
+                    {g.title}
+                    {g.achievedAt && <span className="ml-2 text-[12px] font-medium text-success">achieved</span>}
+                  </span>
+                  <span className="font-mono text-[12.5px] text-ink-500">{g.progressPct}%</span>
+                </div>
+                {g.detail && <p className="mt-0.5 text-[13px] text-ink-500">{g.detail}</p>}
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#F1F3F6] dark:bg-[#1B2536]">
+                  <div className="h-full rounded-full bg-blue" style={{ width: `${g.progressPct}%` }} />
+                </div>
+                {g.targetDate && <p className="mt-1 text-[12px] text-ink-500">Target: {g.targetDate}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {entries.length > 0 && (
+        <div className="rounded-[12px] border border-line bg-card px-6 py-5">
+          <div className="mb-3 font-mono text-[12px] font-semibold text-ink-500">DIARY</div>
+          <ul className="flex flex-col gap-3">
+            {entries.map((e) => (
+              <li key={e.id} className="text-[13.5px]">
+                <div className="font-mono text-[11.5px] font-semibold text-ink-500">{e.entryDate}</div>
+                {e.learnt && <p className="mt-1"><span className="font-medium">Learnt:</span> {e.learnt}</p>}
+                {e.stuckOn && (
+                  <p className="mt-0.5 rounded-[6px] bg-[#FFFBEB] px-2 py-1 text-[#92400E] dark:bg-[#2A2410] dark:text-[#D4B78A]">
+                    <span className="font-medium">Stuck on:</span> {e.stuckOn}
+                  </p>
+                )}
+                {e.note && <p className="mt-0.5 text-ink-500">{e.note}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

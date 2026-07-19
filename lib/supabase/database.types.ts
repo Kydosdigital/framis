@@ -129,6 +129,167 @@ export type Database = {
           },
         ]
       }
+      student_plan: {
+        Row: { student_id: string; mission: string | null; vision: string | null; how_to_achieve: string | null; updated_at: string }
+        Insert: { student_id: string; mission?: string | null; vision?: string | null; how_to_achieve?: string | null; updated_at?: string }
+        Update: { student_id?: string; mission?: string | null; vision?: string | null; how_to_achieve?: string | null; updated_at?: string }
+        Relationships: [
+          {
+            foreignKeyName: "student_plan_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_goals: {
+        Row: {
+          id: string
+          student_id: string
+          title: string
+          detail: string | null
+          progress_pct: number
+          target_date: string | null
+          achieved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          title: string
+          detail?: string | null
+          progress_pct?: number
+          target_date?: string | null
+          achieved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          title?: string
+          detail?: string | null
+          progress_pct?: number
+          target_date?: string | null
+          achieved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_goals_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diary_entries: {
+        Row: {
+          id: string
+          student_id: string
+          learnt: string | null
+          stuck_on: string | null
+          note: string | null
+          entry_date: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          learnt?: string | null
+          stuck_on?: string | null
+          note?: string | null
+          entry_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          learnt?: string | null
+          stuck_on?: string | null
+          note?: string | null
+          entry_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diary_entries_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_questions: {
+        Row: {
+          id: string
+          student_id: string
+          lesson_id: string | null
+          lesson_title: string | null
+          body: string
+          resolved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          lesson_id?: string | null
+          lesson_title?: string | null
+          body: string
+          resolved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          lesson_id?: string | null
+          lesson_title?: string | null
+          body?: string
+          resolved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_questions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_question_replies: {
+        Row: { id: string; question_id: string; author_id: string; body: string; created_at: string }
+        Insert: { id?: string; question_id: string; author_id: string; body: string; created_at?: string }
+        Update: { id?: string; question_id?: string; author_id?: string; body?: string; created_at?: string }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_question_replies_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_question_replies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           created_at: string
