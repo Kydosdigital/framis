@@ -137,6 +137,10 @@ export type OpenQuestion = {
   body: string;
   createdAt: string;
   replyCount: number;
+  /** True when the student addressed this question to this mentor
+   * specifically. Unaddressed questions are still shown — an unavailable
+   * mentor shouldn't leave a student stuck. */
+  addressedToMe: boolean;
 };
 
 /** Unresolved questions across ALL of this mentor's students — the inbox
@@ -164,7 +168,7 @@ export async function fetchOpenQuestions(mentorId: string): Promise<OpenQuestion
 
   const { data: questions } = await supabase
     .from("lesson_questions")
-    .select("id, student_id, lesson_title, body, created_at")
+    .select("id, student_id, lesson_title, body, created_at, assigned_mentor_id")
     .in("student_id", studentIds)
     .is("resolved_at", null)
     .order("created_at", { ascending: false });
@@ -177,15 +181,19 @@ export async function fetchOpenQuestions(mentorId: string): Promise<OpenQuestion
   const replyCount = new Map<string, number>();
   for (const r of replies ?? []) replyCount.set(r.question_id, (replyCount.get(r.question_id) ?? 0) + 1);
 
-  return (questions ?? []).map((q) => ({
-    id: q.id,
-    studentId: q.student_id,
-    studentName: nameById.get(q.student_id) ?? "Student",
-    lessonTitle: q.lesson_title,
-    body: q.body,
-    createdAt: q.created_at,
-    replyCount: replyCount.get(q.id) ?? 0,
-  }));
+  return (questions ?? [])
+    .map((q) => ({
+      id: q.id,
+      studentId: q.student_id,
+      studentName: nameById.get(q.student_id) ?? "Student",
+      lessonTitle: q.lesson_title,
+      body: q.body,
+      createdAt: q.created_at,
+      replyCount: replyCount.get(q.id) ?? 0,
+      addressedToMe: q.assigned_mentor_id === mentorId,
+    }))
+    // questions addressed to me first, then everything else, newest first
+    .sort((a, b) => Number(b.addressedToMe) - Number(a.addressedToMe) || b.createdAt.localeCompare(a.createdAt));
 }
 
 export type SessionRecord = {

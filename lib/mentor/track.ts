@@ -3,7 +3,17 @@ import { createClient } from "@/lib/supabase/server";
 export type TrackSessionProgress = {
   trackSessionId: string;
   sessionNumber: number;
+  /** Effective title — the mentor's per-student override if one exists,
+   * otherwise the canonical curriculum title. */
   title: string;
+  /** The canonical title, kept so the mentor's editor can show what the
+   * shared curriculum actually says underneath their override. */
+  canonicalTitle: string;
+  description: string | null;
+  canonicalDescription: string | null;
+  isOverridden: boolean;
+  /** The mentor's mini message pinned to this session for this student. */
+  mentorNote: string | null;
   month: number | null;
   status: "not_started" | "in_progress" | "completed";
   completedAt: string | null;
@@ -39,27 +49,42 @@ export async function fetchStudentTrack(studentId: string): Promise<StudentTrack
     | null;
   if (!track) return null;
 
-  const [{ data: sessionRows }, { data: progressRows }] = await Promise.all([
+  const [{ data: sessionRows }, { data: progressRows }, { data: overrideRows }] = await Promise.all([
     supabase
       .from("curriculum_track_sessions")
-      .select("id, session_number, title, month")
+      .select("id, session_number, title, description, month")
       .eq("track_id", track.id)
       .order("session_number", { ascending: true }),
     supabase
       .from("student_track_progress")
       .select("track_session_id, status, completed_at")
       .eq("student_id", studentId),
+    supabase
+      .from("student_track_session_overrides")
+      .select("track_session_id, title, description, mentor_note")
+      .eq("student_id", studentId),
   ]);
 
   const progressBySession = new Map<string, { status: string; completedAt: string | null }>();
   for (const p of progressRows ?? []) progressBySession.set(p.track_session_id, { status: p.status, completedAt: p.completed_at });
 
+  const overrideBySession = new Map(
+    (overrideRows ?? []).map((o) => [o.track_session_id, o] as const),
+  );
+
   const sessions: TrackSessionProgress[] = (sessionRows ?? []).map((s) => {
     const p = progressBySession.get(s.id);
+    const o = overrideBySession.get(s.id);
     return {
       trackSessionId: s.id,
       sessionNumber: s.session_number,
-      title: s.title,
+      // an override's null title means "keep the canonical one"
+      title: o?.title ?? s.title,
+      canonicalTitle: s.title,
+      description: o?.description ?? s.description,
+      canonicalDescription: s.description,
+      isOverridden: Boolean(o?.title || o?.description),
+      mentorNote: o?.mentor_note ?? null,
       month: s.month,
       status: (p?.status as TrackSessionProgress["status"]) ?? "not_started",
       completedAt: p?.completedAt ?? null,

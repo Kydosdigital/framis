@@ -161,6 +161,39 @@ export async function reviewSubmission(formData: FormData): Promise<ActionResult
   return { ok: true };
 }
 
+/** Adapt one curriculum session for one student, and/or pin a mini message
+ * to it. Writes an override row — the shared 24-session curriculum itself
+ * is never modified, so other students and mentors are unaffected. Blank
+ * title/description mean "use the canonical text". */
+export async function saveTrackSessionOverride(formData: FormData): Promise<ActionResult> {
+  const studentId = String(formData.get("studentId") ?? "");
+  const trackSessionId = String(formData.get("trackSessionId") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const mentorNote = String(formData.get("mentorNote") ?? "").trim();
+  if (!studentId || !trackSessionId) return { ok: false, error: "Missing session." };
+
+  const resolved = await resolveMentorFor(studentId);
+  if (!resolved) return { ok: false, error: "Not authorised for this student." };
+
+  const supabase = createClient();
+  const { error } = await supabase.from("student_track_session_overrides").upsert(
+    {
+      student_id: studentId,
+      track_session_id: trackSessionId,
+      title: title || null,
+      description: description || null,
+      mentor_note: mentorNote || null,
+      created_by: resolved.meId,
+    },
+    { onConflict: "student_id,track_session_id" },
+  );
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/mentor/students/${studentId}`);
+  return { ok: true };
+}
+
 /** Reply to a student's lesson question. RLS requires the caller to be one
  * of that student's active mentors (or the student themselves). */
 export async function answerQuestion(formData: FormData): Promise<ActionResult> {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useFramis } from "@/lib/store";
-import { fetchQuestionsForLesson, askQuestion, type Question } from "@/lib/mentor/studentQuestions";
+import { fetchQuestionsForLesson, fetchMyMentors, askQuestion, type Question, type MyMentor } from "@/lib/mentor/studentQuestions";
 
 /** Inline "ask about this lesson" box, shown at the bottom of every lesson.
  *
@@ -18,6 +18,8 @@ export default function LessonQuestionBox({ lessonId, lessonTitle }: { lessonId:
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mentors, setMentors] = useState<MyMentor[]>([]);
+  const [assignTo, setAssignTo] = useState("");
 
   const load = () => {
     if (!userId) return;
@@ -26,6 +28,12 @@ export default function LessonQuestionBox({ lessonId, lessonTitle }: { lessonId:
 
   useEffect(() => {
     load();
+    if (userId) {
+      fetchMyMentors(userId).then((m) => {
+        setMentors(m);
+        if (m.length === 1) setAssignTo(m[0].id);
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, lessonId]);
 
@@ -36,7 +44,7 @@ export default function LessonQuestionBox({ lessonId, lessonTitle }: { lessonId:
     if (!body.trim()) return;
     setSending(true);
     setError(null);
-    const res = await askQuestion(userId, body, lessonId, lessonTitle);
+    const res = await askQuestion(userId, body, lessonId, lessonTitle, assignTo || null);
     setSending(false);
     if (res.ok) {
       setBody("");
@@ -65,6 +73,22 @@ export default function LessonQuestionBox({ lessonId, lessonTitle }: { lessonId:
       />
 
       {error && <div className="mt-2 rounded-[8px] bg-[#FDF0F0] px-3.5 py-2.5 text-[13px] font-medium text-[#DC2626]">{error}</div>}
+
+      {mentors.length > 1 && (
+        <label className="mt-2 block text-[12.5px] text-ink-500">
+          Send to
+          <select
+            value={assignTo}
+            onChange={(e) => setAssignTo(e.target.value)}
+            className="ml-2 rounded-[8px] border border-line bg-transparent px-2 py-1.5 text-[13px]"
+          >
+            <option value="">Any of my mentors</option>
+            {mentors.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button

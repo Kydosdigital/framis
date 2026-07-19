@@ -11,8 +11,35 @@ export type Question = {
   body: string;
   resolvedAt: string | null;
   createdAt: string;
+  assignedMentorId: string | null;
   replies: QuestionReply[];
 };
+
+export type MyMentor = { id: string; name: string };
+
+/** The student's active mentors — the choices when addressing a question. */
+export async function fetchMyMentors(userId: string): Promise<MyMentor[]> {
+  const supabase = createClient();
+  try {
+    const { data } = await withTimeout(
+      supabase
+        .from("mentor_assignments")
+        .select("mentor_id, profiles!mentor_assignments_mentor_id_fkey(full_name, username)")
+        .eq("student_id", userId)
+        .eq("active", true)
+        .order("assigned_at", { ascending: true }),
+      8000,
+    );
+    return (data ?? []).map((a) => {
+      const p = (Array.isArray(a.profiles) ? a.profiles[0] : a.profiles) as
+        | { full_name: string | null; username: string }
+        | null;
+      return { id: a.mentor_id, name: p?.full_name ?? p?.username ?? "Mentor" };
+    });
+  } catch {
+    return [];
+  }
+}
 
 /** The student's own questions with their reply threads. */
 export async function fetchMyQuestions(userId: string): Promise<Question[]> {
@@ -21,7 +48,7 @@ export async function fetchMyQuestions(userId: string): Promise<Question[]> {
     const { data: questions } = await withTimeout(
       supabase
         .from("lesson_questions")
-        .select("id, lesson_id, lesson_title, body, resolved_at, created_at")
+        .select("id, lesson_id, lesson_title, body, resolved_at, assigned_mentor_id, created_at")
         .eq("student_id", userId)
         .order("created_at", { ascending: false }),
       8000,
@@ -56,6 +83,7 @@ export async function fetchMyQuestions(userId: string): Promise<Question[]> {
       body: q.body,
       resolvedAt: q.resolved_at,
       createdAt: q.created_at,
+      assignedMentorId: q.assigned_mentor_id,
       replies: byQuestion.get(q.id) ?? [],
     }));
   } catch {
@@ -72,7 +100,7 @@ export async function fetchQuestionsForLesson(userId: string, lessonId: string):
     const { data: questions } = await withTimeout(
       supabase
         .from("lesson_questions")
-        .select("id, lesson_id, lesson_title, body, resolved_at, created_at")
+        .select("id, lesson_id, lesson_title, body, resolved_at, assigned_mentor_id, created_at")
         .eq("student_id", userId)
         .eq("lesson_id", lessonId)
         .order("created_at", { ascending: false }),
@@ -110,6 +138,7 @@ export async function fetchQuestionsForLesson(userId: string, lessonId: string):
       body: q.body,
       resolvedAt: q.resolved_at,
       createdAt: q.created_at,
+      assignedMentorId: q.assigned_mentor_id,
       replies: byQuestion.get(q.id) ?? [],
     }));
   } catch {
@@ -124,6 +153,7 @@ export async function askQuestion(
   body: string,
   lessonId: string | null,
   lessonTitle: string | null,
+  assignedMentorId?: string | null,
 ): Promise<Result> {
   const supabase = createClient();
   const { error } = await supabase.from("lesson_questions").insert({
@@ -131,6 +161,7 @@ export async function askQuestion(
     body: body.trim(),
     lesson_id: lessonId,
     lesson_title: lessonTitle,
+    assigned_mentor_id: assignedMentorId ?? null,
   });
   return error ? { ok: false, error: error.message } : { ok: true };
 }
