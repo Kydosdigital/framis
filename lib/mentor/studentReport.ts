@@ -5,13 +5,14 @@ import { withTimeout } from "@/lib/timeout";
 
 export type StudentMentorReport = {
   mentored: boolean;
-  mentorName: string | null;
+  /** A student can have more than one mentor, so this is a list. */
+  mentorNames: string[];
   nextSession: { scheduledAt: string; durationMinutes: number } | null;
   pastSessions: { scheduledAt: string; studentSummary: string | null }[];
   track: { name: string; completed: number; total: number; currentMonth: number | null } | null;
 };
 
-const EMPTY: StudentMentorReport = { mentored: false, mentorName: null, nextSession: null, pastSessions: [], track: null };
+const EMPTY: StudentMentorReport = { mentored: false, mentorNames: [], nextSession: null, pastSessions: [], track: null };
 
 /** The mentored-student slice of the parent report. Reads only rows the
  * student is allowed to see (RLS): their active assignment + mentor's public
@@ -22,21 +23,25 @@ export async function fetchStudentMentorReport(userId: string): Promise<StudentM
   const supabase = createClient();
 
   try {
-    const { data: assignment } = await withTimeout(
+    const { data: assignments } = await withTimeout(
       supabase
         .from("mentor_assignments")
         .select("mentor_id, profiles!mentor_assignments_mentor_id_fkey(full_name, username)")
         .eq("student_id", userId)
         .eq("active", true)
-        .maybeSingle(),
+        .order("assigned_at", { ascending: true }),
       8000,
     );
-    if (!assignment) return EMPTY;
+    if (!assignments?.length) return EMPTY;
 
-    const mentorProfile = (Array.isArray(assignment.profiles) ? assignment.profiles[0] : assignment.profiles) as
-      | { full_name: string | null; username: string }
-      | null;
-    const mentorName = mentorProfile?.full_name ?? mentorProfile?.username ?? null;
+    const mentorNames = assignments
+      .map((a) => {
+        const p = (Array.isArray(a.profiles) ? a.profiles[0] : a.profiles) as
+          | { full_name: string | null; username: string }
+          | null;
+        return p?.full_name ?? p?.username ?? null;
+      })
+      .filter((n): n is string => Boolean(n));
 
     const nowIso = new Date().toISOString();
     const [{ data: sessions }, track] = await Promise.all([
@@ -58,7 +63,7 @@ export async function fetchStudentMentorReport(userId: string): Promise<StudentM
 
     return {
       mentored: true,
-      mentorName,
+      mentorNames,
       nextSession: nextSessionRow ? { scheduledAt: nextSessionRow.scheduled_at, durationMinutes: nextSessionRow.duration_minutes } : null,
       pastSessions,
       track,

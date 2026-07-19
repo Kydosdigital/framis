@@ -20,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin" className="text-ink-500 hover:text-blue">Engagement</Link>
         {isSuperAdmin && (
           <>
+            <Link href="/admin/students" className="text-ink-500 hover:text-blue">Students</Link>
             <Link href="/admin/mentors" className="text-ink-500 hover:text-blue">Mentors</Link>
             <Link href="/admin/assignments" className="text-ink-500 hover:text-blue">Assignments</Link>
             <Link href="/admin/tracks" className="text-ink-500 hover:text-blue">Tracks</Link>
