@@ -4,6 +4,7 @@ import { currentUser, mentorCanSeeStudent } from "@/lib/mentor/access";
 import { fetchStudentDetail } from "@/lib/mentor/queries";
 import { fetchStudentTrack, fetchTrackSessionsForStudent } from "@/lib/mentor/track";
 import { fetchAssignmentsForStudent } from "@/lib/mentor/assignments";
+import { fetchStudentContext } from "@/lib/mentor/studentContext";
 import MentorStudentDetail from "@/components/app/mentor/MentorStudentDetail";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +14,12 @@ export default async function MentorStudentPage({ params }: { params: { id: stri
   if (!me) redirect("/");
   if (!(await mentorCanSeeStudent(me, params.id))) redirect("/mentor");
 
-  const [detail, track, trackSessionOptions, assignments] = await Promise.all([
+  const [detail, track, trackSessionOptions, assignments, context] = await Promise.all([
     fetchStudentDetail(params.id),
     fetchStudentTrack(params.id),
     fetchTrackSessionsForStudent(params.id),
     fetchAssignmentsForStudent(params.id),
+    fetchStudentContext(params.id),
   ]);
   if (!detail) notFound();
 
@@ -51,6 +53,7 @@ export default async function MentorStudentPage({ params }: { params: { id: stri
         trackSessionOptions={trackSessionOptions}
         isEnrolled={track != null}
         assignments={assignments}
+        context={context}
       />
     </div>
   );

@@ -10,6 +10,8 @@ import PeerReview from "./PeerReview";
 import Portfolio from "./Portfolio";
 import Report from "./Report";
 import Assignments from "./Assignments";
+import Diary from "./Diary";
+import Questions from "./Questions";
 import Faq from "./Faq";
 import Dictionary from "./Dictionary";
 import { Logo } from "../ui";
@@ -41,6 +43,8 @@ export default function AppShell() {
         {appTab === "review" && <PeerReview />}
         {appTab === "portfolio" && <Portfolio />}
         {appTab === "assignments" && <Assignments />}
+        {appTab === "questions" && <Questions />}
+        {appTab === "diary" && <Diary />}
         {appTab === "report" && <Report />}
         {appTab === "faq" && <Faq />}
         {appTab === "dictionary" && <Dictionary />}

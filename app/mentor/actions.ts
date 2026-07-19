@@ -161,6 +161,50 @@ export async function reviewSubmission(formData: FormData): Promise<ActionResult
   return { ok: true };
 }
 
+/** Reply to a student's lesson question. RLS requires the caller to be one
+ * of that student's active mentors (or the student themselves). */
+export async function answerQuestion(formData: FormData): Promise<ActionResult> {
+  const studentId = String(formData.get("studentId") ?? "");
+  const questionId = String(formData.get("questionId") ?? "");
+  const body = String(formData.get("body") ?? "").trim();
+  if (!studentId || !questionId || !body) return { ok: false, error: "Write an answer first." };
+
+  const me = await currentUser();
+  if (!me) return { ok: false, error: "Not signed in." };
+  if (!(await mentorCanSeeStudent(me, studentId))) return { ok: false, error: "Not authorised for this student." };
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("lesson_question_replies")
+    .insert({ question_id: questionId, author_id: me.id, body });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/mentor/students/${studentId}`);
+  return { ok: true };
+}
+
+/** Mark a student's question resolved (or reopen it). */
+export async function resolveQuestion(formData: FormData): Promise<ActionResult> {
+  const studentId = String(formData.get("studentId") ?? "");
+  const questionId = String(formData.get("questionId") ?? "");
+  const resolved = String(formData.get("resolved") ?? "") === "true";
+  if (!studentId || !questionId) return { ok: false, error: "Missing question." };
+
+  const me = await currentUser();
+  if (!me) return { ok: false, error: "Not signed in." };
+  if (!(await mentorCanSeeStudent(me, studentId))) return { ok: false, error: "Not authorised for this student." };
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("lesson_questions")
+    .update({ resolved_at: resolved ? new Date().toISOString() : null })
+    .eq("id", questionId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/mentor/students/${studentId}`);
+  return { ok: true };
+}
+
 /** Send a threaded message to the student. Sender is always the caller;
  * RLS additionally requires an active assignment between the pair. */
 export async function sendMessage(formData: FormData): Promise<ActionResult> {
