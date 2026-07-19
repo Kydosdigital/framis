@@ -9,6 +9,7 @@ import { runSqlExt } from "@/lib/sqlExt";
 import type { LessonData, QuizOption } from "@/lib/lessons/types";
 import { useLessonEngagement } from "@/lib/engagement/useLessonEngagement";
 import { lessonEngagementId, moduleEngagementId } from "@/lib/engagement/types";
+import LessonQuestionBox from "./LessonQuestionBox";
 import { phaseForModule } from "@/lib/engagement/phase";
 import StageViz from "./StageViz";
 import ExplainerSidebar from "./ExplainerSidebar";
@@ -249,6 +250,13 @@ export default function GenericLesson({
         <div className="mb-2 font-inter text-[13px] font-semibold text-success">KEY TAKEAWAY</div>
         <p className="text-[15.5px]/[1.6] font-medium text-[#1F2937]">{data.takeaway}</p>
       </div>
+
+      {/* ask about this lesson — same tables as the Questions tab, tagged
+          with this lesson so the mentor gets the context */}
+      <LessonQuestionBox
+        lessonId={lessonEngagementId(data.num, data.orderIndex)}
+        lessonTitle={data.title}
+      />
 
       {/* next */}
       <div className="flex flex-wrap items-center justify-between gap-4">

@@ -63,6 +63,60 @@ export async function fetchMyQuestions(userId: string): Promise<Question[]> {
   }
 }
 
+/** The student's questions for one specific lesson — powers the inline
+ * "ask about this lesson" box. Same tables as the Questions tab, just
+ * filtered by lesson_id, so anything asked here shows up there too. */
+export async function fetchQuestionsForLesson(userId: string, lessonId: string): Promise<Question[]> {
+  const supabase = createClient();
+  try {
+    const { data: questions } = await withTimeout(
+      supabase
+        .from("lesson_questions")
+        .select("id, lesson_id, lesson_title, body, resolved_at, created_at")
+        .eq("student_id", userId)
+        .eq("lesson_id", lessonId)
+        .order("created_at", { ascending: false }),
+      8000,
+    );
+    const ids = (questions ?? []).map((q) => q.id);
+    if (!ids.length) return [];
+
+    const { data: replies } = await supabase
+      .from("lesson_question_replies")
+      .select("id, question_id, author_id, body, created_at, profiles(full_name, username)")
+      .in("question_id", ids)
+      .order("created_at", { ascending: true });
+
+    const byQuestion = new Map<string, QuestionReply[]>();
+    for (const r of replies ?? []) {
+      const p = (Array.isArray(r.profiles) ? r.profiles[0] : r.profiles) as
+        | { full_name: string | null; username: string }
+        | null;
+      const list = byQuestion.get(r.question_id) ?? [];
+      list.push({
+        id: r.id,
+        authorId: r.author_id,
+        authorName: p?.full_name ?? p?.username ?? null,
+        body: r.body,
+        createdAt: r.created_at,
+      });
+      byQuestion.set(r.question_id, list);
+    }
+
+    return (questions ?? []).map((q) => ({
+      id: q.id,
+      lessonId: q.lesson_id,
+      lessonTitle: q.lesson_title,
+      body: q.body,
+      resolvedAt: q.resolved_at,
+      createdAt: q.created_at,
+      replies: byQuestion.get(q.id) ?? [],
+    }));
+  } catch {
+    return [];
+  }
+}
+
 type Result = { ok: true } | { ok: false; error: string };
 
 export async function askQuestion(

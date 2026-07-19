@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/mentor/access";
-import { fetchMentorOverview } from "@/lib/mentor/queries";
+import { fetchMentorOverview, fetchOpenQuestions } from "@/lib/mentor/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,10 @@ function relativeDays(iso: string | null): string {
 export default async function MentorOverviewPage() {
   const me = await currentUser();
   if (!me) redirect("/");
-  const { students, upcomingThisWeek, today } = await fetchMentorOverview(me.id);
+  const [{ students, upcomingThisWeek, today }, openQuestions] = await Promise.all([
+    fetchMentorOverview(me.id),
+    fetchOpenQuestions(me.id),
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -41,6 +44,33 @@ export default async function MentorOverviewPage() {
                     prepare notes &amp; assignment →
                   </Link>
                 </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="rounded-[12px] border border-line bg-card px-6 py-5">
+        <div className="mb-4 font-mono text-[12px] font-semibold text-ink-500">
+          OPEN QUESTIONS{openQuestions.length ? ` (${openQuestions.length})` : ""}
+        </div>
+        {openQuestions.length === 0 ? (
+          <p className="text-[14px] text-ink-500">Nothing waiting on you.</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {openQuestions.map((q) => (
+              <li key={q.id} className="border-b border-line pb-3 last:border-none last:pb-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Link href={`/mentor/students/${q.studentId}`} className="text-[13.5px] font-medium text-blue">
+                    {q.studentName}
+                  </Link>
+                  <span className="font-mono text-[11.5px] text-ink-500">
+                    {q.lessonTitle ? q.lessonTitle : "General"} ·{" "}
+                    {new Date(q.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    {q.replyCount ? " · replied" : ""}
+                  </span>
+                </div>
+                <p className="mt-1 line-clamp-2 text-[13.5px]">{q.body}</p>
               </li>
             ))}
           </ul>

@@ -129,6 +129,65 @@ export async function fetchMentorOverview(mentorId: string): Promise<MentorOverv
   return { students, upcomingThisWeek, today };
 }
 
+export type OpenQuestion = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  lessonTitle: string | null;
+  body: string;
+  createdAt: string;
+  replyCount: number;
+};
+
+/** Unresolved questions across ALL of this mentor's students — the inbox
+ * they work from, so they don't have to open each student to find out who
+ * is stuck. RLS already limits these rows to their own students. */
+export async function fetchOpenQuestions(mentorId: string): Promise<OpenQuestion[]> {
+  const supabase = createClient();
+
+  const { data: assignments } = await supabase
+    .from("mentor_assignments")
+    .select("student_id, profiles!mentor_assignments_student_id_fkey(full_name, username)")
+    .eq("mentor_id", mentorId)
+    .eq("active", true);
+
+  const studentIds = (assignments ?? []).map((a) => a.student_id);
+  if (!studentIds.length) return [];
+
+  const nameById = new Map<string, string>();
+  for (const a of assignments ?? []) {
+    const p = (Array.isArray(a.profiles) ? a.profiles[0] : a.profiles) as
+      | { full_name: string | null; username: string }
+      | null;
+    nameById.set(a.student_id, p?.full_name ?? p?.username ?? a.student_id.slice(0, 8));
+  }
+
+  const { data: questions } = await supabase
+    .from("lesson_questions")
+    .select("id, student_id, lesson_title, body, created_at")
+    .in("student_id", studentIds)
+    .is("resolved_at", null)
+    .order("created_at", { ascending: false });
+
+  const ids = (questions ?? []).map((q) => q.id);
+  const { data: replies } = ids.length
+    ? await supabase.from("lesson_question_replies").select("question_id").in("question_id", ids)
+    : { data: [] as { question_id: string }[] };
+
+  const replyCount = new Map<string, number>();
+  for (const r of replies ?? []) replyCount.set(r.question_id, (replyCount.get(r.question_id) ?? 0) + 1);
+
+  return (questions ?? []).map((q) => ({
+    id: q.id,
+    studentId: q.student_id,
+    studentName: nameById.get(q.student_id) ?? "Student",
+    lessonTitle: q.lesson_title,
+    body: q.body,
+    createdAt: q.created_at,
+    replyCount: replyCount.get(q.id) ?? 0,
+  }));
+}
+
 export type SessionRecord = {
   id: string;
   scheduledAt: string;
