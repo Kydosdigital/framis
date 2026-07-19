@@ -6,6 +6,8 @@ import { moduleLessonList, resolveLesson, nextLessonLabel } from "@/lib/lessons"
 import VariablesLesson from "./lessons/VariablesLesson";
 import RagLesson from "./lessons/RagLesson";
 import GenericLesson from "./lessons/GenericLesson";
+import LessonQuestionBox from "./lessons/LessonQuestionBox";
+import { lessonEngagementId } from "@/lib/engagement/types";
 
 function BackToAll({ onBack }: { onBack: () => void }) {
   return (
@@ -137,6 +139,14 @@ export default function Lesson() {
       <LessonSubNav module={module} activeIndex={lessonIndex} onPick={(i) => goToLesson(module, i)} />
       {ref?.kind === "bespoke" && ref.bespokeKey === "variables" && <VariablesLesson />}
       {ref?.kind === "bespoke" && ref.bespokeKey === "rag" && <RagLesson />}
+      {/* The two bespoke lessons render their own layout, so the ask-box is
+          mounted here rather than inside them. GenericLesson mounts its own. */}
+      {ref?.kind === "bespoke" && (
+        <LessonQuestionBox
+          lessonId={lessonEngagementId(module, lessonIndex)}
+          lessonTitle={ref.bespokeKey === "variables" ? "Variables" : "RAG"}
+        />
+      )}
       {ref?.kind === "generic" && (
         <GenericLesson
           key={`${module}-${lessonIndex}`}
