@@ -20,10 +20,33 @@ function relativeDays(iso: string | null): string {
 export default async function MentorOverviewPage() {
   const me = await currentUser();
   if (!me) redirect("/");
-  const { students, upcomingThisWeek } = await fetchMentorOverview(me.id);
+  const { students, upcomingThisWeek, today } = await fetchMentorOverview(me.id);
 
   return (
     <div className="flex flex-col gap-8">
+      <div className="rounded-[12px] border border-line bg-card px-6 py-5">
+        <div className="mb-4 font-mono text-[12px] font-semibold text-ink-500">TODAY</div>
+        {today.length === 0 ? (
+          <p className="text-[14px] text-ink-500">No sessions today.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {today.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 text-[13.5px]">
+                <Link href={`/mentor/students/${s.studentId}`} className="font-medium text-blue">
+                  {s.studentName}
+                </Link>
+                <span className="text-ink-500">
+                  {new Date(s.scheduledAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} · {s.durationMinutes} min
+                  <Link href={`/mentor/students/${s.studentId}`} className="ml-3 font-medium text-blue">
+                    prepare notes &amp; assignment →
+                  </Link>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <div className="rounded-[12px] border border-line bg-card px-6 py-5">
         <div className="mb-4 font-mono text-[12px] font-semibold text-ink-500">UPCOMING SESSIONS THIS WEEK</div>
         {upcomingThisWeek.length === 0 ? (

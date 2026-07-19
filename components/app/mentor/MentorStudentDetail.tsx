@@ -3,11 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import LessonEngagementTable, { type LessonEngagementRow } from "@/components/app/engagement/LessonEngagementTable";
-import { scheduleSession, logSession, sendMessage, type ActionResult } from "@/app/mentor/actions";
+import {
+  scheduleSession,
+  logSession,
+  sendMessage,
+  createAssignment,
+  reviewSubmission,
+  type ActionResult,
+} from "@/app/mentor/actions";
 import type { SessionRecord, MessageRecord } from "@/lib/mentor/queries";
 import type { StudentTrack } from "@/lib/mentor/track";
+import type { AssignmentRecord } from "@/lib/mentor/assignments";
 
-type Tab = "engagement" | "sessions" | "curriculum" | "messages";
+type Tab = "engagement" | "sessions" | "assignments" | "curriculum" | "messages";
 
 const STATUS_STYLES: Record<string, string> = {
   completed: "bg-[#ECFDF5] text-[#059669]",
@@ -30,6 +38,7 @@ export default function MentorStudentDetail({
   track,
   trackSessionOptions,
   isEnrolled,
+  assignments,
 }: {
   studentId: string;
   lessons: LessonEngagementRow[];
@@ -40,12 +49,16 @@ export default function MentorStudentDetail({
   track: StudentTrack | null;
   trackSessionOptions: { id: string; label: string }[];
   isEnrolled: boolean;
+  assignments: AssignmentRecord[];
 }) {
   const [tab, setTab] = useState<Tab>("engagement");
+
+  const awaitingReview = assignments.filter((a) => a.submission && !a.submission.reviewedAt).length;
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "engagement", label: "Engagement" },
     { key: "sessions", label: `Sessions (${sessions.length})` },
+    { key: "assignments", label: `Assignments (${assignments.length})${awaitingReview ? ` · ${awaitingReview} to review` : ""}` },
     { key: "curriculum", label: "Curriculum" },
     { key: "messages", label: `Messages (${messages.length})` },
   ];
@@ -85,6 +98,10 @@ export default function MentorStudentDetail({
 
       {tab === "sessions" && (
         <SessionsTab studentId={studentId} sessions={sessions} trackSessionOptions={trackSessionOptions} />
+      )}
+
+      {tab === "assignments" && (
+        <AssignmentsTab studentId={studentId} assignments={assignments} trackSessionOptions={trackSessionOptions} />
       )}
 
       {tab === "curriculum" && <CurriculumTab track={track} isEnrolled={isEnrolled} />}
@@ -248,6 +265,152 @@ function SessionsTab({
         </ul>
       )}
     </div>
+  );
+}
+
+function AssignmentsTab({
+  studentId,
+  assignments,
+  trackSessionOptions,
+}: {
+  studentId: string;
+  assignments: AssignmentRecord[];
+  trackSessionOptions: { id: string; label: string }[];
+}) {
+  const [creating, setCreating] = useState(false);
+  const { pending, error, run } = useAction();
+
+  const submitNew = (form: HTMLFormElement) => {
+    const fd = new FormData(form);
+    fd.set("studentId", studentId);
+    run(() => createAssignment(fd), () => { form.reset(); setCreating(false); });
+  };
+
+  const submitReview = (form: HTMLFormElement, assignmentId: string) => {
+    const fd = new FormData(form);
+    fd.set("studentId", studentId);
+    fd.set("assignmentId", assignmentId);
+    run(() => reviewSubmission(fd));
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <button onClick={() => setCreating(!creating)} className="w-fit rounded-[8px] bg-blue px-4 py-2 text-[13px] font-semibold text-white">
+        {creating ? "Cancel" : "Set an assignment"}
+      </button>
+
+      {error && <div className="rounded-[8px] bg-[#FDF0F0] px-3.5 py-2.5 text-[13px] font-medium text-[#DC2626]">{error}</div>}
+
+      {creating && (
+        <form
+          onSubmit={(e) => { e.preventDefault(); submitNew(e.currentTarget); }}
+          className="flex flex-col gap-3 rounded-[12px] border border-line bg-card px-6 py-5"
+        >
+          <div className="font-mono text-[12px] font-semibold text-ink-500">NEW ASSIGNMENT</div>
+          <label className="text-[13px] font-medium">
+            Title
+            <input name="title" required placeholder="e.g. Build the login form" className="mt-1 block w-full rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]" />
+          </label>
+          <label className="text-[13px] font-medium">
+            Instructions / notes for the student
+            <textarea name="instructions" rows={5} className="mt-1 block w-full rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]" />
+          </label>
+          <div className="flex flex-wrap gap-3">
+            <label className="text-[13px] font-medium">
+              Due (optional)
+              <input type="datetime-local" name="dueAt" className="mt-1 block rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]" />
+            </label>
+            <label className="flex-1 text-[13px] font-medium">
+              Curriculum session (optional)
+              <select name="trackSessionId" disabled={trackSessionOptions.length === 0} className="mt-1 block w-full rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]">
+                <option value="">{trackSessionOptions.length === 0 ? "No track sessions" : "— none —"}</option>
+                {trackSessionOptions.map((o) => (
+                  <option key={o.id} value={o.id}>{o.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <button disabled={pending} className="mt-1 w-fit rounded-[8px] bg-blue px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-60">
+            {pending ? "Sending…" : "Send to student"}
+          </button>
+        </form>
+      )}
+
+      {assignments.length === 0 ? (
+        <p className="text-[14px] text-ink-500">No assignments set yet.</p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {assignments.map((a) => {
+            const overdue = a.dueAt && !a.submission && new Date(a.dueAt).getTime() < Date.now();
+            return (
+              <li key={a.id} className="rounded-[12px] border border-line bg-card px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-inter text-[14.5px] font-semibold">{a.title}</div>
+                  <SubmissionPill submission={a.submission} overdue={Boolean(overdue)} />
+                </div>
+                <div className="mt-0.5 text-[12.5px] text-ink-500">
+                  Set {fmt(a.createdAt)}
+                  {a.dueAt ? ` · due ${fmt(a.dueAt)}` : ""}
+                  {a.trackSessionLabel ? ` · ${a.trackSessionLabel}` : ""}
+                </div>
+                {a.instructions && <p className="mt-2 whitespace-pre-wrap text-[13.5px]">{a.instructions}</p>}
+
+                {a.submission ? (
+                  <div className="mt-3 rounded-[8px] border border-line px-3.5 py-3">
+                    <div className="font-mono text-[11.5px] font-semibold text-ink-500">
+                      SUBMITTED {fmt(a.submission.submittedAt)}
+                    </div>
+                    {a.submission.content && <p className="mt-1.5 whitespace-pre-wrap text-[13.5px]">{a.submission.content}</p>}
+                    {a.submission.linkUrl && (
+                      <a href={a.submission.linkUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-[13px] font-medium text-blue">
+                        {a.submission.linkUrl} ↗
+                      </a>
+                    )}
+                    <form
+                      onSubmit={(e) => { e.preventDefault(); submitReview(e.currentTarget, a.id); }}
+                      className="mt-3 flex flex-col gap-2"
+                    >
+                      <label className="text-[12.5px] font-medium">
+                        Feedback to the student
+                        <textarea
+                          name="mentorFeedback"
+                          rows={2}
+                          defaultValue={a.submission.mentorFeedback ?? ""}
+                          className="mt-1 block w-full rounded-[8px] border border-line bg-transparent px-3 py-2 text-[13.5px]"
+                        />
+                      </label>
+                      <button disabled={pending} className="w-fit rounded-[8px] border border-line px-3.5 py-1.5 text-[12.5px] font-semibold disabled:opacity-60">
+                        {a.submission.reviewedAt ? "Update feedback" : "Save feedback"}
+                      </button>
+                      {a.submission.reviewedAt && (
+                        <span className="text-[11.5px] text-ink-500">Reviewed {fmt(a.submission.reviewedAt)}</span>
+                      )}
+                    </form>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-[13px] text-ink-500">Not submitted yet.</p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function SubmissionPill({ submission, overdue }: { submission: AssignmentRecord["submission"]; overdue: boolean }) {
+  if (!submission) {
+    return (
+      <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${overdue ? "bg-[#FDF0F0] text-[#DC2626]" : "bg-[#F1F3F6] text-ink-500 dark:bg-[#1B2536]"}`}>
+        {overdue ? "overdue" : "not submitted"}
+      </span>
+    );
+  }
+  return (
+    <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${submission.reviewedAt ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#EFF6FF] text-[#0066CC]"}`}>
+      {submission.reviewedAt ? "reviewed" : "awaiting review"}
+    </span>
   );
 }
 

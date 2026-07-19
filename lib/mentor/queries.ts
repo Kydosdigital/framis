@@ -27,6 +27,9 @@ export type UpcomingSession = {
 export type MentorOverview = {
   students: StudentRow[];
   upcomingThisWeek: UpcomingSession[];
+  /** Subset of the week's sessions that fall on today — what the mentor
+   * needs in front of them when they log in to prepare. */
+  today: UpcomingSession[];
 };
 
 /** Everything the `/mentor` overview needs: the mentor's actively-assigned
@@ -119,7 +122,11 @@ export async function fetchMentorOverview(mentorId: string): Promise<MentorOverv
     status: s.status,
   }));
 
-  return { students, upcomingThisWeek };
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  const today = upcomingThisWeek.filter((s) => new Date(s.scheduledAt).getTime() <= endOfToday.getTime());
+
+  return { students, upcomingThisWeek, today };
 }
 
 export type SessionRecord = {

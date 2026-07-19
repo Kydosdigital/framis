@@ -31,6 +31,7 @@ export default function Sidebar() {
     { id: "capstone", label: "Capstone", badge: capstoneBadge },
     { id: "review", label: "Peer review", badge: reviewBadge },
     { id: "portfolio", label: "Portfolio", badge: "" },
+    { id: "assignments", label: "Assignments", badge: "" },
     { id: "report", label: "Engagement report", badge: "" },
     { id: "dictionary", label: "Dictionary", badge: "" },
     { id: "faq", label: "FAQ", badge: "" },

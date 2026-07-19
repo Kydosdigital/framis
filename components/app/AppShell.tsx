@@ -9,6 +9,7 @@ import Capstone from "./Capstone";
 import PeerReview from "./PeerReview";
 import Portfolio from "./Portfolio";
 import Report from "./Report";
+import Assignments from "./Assignments";
 import Faq from "./Faq";
 import Dictionary from "./Dictionary";
 import { Logo } from "../ui";
@@ -39,6 +40,7 @@ export default function AppShell() {
         {appTab === "capstone" && <Capstone />}
         {appTab === "review" && <PeerReview />}
         {appTab === "portfolio" && <Portfolio />}
+        {appTab === "assignments" && <Assignments />}
         {appTab === "report" && <Report />}
         {appTab === "faq" && <Faq />}
         {appTab === "dictionary" && <Dictionary />}
